@@ -40,8 +40,9 @@ not a new capability — it is `provision/run.sh`, again. Everything below adds
 convenience around that fact; none of it replaces it.
 
 Three pieces of runtime behaviour exist already. Obtainium runs in all six
-zones and the launcher no longer carries a version pin, so app updates arrive in
-each zone on their own, without waiting for the host. The catalog is a template:
+zones and the launcher no longer carries a version pin
+([0012](../decisions/0012-every-zone-updates-itself.md)), so app updates arrive
+in each zone on their own, without waiting for the host. The catalog is a template:
 the generators honour `CONFIG_DIR`, so a private catalog can live outside this
 repository. That is the split "repository as dotfiles" needs — the distribution
 here, the personal configuration elsewhere.
