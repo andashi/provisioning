@@ -255,7 +255,7 @@ configure_profile() {   # $1=profile-key
   # "personal" is the default and disappears, "work" is not and survives. A
   # verbatim comparison therefore rejected every zone with a favorite in the
   # personal profile, reporting a mismatch for a config that had converged
-  # correctly (provisioning#6, found from the launcher side 2026-09-22).
+  # correctly (provisioning#2, found from the launcher side 2026-09-22).
   #
   # So both sides are canonicalised into the long form before comparing. The
   # normalisation is deliberately narrow: a swallowed favorite, a changed
