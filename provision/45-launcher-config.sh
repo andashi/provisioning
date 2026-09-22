@@ -7,6 +7,9 @@
 #
 # Flow per profile (Kvaesitso fork ADR 0002/0003, services/config module):
 #   content write launcher.json into the launcher's ingest provider of that
+#   45-launcher-config.sh          push the generated config to every zone
+#   45-launcher-config.sh --pull   bring the device's arrangement back first
+#
 #   user -> broadcast RELOAD_CONFIG -> poll diagnostics until configSha256
 #   matches the written file -> query /config and verify the effective state
 #   semantically against the written file.
@@ -71,6 +74,14 @@ problem() {   # $1=profile-key $2=reason; in DRY_RUN only a warning
 # Queries the launcher state provider and prints the served JSON document.
 # 'content query' prints "Row: 0 <col>=<json>" - strip everything up to the
 # first '{' and let jq decide whether what remains is a document.
+# What the device reported the last time we agreed with it, per device and
+# zone. Not a version counter: the launcher writes launcher.json itself once
+# edit mode ships, and a counter would have to be maintained on both sides.
+# The sha the launcher already publishes in its diagnostics is enough for a
+# compare-and-swap on content.
+device_id() { printf '%s' "${ADB_SERIAL:-$(adb get-serialno 2>/dev/null || echo unknown)}" | tr -c 'A-Za-z0-9_.-' '_'; }
+sha_record() { printf '%s/launcher-sha/%s/%s' "$STATE_DIR" "$(device_id)" "$1"; }
+
 query_state() {   # $1=path (config|diagnostics) $2=uid
   local out json
   out="$(ash_ro content query --uri "content://$PKG.state/$1" --user "$2" 2>/dev/null | tr -d '\r')" || return 1
@@ -148,6 +159,23 @@ configure_profile() {   # $1=profile-key
   # The generated config names the image (basename of the theming.json path);
   # the file itself is uploaded here, under that name, before the config, so
   # the reload finds it. {aspect} resolves against the device like in
+  # ---- Pull before push -------------------------------------------------
+  # Once edit mode ships, the launcher writes launcher.json itself: a push can
+  # overwrite an arrangement somebody made by hand. So compare what the device
+  # reports NOW against what it reported when we last agreed with it, and
+  # refuse if someone changed it in between. No record yet means a device we
+  # have never written to - nothing to protect, so it proceeds and records.
+  local rec dev_sha
+  rec="$(sha_record "$key")"
+  if [ "$DRY_RUN" != "1" ] && [ -f "$rec" ]; then
+    dev_sha="$(query_state diagnostics "$uid" 2>/dev/null | jq -r '.configSha256 // empty')"
+    if [ -n "$dev_sha" ] && [ "$dev_sha" != "$(tr -d '[:space:]' < "$rec")" ]; then
+      warn "$label: device has ${dev_sha:0:12}..., we last agreed on $(tr -d '[:space:]' < "$rec" | cut -c1-12)..."
+      problem "$key" "$label: the config changed on the device since our last run - pull it first ($0 --pull), then push"
+      return 1
+    fi
+  fi
+
   # 40-theming.sh. No wallpaper in theming.json means nothing to upload.
   wp="$(theme_field "$key" wallpaper)"
   if [ "$(jq -r --arg k "$LKEY" '.launchers[$k].wallpaper // false' "$THEME_FILE")" != "true" ]; then
@@ -313,6 +341,9 @@ configure_profile() {   # $1=profile-key
     | map(select($e[.] != $w[.]))
     | join(", ")')"
   if [ -z "$mism" ]; then
+    # Remember what the device now reports, so the next run can tell our own
+    # push apart from an edit made on the device.
+    mkdir -p "$(dirname "$rec")" && printf '%s\n' "$want_sha" > "$rec"
     ok "$label: effective config verified"
     return 0
   fi
@@ -320,6 +351,44 @@ configure_profile() {   # $1=profile-key
   problem "$key" "$label: read-back /config does not match the written file ($mism)"
   return 1
 }
+
+# ---- Pull: bring the device's arrangement back into the catalog -----------
+# The counterpart to the guard above. It writes into the catalog the chain was
+# pointed at, never into this repository's template: config/ here demonstrates
+# mechanisms and is diffed against the generator by `make check`, so a device's
+# arrangement has no business in it. A private catalog is selected with
+# CONFIG_DIR (lib/common.sh).
+pull_all() {
+  local repo_config="$REPO_ROOT/config"
+  case "$(cd "$LAUNCHER_CFG_DIR/.." 2>/dev/null && pwd)" in
+    "$repo_config")
+      die "refusing to pull into the repository's template ($LAUNCHER_CFG_DIR).
+   Point the chain at your own catalog first:  CONFIG_DIR=/path/to/config $0 --pull" ;;
+  esac
+  require_device
+  local key label uid eff dev_sha rec n=0
+  log "Pulling the effective launcher config into $LAUNCHER_CFG_DIR"
+  while read -r key; do
+    label="$(profile_label "$key")"
+    [ "$(profile_field "$key" type)" = "managed" ] && { skip "$label: managed profile - no home screen"; continue; }
+    uid="$(resolve_uid "$key")"
+    [ -n "$uid" ] || { warn "$label: profile does not exist - skipped"; continue; }
+    user_running_uid "$uid" || ash am start-user -w "$uid" >/dev/null 2>&1
+    eff="$(query_state config "$uid")" || { warn "$label: /config not served - skipped"; continue; }
+    dev_sha="$(query_state diagnostics "$uid" 2>/dev/null | jq -r '.configSha256 // empty')"
+    printf '%s\n' "$eff" | jq -S . > "$LAUNCHER_CFG_DIR/$key.json" \
+      || { warn "$label: could not write $LAUNCHER_CFG_DIR/$key.json"; continue; }
+    rec="$(sha_record "$key")"
+    mkdir -p "$(dirname "$rec")"
+    printf '%s\n' "$dev_sha" > "$rec"
+    ok "$label: pulled (device sha ${dev_sha:0:12}...)"
+    n=$((n + 1))
+  done < <(profile_keys)
+  printf '\n'
+  ok "$n profile(s) pulled - review the diff and commit it like any other change"
+}
+
+[ "${1:-}" = "--pull" ] && { pull_all; exit 0; }
 
 while read -r key; do
   [ -z "$key" ] && continue
