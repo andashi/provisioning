@@ -39,12 +39,21 @@ writes only the difference. "Change the configuration after the fact" is therefo
 not a new capability — it is `provision/run.sh`, again. Everything below adds
 convenience around that fact; none of it replaces it.
 
-Two smaller pieces of runtime behaviour exist already. Obtainium runs in all six
-zones and the launcher no longer carries a version pin (provisioning#5), so app
-updates arrive in each zone on their own, without waiting for the host. And the
-catalog is a template: the generators honour `CONFIG_DIR`, so a private catalog
-can live outside this repository. That is the split "repository as dotfiles"
-needs — the distribution here, the personal configuration elsewhere.
+Three pieces of runtime behaviour exist already. Obtainium runs in all six
+zones and the launcher no longer carries a version pin, so app updates arrive in
+each zone on their own, without waiting for the host. The catalog is a template:
+the generators honour `CONFIG_DIR`, so a private catalog can live outside this
+repository. That is the split "repository as dotfiles" needs — the distribution
+here, the personal configuration elsewhere.
+
+And since the launcher contract's second schema version, **the phone writes
+back.** The home grid is editable on the device, the launcher writes the result
+into its `launcher.json` itself, and the host must pull before it pushes: the
+step refuses a push when the device file's hash differs from the last pulled
+version, and says why. With that, the file stops being the host's declaration
+and becomes the last agreed state between host and device. That is the Layer A
+half of this document, no longer exploration but contract; what is still open on
+the provisioning side is provisioning#2.
 
 ## Three layers of the configuration surface
 
@@ -454,9 +463,16 @@ Two things belong with that:
 - **Invariants as tests.** "Anon never gets Play", "no second background profile"
   belong in `make check`, so an agent cannot violate them by accident.
 
-The on-device editor is the same app: a form generated from the schema, applying
-Layer A fields directly and writing everything else back as a commit for the
-laptop to pick up. No bidirectional sync; conflicts are git's.
+The on-device editor for Layer A already exists: it is the launcher's edit
+mode, and the launcher contract settles how its changes travel back — the device
+writes its file, the host pulls before it pushes, and a hash guard in the step
+refuses to overwrite an arrangement it has not seen. The exploration's earlier
+line, "no bidirectional sync, conflicts are git's", is therefore replaced by
+something more precise: the device owns geometry, the host owns declarations,
+and the read-back compares declared items rather than the whole document. An
+editor for anything beyond Layer A would follow the same shape — a form from the
+schema, changes written to the device's copy, pulled by the laptop and committed
+there — rather than the phone talking to git.
 
 Two audiences fall out of this. People with a laptop: the repository is the
 source, the door is the path. People without one: the editor is the source, the
