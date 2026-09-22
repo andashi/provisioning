@@ -1,0 +1,133 @@
+{
+  "_comment": [
+    "Architecture decisions that can be turned on and off.",
+    "",
+    "A feature is NOT an app and not a phase, but a deliberate decision",
+    "that changes the security model. That's why it lives here and not in",
+    "apps.json: there it would look like an ordinary line and would get",
+    "lost when skimming.",
+    "",
+    "Every entry carries its price next to it. 'cost' is mandatory - anyone",
+    "turning on a feature should have to read what it costs.",
+    "",
+    "FIELDS:",
+    "  enabled   on/off. If off, 10-apps.sh and 20-permissions.sh skip",
+    "            every catalog entry with a matching 'feature' field.",
+    "  profiles  which zones it affects (documentation only, the apps'",
+    "            assignment lives in the catalog).",
+    "  manual    steps that are not scriptable by design. Land in MANUAL.md,",
+    "            but ONLY if the feature is active.",
+    "  gates     catalog IDs tied to this feature (for traceability;",
+    "            authoritative is the 'feature' field in the catalog entry itself)."
+  ],
+  "features": {
+    "inter_profile_sharing": {
+      "enabled": true,
+      "label": "Cross-zone sharing",
+      "effect": "Installs Inter Profile Sharing in the affected profiles and grants android.permission.INTERACT_ACROSS_USERS. After that, files, links, and clipboard content can be passed between zones.",
+      "cost": "Opens a deliberate channel through boundaries that are otherwise sealed - the same category as the Immich bridge before it. The channel is narrow and only triggered by you, but it exists. Without a sharing password set, the transfer is UNENCRYPTED over a local port, and the app itself warns that other apps in the same profile could then read along.",
+      "verified": "Measured end-to-end on our own emulator build (emu64x, Android 17, 2026-09-15): text shared in user 0, arrived in user 10 as 'New shared text' with the correct content. The service listens on 127.0.0.1:2411. The adb grant survives app updates and restarts.",
+      "profiles": [
+        "home",
+        "cloud"
+      ],
+      "gates": [
+        "ips"
+      ],
+      "manual": [
+        "Set the same sharing password in ALL involved profiles (Settings -> Security -> Sharing Password). Without an identical password, the profiles won't find each other.",
+        "Turn on encryption - without a password it can't be enabled and the transfer runs in plaintext.",
+        "Observe in Lab for 48h before use (our own rule for new third-party apps), especially because this app by construction carries data across zone boundaries."
+      ]
+    },
+    "private_space_vaults": {
+      "enabled": false,
+      "label": "Bitwarden in Home's Private Space",
+      "effect": "Pure documentation decision, not scriptable - Private Space is set up via Settings.",
+      "cost": "Three seconds per access. In exchange, the most valuable app isn't permanently decrypted in the most-used profile, but at rest. WARNING: an unlocked Private Space occupies one of the three runtime slots - keep it short, otherwise Cloud gets evicted.",
+      "profiles": [
+        "home"
+      ],
+      "gates": [],
+      "manual": [
+        "Settings -> Security and Privacy -> set up Private Space, assign its own lock.",
+        "Move Bitwarden there and lock it again after every use.",
+        "The clipboard is SHARED between the owner and Private Space - copying a password out lifts the boundary for that content."
+      ]
+    },
+    "work_profile": {
+      "enabled": true,
+      "label": "Work profile in Home instead of a secondary Cloud profile",
+      "effect": "Creates a managed profile under Home (profile owner: Shelter) and installs the apps intended for it there. Customer calls then show names from company contacts, even while you're in Home privately - looked up, not copied.",
+      "cost": "Play would run in the work container: the 'no Play in Home' rule then only applies to the personal area. A work profile isolates more weakly than a secondary user - it runs alongside and the framework deliberately opens channels (contacts, share menu, notifications). Acceptable for apps the company entrusts with all its data anyway, wrong for consumer apps.",
+      "verified": "Measured on the emulator (2026-09-15): managed profile can be created via pm/dpm, Shelter as ManagedProfileOwner(parentUserId=0), apps installable, own VPN slot alongside Tailscale in Home, and cross-profile contact resolution from Home (phone_lookup_enterprise -> hit, phone_lookup -> no hit). The AOSP dialer uses ENTERPRISE_CONTENT_FILTER_URI (incallui/CallerInfo.java:348).",
+      "unverified": "WHETHER INTUNE MAM WORKS INSIDE IT. Company Portal needs sandboxed Play, which doesn't exist for the x86_64 emulator target. Only verifiable on real hardware. As long as that's open, this feature remains a hypothesis.",
+      "profiles": [
+        "home",
+        "work"
+      ],
+      "gates": [],
+      "manual": [
+        "Install Shelter from F-Droid or Accrescent in Home BEFORE provisioning runs - without the app no profile owner can be set.",
+        "After creation: sign in to Intune in the Company Portal inside the work profile, then Outlook and Teams.",
+        "Check whether Conditional Access with 'require app protection policy' takes effect - that's the open question this feature hinges on."
+      ]
+    },
+    "microsoft_365": {
+      "enabled": true,
+      "label": "Microsoft 365 as the work profile's stack",
+      "effect": "Installs Teams, Outlook, Authenticator and the Intune Company Portal into the managed work profile. Company Portal is the MAM agent: the employer applies app protection policies through it, and Conditional Access can require them before mail or chat data is released.",
+      "cost": "An agent that answers to the employer runs on the device. It cannot see the personal profile - that is precisely what the zone model buys - but inside the work profile it enforces policy, can wipe, and decides whether apps start at all. It also makes sandboxed Play load-bearing in the work container: without Play, Company Portal does not run.",
+      "unverified": "Whether Intune MAM accepts a Shelter-owned profile is the open question of the whole work zone (see work_profile). Company Portal needs sandboxed Play, which the x86_64 emulator target does not have. Only real hardware can answer it.",
+      "profiles": [
+        "work"
+      ],
+      "gates": [
+        "teams",
+        "outlook",
+        "msauth",
+        "companyportal"
+      ],
+      "manual": [
+        "Sign in to Company Portal inside the work profile FIRST, then Outlook and Teams - the other two expect an enrolled profile.",
+        "Do not enable google_workspace at the same time: two MAM agents in one profile is not a configuration any employer intends."
+      ]
+    },
+    "google_workspace": {
+      "enabled": false,
+      "label": "Google Workspace as the work profile's stack",
+      "effect": "The same zone, filled by the other vendor: Gmail, Drive and Calendar in the managed work profile, with Android Device Policy as the MAM agent. It exists so the work zone is demonstrably not a Microsoft special case - the architecture is 'a managed profile with an employer's agent in it', whoever that employer buys from.",
+      "cost": "Same shape as microsoft_365, plus a Google account becomes load-bearing for the work zone: Device Policy, Gmail and Drive all expect Google services, so sandboxed Play is not optional there. A device whose personal side is deliberately Play-free then carries Play in the work container.",
+      "unverified": "Nobody has run this. The package names are reasoned guesses (pkg_status: unverified) and no run has enrolled a profile through Device Policy. Treat it as the documented alternative, not as a tested path.",
+      "profiles": [
+        "work"
+      ],
+      "gates": [
+        "gmail",
+        "gdrive",
+        "gcalendar",
+        "gdevicepolicy"
+      ],
+      "manual": [
+        "Enroll the work profile through Android Device Policy first, then sign in to Gmail, Drive and Calendar.",
+        "Do not enable microsoft_365 at the same time."
+      ]
+    },
+    "eid_germany": {
+      "enabled": false,
+      "label": "German eID (AusweisApp) in Home",
+      "effect": "Installs AusweisApp, the official eID client for the German ID card. It reads the card over NFC and authenticates against public-sector and bank services.",
+      "cost": "Region-specific, and useless outside Germany. It is also the one entry in the catalog whose signer nobody else corroborates: privacyguides/verified-apps documents F-Droid's rebuild, not the binary from the vendor's own release that we install (apks/certs/PROVENANCE.tsv). AppVerifier at first install on the device is the remaining check - which matters more here than elsewhere, because this app talks to an identity document.",
+      "profiles": [
+        "home"
+      ],
+      "gates": [
+        "ausweisapp"
+      ],
+      "manual": [
+        "Verify the APK with AppVerifier at first install - its pin rests on a single download.",
+        "The card PIN never goes through the shell; set it up in the app."
+      ]
+    }
+  }
+}

@@ -1,0 +1,583 @@
+{
+  "_comment": [
+    "Declarative app catalog. An app can live in multiple profiles.",
+    "pkg_status: 'verified' = package name confirmed. 'unverified' = MUST be",
+    "confirmed before the first run (provision/05-verify-catalog.sh reads it via aapt2 from the APK).",
+    "source: gos-store | accrescent | obtainium | play-sandboxed | fdroid | aurora | system | local (own build, APK in apks/)",
+    "net:false => android.permission.INTERNET gets revoked (GrapheneOS network toggle).",
+    "needs: a runtime precondition the zone has to satisfy. 'tailnet' means the app only reaches its server through the private Tailscale network, so it may only live in zones whose VPN slot is a tailscale one - 'make check' enforces that, because a zone has exactly ONE always-on VPN slot.",
+    "asset_exclude / asset_prefer: regex over the release asset NAMES, for upstreams that ship several flavours per architecture (Obtainium's '-fdroid' build, Haven's '-terminal'). Exclude wins first, prefer narrows what is left; both are optional."
+  ],
+  "apps": [
+    {
+      "id": "signal",
+      "label": "Signal",
+      "pkg": "org.thoughtcrime.securesms",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/signalapp/Signal-Android",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "scopes": "Contact Scopes instead of the full contact list; Storage Scopes -> DCIM only",
+      "notes": "Fold becomes primary; iPhone as linked device (45-day sync window)"
+    },
+    {
+      "id": "immich",
+      "label": "Immich",
+      "pkg": "app.alextran.immich",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/immich-app/immich",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "scopes": "Storage Scopes -> DCIM only; backup ON",
+      "notes": "Home only. The server lives on the private tailnet, and a zone has exactly one always-on VPN slot - a zone whose slot is RethinkDNS has no route to it. Files cross zones through Inter Profile Sharing instead.",
+      "needs": "tailnet"
+    },
+    {
+      "id": "homeassistant",
+      "label": "Home Assistant",
+      "pkg": "io.homeassistant.companion.android",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/home-assistant/android",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "notes": "device_tracker + command notifications = device finding",
+      "needs": "tailnet"
+    },
+    {
+      "id": "tailscale",
+      "label": "Tailscale",
+      "pkg": "com.tailscale.ipn",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/tailscale/tailscale-android",
+      "profiles": [
+        "home",
+        "ops"
+      ],
+      "net": true,
+      "notes": "Home=private tailnet, Ops=business tailnet. Occupies the VPN slot."
+    },
+    {
+      "id": "bitwarden",
+      "label": "Bitwarden",
+      "pkg": "com.x8bit.bitwarden",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/bitwarden/android",
+      "profiles": [
+        "home",
+        "cloud",
+        "ops"
+      ],
+      "net": true,
+      "notes": "Per-customer creds in collections (instead of per-customer profiles)"
+    },
+    {
+      "id": "tubular",
+      "label": "Tubular",
+      "pkg": "org.polymorphicshade.tubular",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/polymorphicshade/Tubular",
+      "profiles": [
+        "home"
+      ],
+      "net": true
+    },
+    {
+      "id": "comaps",
+      "label": "CoMaps",
+      "pkg": "app.comaps",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://codeberg.org/comaps/comaps",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "notes": "Default maps app. Repo lives on CODEBERG, not GitHub. Three variants with DIFFERENT applicationId: app.comaps (direct APK/IzzyOnDroid, what we use), app.comaps.fdroid (F-Droid), app.comaps.google (Play)."
+    },
+    {
+      "id": "ausweisapp",
+      "label": "AusweisApp",
+      "pkg": "com.governikus.ausweisapp2",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/Governikus/AusweisApp2",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "notes": "Package name is com.*, NOT de.* - web research was wrong, confirmed via aapt2 from the APK.",
+      "feature": "eid_germany"
+    },
+    {
+      "id": "torbrowser",
+      "label": "Tor Browser",
+      "pkg": "org.torproject.torbrowser",
+      "pkg_status": "verified",
+      "source": "torproject",
+      "upstream": "https://www.torproject.org/download/",
+      "profiles": [
+        "home",
+        "anon"
+      ],
+      "net": true,
+      "notes": "Only browser in Anon. Fetched from dist.torproject.org and verified against the Tor Browser Developers GPG signature (keys/torbrowser.asc, EF6E286DDA85EA2A4BA7DE684E2C6E8793298290) - the one app in this catalog whose binary is checked by an upstream signature instead of trust on first use. Exclude it from Orbot per-app routing: it brings its own Tor (Tor over Tor)."
+    },
+    {
+      "id": "goscamera",
+      "label": "GrapheneOS Camera",
+      "pkg": "app.grapheneos.camera",
+      "pkg_status": "verified",
+      "source": "system",
+      "profiles": [
+        "home"
+      ],
+      "net": false,
+      "notes": "Default camera"
+    },
+    {
+      "id": "opencamera",
+      "label": "Open Camera",
+      "pkg": "net.sourceforge.opencamera",
+      "pkg_status": "verified",
+      "source": "fdroid",
+      "upstream": "https://sourceforge.net/projects/opencamera/",
+      "profiles": [
+        "home"
+      ],
+      "net": false,
+      "notes": "Later, own fork: Family shutter -> DCIM/Family. Source is F-Droid, not SourceForge: SourceForge offers no release API that fetch.sh could use, so the app would stay manual forever. Price: the binary is signed by F-Droid, not by upstream - same trade-off as Shelter."
+    },
+    {
+      "id": "obtainium",
+      "label": "Obtainium",
+      "pkg": "dev.imranr.obtainium",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "profiles": [
+        "home",
+        "cloud",
+        "gadgets",
+        "ops",
+        "lab",
+        "anon"
+      ],
+      "net": true,
+      "notes": "The update client for every zone: without it a zone can install once and never again. Fetched from the project's own GitHub release rather than Accrescent, because a zone has no store to bootstrap it from - the signer is the same one IzzyOnDroid, privacyguides and AppVerifier all record. asset_exclude drops the '-fdroid' flavour, which is built for F-Droid distribution and has its own updater wired differently.",
+      "upstream": "https://github.com/ImranR98/Obtainium",
+      "asset_exclude": "fdroid"
+    },
+    {
+      "id": "accrescent",
+      "label": "Accrescent",
+      "pkg": "app.accrescent.client",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "profiles": [
+        "home",
+        "cloud",
+        "gadgets",
+        "ops",
+        "lab",
+        "anon"
+      ],
+      "net": true,
+      "upstream": "https://github.com/accrescent/accrescent",
+      "notes": "A curated store with server-side pinned developer keys, in every zone so an app can be installed there interactively - without the host, and without waiting for the next provisioning run. Fetched from the project's own GitHub release, which is what accrescent.app links to for bootstrapping; the signer is the one privacyguides records for the client. The chain can put any already-installed package into a zone with pm install-existing, so this is for the case the chain cannot serve: you, standing in a zone, wanting something now."
+    },
+    {
+      "id": "appverifier",
+      "label": "AppVerifier",
+      "pkg": "dev.soupslurpr.appverifier",
+      "pkg_status": "verified",
+      "source": "accrescent",
+      "profiles": [
+        "home"
+      ],
+      "net": false,
+      "notes": "Use on every first install"
+    },
+    {
+      "id": "shizuku",
+      "label": "Shizuku",
+      "pkg": "moe.shizuku.privileged.api",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/RikkaApps/Shizuku",
+      "profiles": [
+        "home"
+      ],
+      "net": false
+    },
+    {
+      "id": "yubioath",
+      "label": "Yubico Authenticator",
+      "pkg": "com.yubico.yubioath",
+      "pkg_status": "verified",
+      "source": "manual",
+      "upstream": "https://github.com/Yubico/yubioath-flutter",
+      "profiles": [
+        "home",
+        "cloud"
+      ],
+      "net": false,
+      "notes": "GitHub releases contain no APK asset (as of 7.4.2) - get it via yubico.com or Play. Manual."
+    },
+    {
+      "id": "pocketpal",
+      "label": "PocketPal AI",
+      "pkg": "com.pocketpalai",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/a-ghorbani/pocketpal-ai",
+      "profiles": [
+        "home"
+      ],
+      "net": false,
+      "optional": true,
+      "notes": "Local inference, BUT the models are downloaded from huggingface.co (confirmed in the APK: /api/models, GGUF). INTERNET must be granted once for the model download and then revoked again.",
+      "net_setup": true
+    },
+    {
+      "id": "chatterui",
+      "label": "ChatterUI",
+      "pkg": "com.Vali98.ChatterUI",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/Vali-98/ChatterUI",
+      "profiles": [
+        "home"
+      ],
+      "net": false,
+      "optional": true,
+      "net_setup": true,
+      "notes": "Like PocketPal: local models have to be loaded first. Grant INTERNET once, then revoke. Can alternatively use remote APIs - in that case net:true would be correct."
+    },
+    {
+      "id": "davx5",
+      "label": "DAVx5",
+      "pkg": "at.bitfire.davdroid",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/bitfireAT/davx5-ose",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "notes": "CalDAV/CardDAV against mailbox.org"
+    },
+    {
+      "id": "teams",
+      "label": "MS Teams",
+      "pkg": "com.microsoft.teams",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "notes": "MAM-only, no enrollment",
+      "feature": "microsoft_365"
+    },
+    {
+      "id": "outlook",
+      "label": "MS Outlook",
+      "pkg": "com.microsoft.office.outlook",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "feature": "microsoft_365"
+    },
+    {
+      "id": "msauth",
+      "label": "MS Authenticator",
+      "pkg": "com.azure.authenticator",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "notes": "Own accounts/MFA. CORRECTION: the MAM broker on Android is the Company Portal, not the Authenticator (that applies to iOS). Stays in Cloud, NOT moved to Ops.",
+      "feature": "microsoft_365"
+    },
+    {
+      "id": "companyportal",
+      "label": "Intune Company Portal",
+      "pkg": "com.microsoft.windowsintune.companyportal",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "notes": "MAM broker on ANDROID. The Authenticator is the broker on iOS - on Android, Intune requires the Company Portal, even without enrollment. Just needs to be installed, no login needed. Without the app, Teams and Outlook won't run once CA \"require app protection policy\" kicks in.",
+      "feature": "microsoft_365"
+    },
+    {
+      "id": "azure",
+      "label": "Azure (Portal)",
+      "pkg": "com.microsoft.azure",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "ops"
+      ],
+      "net": true,
+      "notes": "Taken OUT of the MAM scope -> Ops stays broker-free."
+    },
+    {
+      "id": "gmaps",
+      "label": "Google Maps",
+      "pkg": "com.google.android.apps.maps",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "cloud"
+      ],
+      "net": true,
+      "notes": "WITHOUT an account. Only customer appointments/POI."
+    },
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "pkg": "com.google.android.youtube",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "cloud"
+      ],
+      "net": true,
+      "optional": true
+    },
+    {
+      "id": "rethinkdns",
+      "label": "RethinkDNS",
+      "pkg": "com.celzero.bravedns",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/celzero/rethink-app",
+      "profiles": [
+        "cloud",
+        "gadgets",
+        "work"
+      ],
+      "net": true,
+      "notes": "Occupies the VPN slot. Cloud=monitor, Gadgets=aggressive."
+    },
+    {
+      "id": "speediance",
+      "label": "Speediance",
+      "pkg": "com.speediance.speediance_mobile",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "gadgets"
+      ],
+      "net": true
+    },
+    {
+      "id": "bambu",
+      "label": "Bambu Handy",
+      "pkg": "bbl.intl.bambulab.com",
+      "pkg_status": "verified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "gadgets"
+      ],
+      "net": true,
+      "optional": true,
+      "notes": "ONLY if LAN mode + HA integration fail. bbl.intl.* = international variant (developer: Shanghai Lunkuo)."
+    },
+    {
+      "id": "orbot",
+      "label": "Orbot",
+      "pkg": "org.torproject.android",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/guardianproject/orbot-android",
+      "profiles": [
+        "anon"
+      ],
+      "net": true,
+      "notes": "Always-on VPN + 'block connections without VPN'. EXCLUDE Tor Browser."
+    },
+    {
+      "id": "lawnicons",
+      "label": "Lawnicons",
+      "pkg": "app.lawnchair.lawnicons",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/LawnchairLauncher/lawnicons",
+      "profiles": [
+        "home",
+        "cloud",
+        "gadgets",
+        "ops",
+        "lab",
+        "anon"
+      ],
+      "net": false,
+      "notes": "Icon pack (~7000 icons, unified style), selected by Andashi Home through config/launcher/<profile>.json (icons.pack) - nothing to tap. Clean stable releases upstream - no release_tag needed."
+    },
+    {
+      "id": "andashi-home",
+      "label": "Andashi Home",
+      "pkg": "org.andashi.home",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/andashi/home",
+      "profiles": [
+        "home",
+        "cloud",
+        "gadgets",
+        "ops",
+        "lab",
+        "anon"
+      ],
+      "net": false,
+      "notes": "The launcher this distribution ships. Deliberately NOT pinned: a release that does not reach the phones is not a release, and 0.3.0 alone closed eight security issues. A launcher release can change the config contract (0.3.0 dropped the clock keys and made home.dock.enabled inert), which is why andashi/home#47 exists - the build should report which keys it still serves. Pin it with release_tag only to hold a version deliberately, for debugging or to sit out a bad release.",
+      "perms": {
+        "grant": [
+          "android.permission.READ_CONTACTS"
+        ],
+        "only_profiles": [
+          "home"
+        ]
+      }
+    },
+    {
+      "id": "heliboard",
+      "label": "HeliBoard",
+      "pkg": "helium314.keyboard",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/Helium314/HeliBoard",
+      "profiles": [
+        "home",
+        "cloud",
+        "gadgets",
+        "ops",
+        "lab",
+        "anon"
+      ],
+      "net": false,
+      "notes": "Keyboard for all profiles, follows the Monet profile color (dynamic colors). Declares NO INTERNET permission itself - net:false is a no-op, but documents the target state. fetch.sh excludes the nouserlib variant. 40-theming.sh sets it as the default IME."
+    },
+    {
+      "id": "ips",
+      "label": "Inter Profile Sharing",
+      "pkg": "digital.ventral.ips",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/VentralDigital/InterProfileSharing",
+      "profiles": [
+        "home",
+        "cloud"
+      ],
+      "net": true,
+      "feature": "inter_profile_sharing",
+      "perms": {
+        "grant": [
+          "android.permission.INTERACT_ACROSS_USERS",
+          "android.permission.POST_NOTIFICATIONS"
+        ]
+      },
+      "notes": "net:true is MANDATORY: on Android, INTERNET gates every AF_INET socket creation, even 127.0.0.1. Without it, the listener on port 2411 never comes up and the app would be silently non-functional. POST_NOTIFICATIONS is needed because receiving happens via a notification in the target profile - without it, shared content silently never arrives. Hangs off the inter_profile_sharing feature (config/features.json), OFF by default - only the switch triggers installation and grants. Accrescent is the recommended source on the device; obtainium/GitHub serves automation."
+    },
+    {
+      "id": "shelter",
+      "label": "Shelter",
+      "pkg": "net.typeblog.shelter",
+      "pkg_status": "verified",
+      "source": "fdroid",
+      "upstream": "https://github.com/PeterCxy/Shelter",
+      "profiles": [
+        "home"
+      ],
+      "net": false,
+      "feature": "work_profile",
+      "notes": "Profile owner of the work profile (profiles.json: work.profile_owner). Must be in Home, otherwise dpm set-profile-owner fails and work stays a profile without an owner. No internet needed. UNTESTED whether Intune MAM runs inside a Shelter profile - needs hardware with sandboxed Play."
+    },
+    {
+      "id": "molly",
+      "label": "Molly",
+      "pkg": "im.molly.app",
+      "pkg_status": "verified",
+      "source": "obtainium",
+      "upstream": "https://github.com/mollyim/mollyim-android",
+      "profiles": [
+        "anon"
+      ],
+      "net": true,
+      "optional": true,
+      "notes": "Never with a personal number/logins"
+    },
+    {
+      "id": "gmail",
+      "label": "Gmail",
+      "pkg": "com.google.android.gm",
+      "pkg_status": "unverified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "feature": "google_workspace",
+      "notes": "Google Workspace counterpart to Outlook."
+    },
+    {
+      "id": "gdrive",
+      "label": "Google Drive",
+      "pkg": "com.google.android.apps.docs",
+      "pkg_status": "unverified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "feature": "google_workspace",
+      "notes": "Google Workspace counterpart to OneDrive/Teams file storage."
+    },
+    {
+      "id": "gcalendar",
+      "label": "Google Calendar",
+      "pkg": "com.google.android.calendar",
+      "pkg_status": "unverified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "feature": "google_workspace",
+      "notes": "Google Workspace calendar; the work profile's calendar stays separate from DAVx5 in Home."
+    },
+    {
+      "id": "gdevicepolicy",
+      "label": "Android Device Policy",
+      "pkg": "com.google.android.apps.enterprise.dmagent",
+      "pkg_status": "unverified",
+      "source": "play-sandboxed",
+      "profiles": [
+        "work"
+      ],
+      "net": true,
+      "feature": "google_workspace",
+      "notes": "The MAM agent, Google's counterpart to Intune Company Portal - this is the app the architectural claim hinges on. UNTESTED whether it accepts a Shelter-owned profile, same open question as Intune (features.json: work_profile)."
+    }
+  ]
+}

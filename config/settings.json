@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "Private DNS is GLOBAL on Android -> gets disabled because it collides with",
+    "the per-profile VPNs (Tailscale/RethinkDNS/Orbot). See docs/architecture/zones.md.",
+    "per_profile does NOT override all_profiles - jq '*' merges, right side wins."
+  ],
+  "global": {
+    "private_dns_mode": "off"
+  },
+  "all_profiles": {
+    "secure": {},
+    "system": {}
+  },
+  "per_profile": {
+    "home":    { "secure": {}, "system": {} },
+    "cloud":   { "secure": {}, "system": {} },
+    "gadgets": { "secure": {}, "system": {} },
+    "ops":     { "secure": {}, "system": {} },
+    "lab":     { "secure": {}, "system": {} },
+    "anon":    { "secure": {}, "system": {} }
+  }
+}

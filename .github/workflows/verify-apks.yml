@@ -1,0 +1,70 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON configuration
+        run: |
+          for f in config/*.json; do jq -e . "$f" >/dev/null && echo "ok: $f"; done
+      - name: Catalog consistency
+        run: |
+          # Every profile in apps.json must exist in profiles.json
+          known=$(jq -r '.profiles[].key' config/profiles.json | sort -u)
+          used=$(jq -r '.apps[].profiles[]' config/apps.json | sort -u)
+          bad=$(comm -13 <(echo "$known") <(echo "$used"))
+          [ -z "$bad" ] || { echo "Unknown profiles in apps.json: $bad"; exit 1; }
+          # Package names unique
+          dupes=$(jq -r '.apps[].pkg' config/apps.json | sort | uniq -d)
+          [ -z "$dupes" ] || { echo "Duplicate package names: $dupes"; exit 1; }
+          # IDs unique
+          dupes=$(jq -r '.apps[].id' config/apps.json | sort | uniq -d)
+          [ -z "$dupes" ] || { echo "Duplicate app IDs: $dupes"; exit 1; }
+          echo "Catalog consistent: $(jq '.apps|length' config/apps.json) apps"
+      - name: Show open unverified package names
+        # Block scalar, not a plain one: the jq program contains ": ", which
+        # YAML would read as a mapping. That single line made the whole file
+        # unparseable, so this workflow never ran at all until 2026-09-20.
+        run: |
+          jq -r '.apps[]|select(.pkg_status=="unverified")|"TODO check package name: \(.label) -> \(.pkg)"' config/apps.json
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: bash -n
+        run: for f in $(find . -name '*.sh'); do bash -n "$f"; done
+      - name: shellcheck
+        run: shellcheck -S warning $(find . -name '*.sh') || true
+
+  # The binaries are deliberately not in git, so hashes and signer certificates
+  # cannot be verified here - apks/verify.sh would find nothing and exit 0,
+  # which is a green light for work not done. That check belongs where the
+  # binaries are: `make apks` locally, before a pin is committed.
+  # What IS checkable without binaries is whether the pins and the catalog
+  # still describe the same set of apps.
+  pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pins match the catalog
+        run: |
+          fail=0
+          for f in apks/certs/*.cert; do
+            p="$(basename "$f" .cert)"
+            jq -e --arg p "$p" '.apps[]|select(.pkg==$p)' config/apps.json >/dev/null \
+              || { echo "orphaned certificate: $p is not in config/apps.json"; fail=1; }
+          done
+          while read -r p; do
+            [ -z "$p" ] && continue
+            jq -e --arg p "$p" '.apps[]|select(.pkg==$p)' config/apps.json >/dev/null \
+              || { echo "orphaned hash: $p is not in config/apps.json"; fail=1; }
+          done < <(awk '{print $2}' apks/SHA256SUMS | sed 's|.*/||; s|-[0-9].*||' | sort -u)
+          [ "$fail" = "0" ] && echo "pins consistent: $(ls apks/certs/*.cert | wc -l) certificates"
+          exit $fail

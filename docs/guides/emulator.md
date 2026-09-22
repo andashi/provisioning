@@ -1,0 +1,211 @@
+# Emulator
+
+The everyday target. It proves everything that does not need Google's servers or
+real radios — see
+[../architecture/zones.md](../architecture/zones.md#what-the-emulator-cannot-prove)
+for the line between the two.
+
+## Build it once
+
+```bash
+emulator/build.sh prereqs          # hard check before anything else
+tmux new -s gos 'emulator/build.sh all'
+```
+
+Sync and build run for hours, so they belong in a terminal multiplexer, not in a
+session that can be closed. The result is a `sdk_phone64_x86_64` userdebug build of
+the GrapheneOS tree, signed with test keys.
+
+## Run it
+
+Without `SERIAL` and `OVERLAY_DIR`, every command below addresses the **working
+instance** `emulator-5554` on the build tree. Export the pair first to work on a
+test instance — they always travel together, see [below](#one-instance-per-session).
+
+```bash
+export SERIAL=emulator-5558 OVERLAY_DIR=$PWD/emulator/instances/test-2
+
+emulator/run.sh start              # cold boot, 1.5–2 min
+SNAPSHOT=clean emulator/run.sh start   # load a snapshot instead, ~7 s
+emulator/run.sh status
+emulator/run.sh snapshot <name>    # save
+emulator/run.sh restore <name>     # load into the running instance
+emulator/run.sh stop               # waits for the process to be gone
+```
+
+`restore` and `snapshot` fail on the console's `KO:` reply — adb itself exits 0
+there, which is exactly the kind of proxy success
+[provisioning.md](../architecture/provisioning.md#verifying-and-the-one-recurring-defect)
+warns about. Saving works despite `-no-snapshot-save`: that flag only drops the
+quickboot save on exit. `READ_ONLY=1` discards all writes, but it disables
+snapshots entirely, loading included.
+
+Then point the chain at the same instance — `provision/` reads `ADB_SERIAL`, not
+`SERIAL`:
+
+```bash
+ADB_SERIAL=$SERIAL provision/run.sh
+```
+
+## One instance per session
+
+An instance is a serial **plus** an overlay directory, and the two always travel
+together. `run.sh start` refuses an `OVERLAY_DIR` that another running emulator
+already uses. Each instance gets its own qcow2 overlays over the read-only build
+images and its own AVD identity, so instances never touch each other's disks.
+
+| Serial | `OVERLAY_DIR` | Belongs to |
+|---|---|---|
+| `emulator-5554` | none (build tree) | the working instance: interactive, manual |
+| `emulator-5556` | `emulator/instances/test` | launcher e2e from the [andashi/home](https://github.com/andashi/home) repo |
+| `emulator-5558` | `emulator/instances/test-2` | this repo's verification runs |
+| `emulator-5560` | `emulator/instances/test-fold` | foldable, for the launcher's grid tests on the Fold |
+
+```bash
+SERIAL=emulator-5558 OVERLAY_DIR=$PWD/emulator/instances/test-2 emulator/run.sh start
+```
+
+Each instance costs a few GB of RAM. Two side by side are comfortable on a large
+host, but a cold boot of the second one under load takes minutes, not seconds.
+
+## The lock
+
+Several sessions work on this repository at once and they all drive emulators. Two
+of them on the same instance do not fail loudly — taps land in the wrong app, a
+user switch fires mid-run, and the result looks like a flaky script rather than a
+collision.
+
+```bash
+emulator/device-lock.sh status                  # every held instance
+emulator/device-lock.sh acquire <owner> [serial]
+emulator/device-lock.sh release <owner> [serial]
+emulator/device-lock.sh steal   <owner> [serial]   # prints who lost it
+```
+
+The lock is **per instance**. Without an argument the serial comes from `SERIAL`,
+then `ADB_SERIAL`, then `ANDROID_SERIAL`. Scripts put serial and pid in the owner
+name (`l4-config@emulator-5556#<pid>`); `acquire` is re-entrant for the same owner.
+
+It is **advisory**. Nothing stops a session from using adb without asking — it
+works only because everyone checks first. `status` before any adb run is the habit
+that makes it worth having.
+
+## The foldable instance
+
+The everyday image is a phone. `emulator-5560` makes the same build behave as a
+foldable, so the launcher's grid can be tested against the device this
+distribution actually targets — 1080×2364 closed, 2076×2152 open, four device
+states.
+
+```bash
+export SERIAL=emulator-5560 OVERLAY_DIR=$PWD/emulator/instances/test-fold
+FOLDABLE=1 emulator/run.sh start     # only the FIRST start needs the flag
+emulator/run.sh foldable-setup       # once, before the clean snapshot
+emulator/run.sh snapshot clean
+
+# in scripts
+adb -s $SERIAL shell cmd device_state state 0       # fold
+adb -s $SERIAL shell cmd device_state state 2       # unfold (or: state reset)
+```
+
+`FOLDABLE=1` matters only while the overlay directory is created: instead of
+symlinking `config.ini` and `advancedFeatures.ini` from the build tree, it writes
+real ones — the Pixel 10 Pro Fold geometry plus `SupportPixelFold = on`, without
+which the emulator never creates a second built-in display. `hw.device.name` has
+to stay `pixel_fold`; with `pixel_10_pro_fold` no second display appears.
+
+### Why the hinge sensor alone does nothing
+
+Three layers have to agree, and the AVD config is only the first:
+
+| | What it does | Where it comes from |
+|---|---|---|
+| hinge sensor | reports an **angle** | `hw.sensor.hinge*` in `config.ini` |
+| `device_state_configuration.xml` | turns angles into **states** | `/data/system/devicestate/`, else `/vendor/etc/devicestate/` (`DeviceStateProviderImpl.java`) |
+| `display_layout_configuration.xml` | turns a state into a **display layout** | `/data/system/displayconfig/` (`DeviceStateToLayoutMap.java`) |
+
+Set the sensor keys alone and the states appear while `wm size` never changes —
+measured, and the reason `foldable-setup` exists. It places both tables by hand
+into the userdata overlay, where the `clean` snapshot then carries them, and
+enables the two shipped-but-disabled RROs that hold the foldable framework
+resources.
+
+Two layers are already in our image: the symlink
+`vendor/etc/displayconfig -> /data/system/displayconfig` from `GoldfishSkinConfig`,
+and an init trigger that copies a state table the emulator hands over at boot.
+The emulator only hands it over for a foldable AVD, though: on this instance
+`ro.boot.qemu.device_state` is empty and `init.svc.ranchu-device-state` stays
+`stopped`. Hence by hand, once.
+
+**A foldable build does not solve this.** `EMULATOR_DEVICE_TYPE_FOLDABLE=true`
+copies the same four files to `/data/misc/pixel_fold/` (`base_phone.mk:33`),
+which is not a path the framework reads — hours of build time and a second image
+to keep current, for files nobody opens.
+
+**What this instance does not prove.** Folding here is bolted onto a phone image,
+so it tests what the software makes of two displays and four states. It says
+nothing about GrapheneOS's own foldable handling on real hardware, where both
+tables come from the vendor partition.
+
+## Snapshots
+
+- **`clean`** — first boot of the build, Owner only, nothing provisioned. The base
+  for one specific claim: *the whole chain works on a device where nothing has been
+  prepared*. A run meant to prove that has to start here. Everyday runs do not.
+- **`profiles-ready`** — `clean` plus `provision/00-profiles.sh` and nothing else.
+  The everyday base, for launcher work and for anything downstream of profile
+  creation. It is script-produced, not hand-repaired, so a run from here is a
+  smaller claim, not a weaker one — it simply says nothing about how the chain
+  behaves before the profiles exist. It re-runs `00-profiles.sh` anyway, so drift
+  from `config/profiles.json` is reconciled and becomes visible.
+
+Pick the base by the claim you want to make, not by habit.
+
+```bash
+ls emulator/instances/<dir>/snapshots/          # without booting
+adb -s <serial> emu avd snapshot list           # while running
+```
+
+A run that starts from a snapshot runs writable, and that is safe: loading resets
+RAM and disks, and nothing is written back unless someone runs `run.sh snapshot`.
+
+### Refreshing `profiles-ready`
+
+Whoever changes `config/profiles.json` refreshes `profiles-ready` on every instance
+that uses it, in the same session. A stale one does not fail runs, it just makes
+them slow again. The order is the part people get wrong:
+
+```bash
+export SERIAL=emulator-5558 OVERLAY_DIR=$PWD/emulator/instances/test-2
+emulator/device-lock.sh acquire "$USER@$SERIAL"
+SNAPSHOT=clean emulator/run.sh start         # writable, so no READ_ONLY
+ADB_SERIAL=$SERIAL bash provision/00-profiles.sh    # 49 s to 1m46s from clean
+emulator/run.sh snapshot profiles-ready      # overwrites the old one
+emulator/run.sh restore clean                # leave the live disk at clean
+emulator/run.sh stop
+emulator/device-lock.sh release "$USER@$SERIAL"
+```
+
+The `restore clean` at the end matters: without it the instance's live disk carries
+the provisioned state, and the next run that forgets `SNAPSHOT=` starts from it.
+
+### Adding an instance
+
+Next free even port — the odd one above it is its adb port — and a new directory
+under `emulator/instances/`:
+
+```bash
+export SERIAL=emulator-5560 OVERLAY_DIR=$PWD/emulator/instances/test-3
+emulator/device-lock.sh acquire "$USER@$SERIAL"
+emulator/run.sh start                        # creates the overlays, first boot ~2 min
+adb -s $SERIAL shell cat /proc/loadavg       # wait for the first value below ~2.5
+emulator/run.sh snapshot clean
+```
+
+Waiting for the load to settle is not politeness: a snapshot taken during first-boot
+dexopt captures that work and hands it to everyone who loads it afterwards.
+
+The instance is now running at `clean`, so continue with the `profiles-ready` steps
+above. Cost per instance: about 4 GB of overlays, another ~3.5 GB per snapshot, and
+a few GB of RAM while it runs. Add a row to the table above so the next session
+knows the instance is taken.

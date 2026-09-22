@@ -1,0 +1,244 @@
+{
+  "apps": [
+    {
+      "id": "org.thoughtcrime.securesms",
+      "url": "https://github.com/signalapp/Signal-Android",
+      "author": "signalapp",
+      "name": "Signal",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "app.alextran.immich",
+      "url": "https://github.com/immich-app/immich",
+      "author": "immich-app",
+      "name": "Immich",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "io.homeassistant.companion.android",
+      "url": "https://github.com/home-assistant/android",
+      "author": "home-assistant",
+      "name": "Home Assistant",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "com.tailscale.ipn",
+      "url": "https://github.com/tailscale/tailscale-android",
+      "author": "tailscale",
+      "name": "Tailscale",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "com.x8bit.bitwarden",
+      "url": "https://github.com/bitwarden/android",
+      "author": "bitwarden",
+      "name": "Bitwarden",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "org.polymorphicshade.tubular",
+      "url": "https://github.com/polymorphicshade/Tubular",
+      "author": "polymorphicshade",
+      "name": "Tubular",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "app.comaps",
+      "url": "https://codeberg.org/comaps/comaps",
+      "author": "comaps",
+      "name": "CoMaps",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "com.governikus.ausweisapp2",
+      "url": "https://github.com/Governikus/AusweisApp2",
+      "author": "Governikus",
+      "name": "AusweisApp",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "org.torproject.torbrowser",
+      "url": "https://guardianproject.info/fdroid/repo/org.torproject.torbrowser",
+      "author": "Guardian Project",
+      "name": "Tor Browser",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "net.sourceforge.opencamera",
+      "url": "https://f-droid.org/packages/net.sourceforge.opencamera",
+      "author": "F-Droid",
+      "name": "Open Camera",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "dev.imranr.obtainium",
+      "url": "https://github.com/ImranR98/Obtainium",
+      "author": "ImranR98",
+      "name": "Obtainium",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "app.accrescent.client",
+      "url": "https://github.com/accrescent/accrescent",
+      "author": "accrescent",
+      "name": "Accrescent",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "moe.shizuku.privileged.api",
+      "url": "https://github.com/RikkaApps/Shizuku",
+      "author": "RikkaApps",
+      "name": "Shizuku",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "com.pocketpalai",
+      "url": "https://github.com/a-ghorbani/pocketpal-ai",
+      "author": "a-ghorbani",
+      "name": "PocketPal AI",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "com.Vali98.ChatterUI",
+      "url": "https://github.com/Vali-98/ChatterUI",
+      "author": "Vali-98",
+      "name": "ChatterUI",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "at.bitfire.davdroid",
+      "url": "https://github.com/bitfireAT/davx5-ose",
+      "author": "bitfireAT",
+      "name": "DAVx5",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "com.celzero.bravedns",
+      "url": "https://github.com/celzero/rethink-app",
+      "author": "celzero",
+      "name": "RethinkDNS",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "org.torproject.android",
+      "url": "https://github.com/guardianproject/orbot-android",
+      "author": "guardianproject",
+      "name": "Orbot",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "app.lawnchair.lawnicons",
+      "url": "https://github.com/LawnchairLauncher/lawnicons",
+      "author": "LawnchairLauncher",
+      "name": "Lawnicons",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "org.andashi.home",
+      "url": "https://github.com/andashi/home",
+      "author": "andashi",
+      "name": "Andashi Home",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "helium314.keyboard",
+      "url": "https://github.com/Helium314/HeliBoard",
+      "author": "Helium314",
+      "name": "HeliBoard",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "digital.ventral.ips",
+      "url": "https://github.com/VentralDigital/InterProfileSharing",
+      "author": "VentralDigital",
+      "name": "Inter Profile Sharing",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "net.typeblog.shelter",
+      "url": "https://f-droid.org/packages/net.typeblog.shelter",
+      "author": "F-Droid",
+      "name": "Shelter",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
+      "id": "im.molly.app",
+      "url": "https://github.com/mollyim/mollyim-android",
+      "author": "mollyim",
+      "name": "Molly",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    }
+  ]
+}

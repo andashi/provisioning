@@ -1,0 +1,33 @@
+{
+  "appearance": {
+    "transparency": {
+      "background": 0.31,
+      "elevatedSurface": 0.31,
+      "name": "fold-glass",
+      "surface": 0.31
+    },
+    "wallpaper": {
+      "image": "anon.jpg",
+      "target": "both"
+    }
+  },
+  "home": {
+    "dock": {
+      "enabled": true,
+      "favorites": []
+    },
+    "searchBar": {
+      "position": "bottom"
+    },
+    "widgets": {
+      "enabled": false,
+      "widgets": []
+    }
+  },
+  "icons": {
+    "enforceThemed": true,
+    "pack": "app.lawnchair.lawnicons",
+    "themed": true
+  },
+  "schemaVersion": 1
+}

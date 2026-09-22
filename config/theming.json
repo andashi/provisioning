@@ -1,0 +1,123 @@
+{
+  "_comment": [
+    "ONE source for the visual identity. Every profile gets",
+    "its own Monet palette; Home is deliberately colorless (glass) - color now",
+    "signals 'you are NOT home'.",
+    "",
+    "launcher = which entry in .launchers gets the HOME role (40-theming.sh) and the",
+    "generated config (45-launcher-config.sh). Only Andashi Home is supported: the",
+    "release build (andashi-home) and its debug build (andashi-home-debug) for the",
+    "fork's e2e runs. Other launchers were dropped on purpose - each of them needed",
+    "UI automation that could type but never read back. Per entry: pkg, config,",
+    "wallpaper, transparency, widgets.",
+    "wallpaper: true means the launcher applies appearance.wallpaper from its config",
+    "(Andashi Home 0.2.0+): gen-launcher.sh emits the key and 45-launcher-config.sh",
+    "uploads the image only then. Keep it false while an older release is pinned.",
+    "config: true means the launcher has a machine interface: provisioning pushes a",
+    "generated config/launcher/<profile>.json into the app's files dir and triggers",
+    "a reload + read-back verification (45-launcher-config.sh).",
+    "andashi-home is the fork (Andashi Home, org.andashi.home), the launcher this",
+    "distribution ships; andashi-home-debug is the same launcher as debug build for",
+    "the emulator tests (e2e/l4-*.sh in the fork use LAUNCHER_CONFIG_KEY=andashi-home-debug).",
+    "transparency: liquid-glass values 0..1 (0=transparent) for background, surface,",
+    "elevated; gen-launcher.sh turns them into the 'fold-glass' scheme in the launcher config.",
+    "",
+    "palette = Monet seed (hex without #). SystemUI generates the color overlays from it",
+    "live (verified on emu64x: com.android.systemui:accent/neutral get [x]).",
+    "color_source=preset pins the color - changing the wallpaper does NOT change it.",
+    "style: TONAL_SPOT | VIBRANT | EXPRESSIVE | RAINBOW | FRUIT_SALAD | MONOCHROMATIC.",
+    "night: 2=dark 1=light 0=auto (secure/ui_night_mode). Takes effect immediately",
+    "for the active profile (cmd uimode), for background profiles only on the next profile switch.",
+    "icon_blacklist: hidden statusbar icons, comma-separated - keep the bar calm.",
+    "wallpaper: repo-relative path (themes/...), applied by Andashi Home itself for",
+    "home+lock screen: gen-launcher.sh puts appearance.wallpaper into the profile's",
+    "launcher.json, 45-launcher-config.sh uploads the image into the launcher's ingest",
+    "provider and reloads; the launcher reports the applied image in its read-back and",
+    "reapplies only when the file or the system wallpaper changed. Needs wallpaper: true",
+    "on the launcher entry (0.2.0+). 40-theming.sh restarts the launcher after a palette",
+    "change, because launchers cache icon tints until the process ends.",
+    "favorites (per profile): app LABELS, resolved by gen-launcher.sh against the catalog",
+    "(a label that does not resolve to exactly one entry fails generation) and written as",
+    "home.dock.favorites objects ({packageName: ...}) in the generated config.",
+    "WHAT THEY DO IN 0.3.0: the apps are pinned - they show up in the launcher's favorites",
+    "section in search and in the apps widget. They do NOT produce a dock band at the bottom:",
+    "that renderer hung in the clock widget and fell with it (andashi/home, 0.3.0). The key",
+    "home.dock.enabled is therefore inert for now and stays in the contract on purpose,",
+    "because the dock returns with the HomeGrid work (andashi/home ADR 0001) and removing",
+    "plus reintroducing it would be two contract changes instead of none.",
+    "Apps that aren't installed yet (e.g. Play apps on the emulator) simply are not pinned.",
+    "WARNING, unlike settings.json: per_profile WINS over all_profiles here.",
+    "All packages (launchers, keyboard_pkg) must be in the catalog",
+    "(10-apps.sh installs them), 40-theming.sh only activates (role, IME, wallpaper)."
+  ],
+  "launcher": "andashi-home",
+  "launchers": {
+    "andashi-home": {
+      "pkg": "org.andashi.home",
+      "config": true,
+      "wallpaper": true,
+      "transparency": {
+        "background": 0.31,
+        "surface": 0.31,
+        "elevated": 0.31
+      },
+      "widgets": []
+    },
+    "andashi-home-debug": {
+      "pkg": "org.andashi.home.debug",
+      "config": true,
+      "wallpaper": true,
+      "transparency": {
+        "background": 0.31,
+        "surface": 0.31,
+        "elevated": 0.31
+      },
+      "widgets": []
+    }
+  },
+  "keyboard_pkg": "helium314.keyboard",
+  "global": {
+    "window_animation_scale": "0.7",
+    "transition_animation_scale": "0.7",
+    "animator_duration_scale": "0.7"
+  },
+  "all_profiles": {
+    "night": "2",
+    "icon_blacklist": "volume,alarm_clock,headset"
+  },
+  "per_profile": {
+    "home": {
+      "palette": "D8DEE9",
+      "style": "MONOCHROMATIC",
+      "wallpaper": "themes/synthwave/{aspect}/home.jpg",
+      "favorites": []
+    },
+    "cloud": {
+      "palette": "4285F4",
+      "style": "TONAL_SPOT",
+      "favorites": [],
+      "wallpaper": "themes/synthwave/{aspect}/cloud.jpg"
+    },
+    "gadgets": {
+      "palette": "F9AB00",
+      "style": "TONAL_SPOT",
+      "wallpaper": "themes/synthwave/{aspect}/gadgets.jpg"
+    },
+    "ops": {
+      "palette": "7C4DFF",
+      "style": "TONAL_SPOT",
+      "favorites": [],
+      "wallpaper": "themes/synthwave/{aspect}/ops.jpg"
+    },
+    "lab": {
+      "palette": "00BCD4",
+      "style": "TONAL_SPOT",
+      "wallpaper": "themes/synthwave/{aspect}/lab.jpg"
+    },
+    "anon": {
+      "palette": "9E9E9E",
+      "style": "MONOCHROMATIC",
+      "wallpaper": "themes/synthwave/{aspect}/anon.jpg"
+    }
+  }
+}

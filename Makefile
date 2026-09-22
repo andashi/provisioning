@@ -1,0 +1,57 @@
+.DEFAULT_GOAL := help
+SHELL := /usr/bin/env bash
+
+help:  ## This overview
+	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}'
+
+check: ## Check JSON + bash syntax + catalog consistency locally
+	@for f in config/*.json; do jq -e . $$f >/dev/null && echo "ok: $$f"; done
+	@for f in $$(find . -name '*.sh'); do bash -n $$f || exit 1; done; echo "ok: bash -n"
+	@dupes=$$(jq -r '.apps[].pkg' config/apps.json | sort | uniq -d); \
+	  [ -z "$$dupes" ] || { echo "Duplicate packages: $$dupes"; exit 1; }; echo "ok: catalog"
+	@unreachable=$$(jq -r -n --slurpfile a config/apps.json --slurpfile p config/profiles.json \
+	  '($$p[0].profiles | INDEX(.key)) as $$z | $$a[0].apps[] | select(.needs? == "tailnet") | . as $$app \
+	   | (.profiles // [])[] | . as $$k | ($$z[$$k].vpn // "") as $$vpn \
+	   | select(($$vpn | startswith("tailscale")) | not) \
+	   | "  \($$app.label) is in \($$k), whose VPN slot is \($$vpn)"'); \
+	  [ -z "$$unreachable" ] || { echo "apps that need the private tailnet, in zones that cannot reach it:"; \
+	    echo "$$unreachable"; echo "  a zone has ONE always-on VPN slot - see docs/architecture/zones.md"; exit 1; }; \
+	  echo "ok: tailnet reachability"
+	@t=$$(mktemp); OUT=$$t config/gen-obtainium.sh >/dev/null; \
+	  if diff -q <(jq -S . $$t) <(jq -S . config/obtainium.json) >/dev/null; then \
+	    echo "ok: obtainium.json in sync"; else \
+	    echo "obtainium.json is stale - run 'make obtainium'"; diff <(jq -S . config/obtainium.json) <(jq -S . $$t) | head -20; \
+	    rm -f $$t; exit 1; fi; rm -f $$t
+	@t=$$(mktemp -d); OUT_DIR=$$t config/gen-launcher.sh >/dev/null; \
+	  if diff -rq config/launcher $$t >/dev/null; then \
+	    echo "ok: launcher/*.json in sync"; else \
+	    echo "config/launcher is stale - run 'make launcher-config'"; diff -r config/launcher $$t | head -20; \
+	    rm -rf $$t; exit 1; fi; rm -rf $$t
+
+todo: ## List unverified package names
+	@jq -r '.apps[]|select(.pkg_status=="unverified")|"  \(.label)  ->  \(.pkg)"' config/apps.json
+
+obtainium: ## Regenerate config/obtainium.json
+	@config/gen-obtainium.sh
+
+launcher-config: ## Regenerate config/launcher/*.json
+	@config/gen-launcher.sh
+
+manual: ## Regenerate MANUAL.md
+	@provision/90-manual.sh
+
+update: ## Fetch newer APKs, verify them, bring every zone to them
+	@apks/fetch.sh
+	@apks/verify.sh
+	@provision/run.sh
+
+apks: ## Verify APK hashes + signer certs (offline)
+	@apks/verify.sh
+
+provenance: ## Re-audit where each pinned signer comes from (needs network)
+	@apks/provenance.sh
+
+emulator: ## Check emulator prerequisites
+	@emulator/build.sh prereqs
+
+.PHONY: help check todo obtainium launcher-config manual update apks provenance emulator

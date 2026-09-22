@@ -1,0 +1,27 @@
+# APK binaries are NOT checked in (license + repo size).
+# Only SHA256SUMS + certs/ stay checked in, as the trust anchor.
+apks/**/*.apk
+apks/**/*.idsig
+apks/**/*.xapk
+
+# Generated artifacts
+/MANUAL.md
+*.log
+.provision-state/
+
+# Emulator build (huge, lives outside the repo; listed here as a safety net)
+emulator/out/
+emulator/src/
+# Emulator test-instance overlays (qcow2 + snapshot state, machine-local)
+emulator/instances/
+
+# Secrets
+*.key
+*.pem
+
+# Claude Code: local session settings (permissions are a per-machine decision,
+# not something a distributed repo should grant on its behalf)
+.claude/settings.local.json
+
+# Screenshot and report staging, not part of the distribution
+.artifact/
