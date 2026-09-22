@@ -255,7 +255,14 @@ configure_profile() {   # $1=profile-key
   # "personal" is the default and disappears, "work" is not and survives. A
   # verbatim comparison therefore rejected every zone with a favorite in the
   # personal profile, reporting a mismatch for a config that had converged
-  # correctly (provisioning#2, found from the launcher side 2026-09-22).
+  # correctly (reported from the launcher side 2026-09-22; the thread is in
+  # ~/Development/andashi/issues-archive-provisioning/issue-6.md, from before
+  # this repository was reset - the issue numbers here are not the same ones).
+  #
+  # Schema v2 adds a second reason to compare meaning rather than text: the
+  # device completes what we left open. Grid items are pushed without geometry,
+  # the launcher places them and writes the coordinates back, so the document
+  # that comes back is richer than the one that went out - by design.
   #
   # So both sides are canonicalised into the long form before comparing. The
   # normalisation is deliberately narrow: a swallowed favorite, a changed
@@ -266,14 +273,42 @@ configure_profile() {   # $1=profile-key
     || { problem "$key" "$label: state provider did not serve /config"; return 1; }
   mism="$(jq -r -n --argjson eff "$eff" --slurpfile want "$cfgfile" '
     def canon:
-      if ((.home.dock.favorites // null) | type) == "array" then
-        .home.dock.favorites |= map(
-          if type == "string" then { packageName: ., profile: "personal" }
-          else { packageName: .packageName, profile: (.profile // "personal") }
-          end)
-      else . end;
-    ($want[0] | canon) as $w
-    | ($eff | canon) as $e
+      # v1 -> v2 shape first, so a file we still generate as v1 can be compared
+      # against a launcher that has already migrated it. That transition is the
+      # normal state for a while: the contract is merged upstream but not in a
+      # release, and 0.3.1 rejects a v2 document outright
+      # ("unsupported-schema-version", measured 2026-09-22).
+      (if (.home.dock.favorites // null) != null
+         then .home.favorites = .home.dock.favorites else . end)
+      | del(.home.dock)
+      | del(.home.widgets.widgets)
+      | (if ((.home.favorites // null) | type) == "array" then
+         .home.favorites |= map(
+           if type == "string" then { packageName: ., profile: "personal" }
+           else { packageName: .packageName, profile: (.profile // "personal") }
+           end)
+       else . end)
+      # Geometry is the DEVICE'"'"'s to decide: the generator omits x/y/w/h, the
+      # launcher places the item and writes the coordinates back (schema v2).
+      # So compare what we declared - which items exist, in which layout, as
+      # which widget - and leave where they sit to the device. Everything else
+      # in the grid stays ours: a different column count, a flipped `locked`
+      # or a swallowed item all remain mismatches.
+      | (if ((.home.grid.layouts // null) | type) == "object" then
+           .home.grid.layouts |= with_entries(
+             .value.items |= map({ id: .id, widget: .widget, profile: (.profile // "personal") }))
+         else . end);
+    # A grid only exists on one side while the generator still emits v1 - the
+    # launcher migrates and invents one. Comparing that would report a
+    # difference for something we never declared, so the grid is only compared
+    # when BOTH sides have one.
+    def drop_grid_if_one_sided($other):
+      if (.home.grid // null) == null or ($other.home.grid // null) == null
+        then del(.home.grid) else . end;
+    ($want[0] | canon) as $w0
+    | ($eff | canon) as $e0
+    | ($w0 | drop_grid_if_one_sided($e0)) as $w
+    | ($e0 | drop_grid_if_one_sided($w0)) as $e
     | [ "schemaVersion", "icons", "appearance", "home" ]
     | map(select($e[.] != $w[.]))
     | join(", ")')"
