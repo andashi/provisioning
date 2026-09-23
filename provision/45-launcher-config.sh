@@ -240,7 +240,7 @@ configure_profile() {   # $1=profile-key
   # The launcher records the sha256 of the file it last loaded plus success /
   # error details. A matching sha with success=false is a failure with an
   # explanation from the launcher itself - surface it, don't retry it away.
-  local attempt=0 diag got_sha success n_diag
+  local attempt=0 diag got_sha success n_diag fatal_diag
   while [ $attempt -lt 30 ]; do
     if diag="$(query_state diagnostics "$uid")"; then
       got_sha="$(printf '%s' "$diag" | jq -r '.configSha256 // empty')"
@@ -262,6 +262,28 @@ configure_profile() {   # $1=profile-key
             warn "$label: converged, but the launcher reported $n_diag diagnostic(s):"
             printf '%s' "$diag" \
               | jq -r '(.diagnostics // [])[] | "     \(.severity // "?") \(.code // "?") \(.path // "-") \(.message // "")"' >&2
+          fi
+          # One of them is not a warning but a failure: the launcher saying
+          # that appearance.transparency no longer does anything (0.5.0
+          # replaced it with appearance.glass, andashi/home#24). It means this
+          # host still generates the pre-glass shape against a release that has
+          # moved on - the zone then runs on the glass defaults of the launcher
+          # while the catalog claims to set the look. The fix is theming.json
+          # (glass: true), not another attempt, so it fails here with the
+          # launcher's own sentence rather than as a read-back difference in
+          # `appearance`, which names the section but not the cause.
+          #
+          # Deliberately a named key and not "every inert key is fatal": a key
+          # can be inert in one release and still be the right thing to keep
+          # writing. home.dock.enabled was exactly that - inert since 0.3.0 and
+          # kept on purpose, because the dock came back with the grid.
+          fatal_diag="$(printf '%s' "$diag" | jq -r '
+            (.diagnostics // [])[]
+            | select((.code // "") == "inert-key" and (.path // "") == "appearance.transparency")
+            | (.message // "appearance.transparency is inert")' | head -1)"
+          if [ -n "$fatal_diag" ]; then
+            problem "$key" "$label: $fatal_diag - set glass: true for the launcher entry in theming.json"
+            return 1
           fi
           break
         fi

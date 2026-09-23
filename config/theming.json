@@ -9,7 +9,7 @@
     "release build (andashi-home) and its debug build (andashi-home-debug) for the",
     "fork's e2e runs. Other launchers were dropped on purpose - each of them needed",
     "UI automation that could type but never read back. Per entry: pkg, config,",
-    "wallpaper, transparency, widgets.",
+    "wallpaper, glass, widgets.",
     "wallpaper: true means the launcher applies appearance.wallpaper from its config",
     "(Andashi Home 0.2.0+): gen-launcher.sh emits the key and 45-launcher-config.sh",
     "uploads the image only then. Keep it false while an older release is pinned.",
@@ -19,8 +19,20 @@
     "andashi-home is the fork (Andashi Home, org.andashi.home), the launcher this",
     "distribution ships; andashi-home-debug is the same launcher as debug build for",
     "the emulator tests (e2e/l4-*.sh in the fork use LAUNCHER_CONFIG_KEY=andashi-home-debug).",
-    "transparency: liquid-glass values 0..1 (0=transparent) for background, surface,",
-    "elevated; gen-launcher.sh turns them into the 'fold-glass' scheme in the launcher config.",
+    "glass: true means the launcher renders the home screen as glass surfaces over the",
+    "blurred wallpaper (Andashi Home 0.5.0+, ADR 0004): gen-launcher.sh emits",
+    "appearance.glass and home.grid.labels and stops emitting appearance.transparency,",
+    "which 0.5.0 reports as an inert key. false keeps the old transparency block for an",
+    "older PINNED release - against 0.5.0 it fails the read-back, because the launcher",
+    "always serves a complete glass block back and never a transparency one.",
+    "The values live in all_profiles.glass and may be overridden per zone with a glass",
+    "object there; unlike the old transparency block those merge FIELD BY FIELD, so a",
+    "zone that wants another tint does not have to repeat blur, radius and contrast.",
+    "blur/radius are dp (0..64), tint is the alpha of the zone's Monet color over the",
+    "backdrop (0..1), contrast is low|medium|high and scales blur and tint together,",
+    "wallpaperBlur switches the blurred backdrop off. All five are written explicitly",
+    "because the launcher fills its defaults in on read-back and the check compares the",
+    "whole appearance section - an omitted field would read as a difference.",
     "",
     "palette = Monet seed (hex without #). SystemUI generates the color overlays from it",
     "live (verified on emu64x: com.android.systemui:accent/neutral get [x]).",
@@ -56,22 +68,14 @@
       "pkg": "org.andashi.home",
       "config": true,
       "wallpaper": true,
-      "transparency": {
-        "background": 0.31,
-        "surface": 0.31,
-        "elevated": 0.31
-      },
+      "glass": true,
       "widgets": []
     },
     "andashi-home-debug": {
       "pkg": "org.andashi.home.debug",
       "config": true,
       "wallpaper": true,
-      "transparency": {
-        "background": 0.31,
-        "surface": 0.31,
-        "elevated": 0.31
-      },
+      "glass": true,
       "widgets": []
     }
   },
@@ -83,7 +87,14 @@
   },
   "all_profiles": {
     "night": "2",
-    "icon_blacklist": "volume,alarm_clock,headset"
+    "icon_blacklist": "volume,alarm_clock,headset",
+    "glass": {
+      "blur": 24,
+      "tint": 0.12,
+      "radius": 28,
+      "contrast": "medium",
+      "wallpaperBlur": true
+    }
   },
   "per_profile": {
     "home": {

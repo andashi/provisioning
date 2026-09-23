@@ -1,10 +1,11 @@
 {
   "appearance": {
-    "transparency": {
-      "background": 0.31,
-      "elevatedSurface": 0.31,
-      "name": "fold-glass",
-      "surface": 0.31
+    "glass": {
+      "blur": 24,
+      "contrast": "medium",
+      "radius": 28,
+      "tint": 0.12,
+      "wallpaperBlur": true
     },
     "wallpaper": {
       "image": "cloud.jpg",
@@ -15,6 +16,7 @@
     "favorites": [],
     "grid": {
       "columns": 4,
+      "labels": true,
       "layouts": {
         "fold": {
           "items": [

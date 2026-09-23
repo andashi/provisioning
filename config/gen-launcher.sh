@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generates config/launcher/<profile>.json - one launcher config per
 # non-managed profile - from theming.json + apps.json + profiles.json +
-# features.json. Schema v1 is the fork's public config contract
+# features.json. Schema v2 is the fork's public config contract
 # (Kvaesitso ADR 0002/0003): provisioning pushes the file into the app's
 # per-user files dir, the launcher converges to it and serves its effective
 # state back for verification (provision/45-launcher-config.sh).
@@ -72,8 +72,37 @@ gen_profile() {   # $1=profile-key
     | ($t.launchers[$lkey]) as $l
     | ($t.per_profile[$key] // {}) as $p
 
-    # Transparency: per-profile object wins as a whole; `elevated` in
-    # theming.json maps to `elevatedSurface` in the config schema.
+    # Glass (Andashi Home 0.5.0+, launcher ADR 0004): all_profiles.glass first,
+    # the glass object of the zone on top - FIELD BY FIELD, not as a whole. The old
+    # transparency rule let a per-profile object win entirely, which was
+    # harmless for three values that were always written together and is a trap
+    # for five: a zone that wants a darker tint would silently reset blur,
+    # radius and contrast to the fallbacks in this generator.
+    | (($t.all_profiles.glass // {}) + ($p.glass // {})) as $g
+    | (($l.glass // false) == true) as $glass_on
+
+    # The launcher rejects an out-of-range value with `invalid-glass`, and a
+    # rejected document takes the wallpaper and favorites of that zone with it.
+    # The bounds are the ones the launcher enforces (ConfigValidator: blur and radius 0..64dp,
+    # tint 0..1, contrast low|medium|high); checking them here turns six broken
+    # zones into one failed generation.
+    | (if $glass_on then
+         ([ $g | keys[] | . as $k | select([ "blur", "tint", "radius", "contrast", "wallpaperBlur" ] | index($k) | not) ]) as $unknown
+         | if ($unknown | length) > 0
+             then error("profile \($key): unknown glass key(s): \($unknown | join(", "))")
+           elif (($g.blur // 24) < 0 or ($g.blur // 24) > 64)
+             then error("profile \($key): glass.blur \($g.blur) is not between 0 and 64dp")
+           elif (($g.radius // 28) < 0 or ($g.radius // 28) > 64)
+             then error("profile \($key): glass.radius \($g.radius) is not between 0 and 64dp")
+           elif (($g.tint // 0.12) < 0 or ($g.tint // 0.12) > 1)
+             then error("profile \($key): glass.tint \($g.tint) is not between 0 and 1")
+           elif ([ "low", "medium", "high" ] | index($g.contrast // "medium")) == null
+             then error("profile \($key): glass.contrast \"\($g.contrast)\" is not low, medium or high")
+           else . end
+       else . end)
+
+    # The pre-0.5.0 shape, emitted only while glass is false - for a release
+    # pinned on purpose. `elevated` maps to `elevatedSurface` in the schema.
     | ($p.transparency // $l.transparency // {}) as $tr
 
     # Wallpaper: the per-profile image path (with or without {aspect}) becomes
@@ -141,14 +170,30 @@ gen_profile() {   # $1=profile-key
           enforceThemed: true,
           pack: "app.lawnchair.lawnicons"
         },
-        appearance: ({
+        # Every glass field is written, none left to the launcher: the read-back
+        # serves a COMPLETE glass block (ConfigStateMapper: "defaults filled
+        # in") and 45-launcher-config.sh compares the whole appearance section,
+        # so an omitted field would come back as a difference. Writing them also
+        # means the look is decided by this distribution and does not move when the
+        # launcher retunes its defaults. wallpaperBlur goes through has():
+        # `// true` would turn an explicit false back into true, the same trap
+        # lib/common.sh documents for profile fields.
+        appearance: ((if $glass_on then {
+          glass: {
+            blur: ($g.blur // 24),
+            tint: ($g.tint // 0.12),
+            radius: ($g.radius // 28),
+            contrast: ($g.contrast // "medium"),
+            wallpaperBlur: (if $g | has("wallpaperBlur") then $g.wallpaperBlur else true end)
+          }
+        } else {
           transparency: {
             name: "fold-glass",
             background: ($tr.background // 0.4),
             surface: ($tr.surface // 0.4),
             elevatedSurface: ($tr.elevated // 0.4)
           }
-        } + (if $wallpaper == null then {} else { wallpaper: $wallpaper } end)),
+        } end) + (if $wallpaper == null then {} else { wallpaper: $wallpaper } end)),
         home: {
           searchBar: { position: "bottom" },
           # The one pin list, shared by search and the favorites widget.
@@ -156,7 +201,7 @@ gen_profile() {   # $1=profile-key
           # Master switch for the grid. Off would mean no home surface at all,
           # since the dock became a grid item in v2.
           widgets: { enabled: true },
-          grid: {
+          grid: ({
             # The cover-width page; the fold layout is twice as wide and the
             # cover renders columns 0 until this number (launcher ADR 0001).
             columns: 4,
@@ -168,7 +213,10 @@ gen_profile() {   # $1=profile-key
               phone: { items: [ { id: "favorites", widget: "favorites" } ] },
               fold:  { items: [ { id: "favorites", widget: "favorites" } ] }
             }
-          }
+          # Labels under the grid items, never on the dock. New in 0.5.0, so it
+          # rides the same flag as glass - an older pinned release would report
+          # it as an unknown key and never echo it back.
+          } + (if $glass_on then { labels: true } else {} end))
         }
       }
   ' "$CONFIG_DIR/theming.json"

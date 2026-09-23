@@ -71,22 +71,41 @@ fails immediately.
 
 ## The config document
 
-Schema version 1, one file per non-managed profile, generated into
+Schema version 2, one file per non-managed profile, generated into
 `config/launcher/<zone>.json` and checked in:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "icons":      { "themed": true, "enforceThemed": true, "pack": "app.lawnchair.lawnicons" },
-  "appearance": { "transparency": { "name": "fold-glass", "background": 0.31,
-                                    "surface": 0.31, "elevatedSurface": 0.31 },
-                  "wallpaper":    { "image": "cloud.jpg", "target": "both" } },
+  "appearance": { "glass":     { "blur": 24, "tint": 0.12, "radius": 28,
+                                 "contrast": "medium", "wallpaperBlur": true },
+                  "wallpaper": { "image": "cloud.jpg", "target": "both" } },
   "home":       { "searchBar": { "position": "bottom" },
-                  "dock":      { "enabled": true, "favorites": [] },
-                  "widgets":   { "enabled": false, "widgets": [] },
-                  "clock":     { "style": "digital1", "fillHeight": true } }
+                  "favorites": [],
+                  "widgets":   { "enabled": true },
+                  "grid":      { "columns": 4, "locked": false, "labels": true,
+                                 "layouts": { "phone": { "items": [ { "id": "favorites",
+                                                                     "widget": "favorites" } ] },
+                                              "fold":  { "items": [ { "id": "favorites",
+                                                                     "widget": "favorites" } ] } } } }
 }
 ```
+
+Two properties of this document are worth stating, because the read-back check
+depends on both.
+
+**We write less than we read.** Grid items carry no geometry: rows come from the
+screen, so "bottom row, full width" is not something a host can compute for a
+device it cannot see. The launcher places the item and writes the coordinates
+back, which is why the comparison matches grid items by `id` and `widget` and
+leaves where they sit to the device.
+
+**We write more than we would need to.** Every glass field is spelled out,
+although each one is optional. The launcher serves a *complete* glass block back,
+defaults filled in, and the check compares the whole `appearance` section - an
+omitted field would come back as a difference. Writing them also means the look
+is decided here rather than moving whenever the launcher retunes its defaults.
 
 A **managed profile gets no file**: Work has no home screen of its own, its apps
 appear badged in Home's launcher. That skip is deliberate, not a failure.
@@ -98,32 +117,81 @@ appear badged in Home's launcher. That skip is deliberate, not a failure.
 directory and diffs, so a hand-edited or stale file fails the check.
 
 Per-profile values win over the launcher defaults, the same precedence
-`40-theming.sh` uses. Human-facing labels are mapped here and only here: clock
-style names to the fork's style ids, widget names to its widget ids, favorite
-labels to package names from the catalog.
+`40-theming.sh` uses. Human-facing labels are mapped here and only here: widget
+names to the fork's widget ids, favorite labels to package names from the catalog.
+
+The glass values are the one exception to "per-profile wins as a whole": they
+merge **field by field**, `all_profiles.glass` first and the zone's own object on
+top. Three transparency values were always written together, so replacing the
+whole object was harmless; with five fields it is a trap, because a zone that
+only wants a darker tint would silently reset blur, radius and contrast.
 
 **Resolution failures are fatal.** A favorite that matches no catalog entry or
-several, an unknown widget, an unknown clock style — generation stops with an
-error instead of writing a file that describes a home screen which cannot exist.
+several, an unknown widget, a glass value outside the bounds the launcher
+enforces (blur and radius 0..64dp, tint 0..1, contrast `low|medium|high`) —
+generation stops with an error instead of writing a file that describes a home
+screen which cannot exist. The bounds are duplicated here on purpose: the
+launcher would reject the document with `invalid-glass`, and a rejected document
+takes the wallpaper and favorites of that zone with it, in every zone at once.
 Files for profiles that no longer exist, became managed, or lost their feature
 flag are pruned, so nothing stale gets pushed.
+
+## Editing on the device
+
+The grid is not locked (`home.grid.locked: false`), so a zone can be rearranged by
+hand and the launcher writes the arrangement back into its own copy of the file.
+That makes the device a second author, and the step therefore **pulls before it
+pushes**: it compares the sha256 the device reports against the one recorded from
+the last run and refuses to overwrite an arrangement it has not seen.
+
+```bash
+CONFIG_DIR=/path/to/your/config provision/45-launcher-config.sh --pull
+```
+
+`--pull` writes the effective config of every zone into the catalog the chain was
+pointed at, never into this repository's template — the template demonstrates
+mechanisms and is diffed against the generator by `make check`.
+
+**A pulled fold layout can make phones complain** (andashi/home#90): a phone
+validates a `fold` layout against its own row count, six, while the Fold has
+seven. A file pulled from the Fold whose bottom row is row 6 is applied cleanly by
+the Fold and reported as `grid-overflow` by every phone that reads the same file.
+Nothing generated here hits this today, because the generator writes no geometry
+at all — the warning becomes reachable the moment the first Fold arrangement is
+pulled and shared.
 
 ## Version coupling
 
 The launcher entry in `theming.json` declares what that build can do:
 
 ```json
-"andashi-home": { "pkg": "org.andashi.home", "config": true, "wallpaper": true, ... }
+"andashi-home": { "pkg": "org.andashi.home", "config": true, "wallpaper": true, "glass": true, ... }
 ```
 
 `config: false` makes the whole step skip itself. `wallpaper: false` suppresses
 the `appearance.wallpaper` key during generation — because a release that does not
 understand the key would not serve it back, and the read-back comparison would
-fail on a difference that is really a version mismatch. The flags exist so the two
-repositories can move independently without lying to each other.
+fail on a difference that is really a version mismatch. `glass: false` does the
+same for `appearance.glass` and `home.grid.labels`, both new in 0.5.0, and keeps
+emitting the `appearance.transparency` block that came before them. The flags
+exist so the two repositories can move independently without lying to each other.
 
-The release itself is pinned like every other app in the catalog: `release_tag`
-plus a pinned signer certificate, checked against the binary by `make apks`. See
+**Against 0.5.0 the flag has to be true.** The key did not merely change meaning,
+it changed sides: `transparency` is now inert and `glass` is what the launcher
+serves back. A run with `glass: false` against 0.5.0 therefore fails twice over,
+and the first of the two is the one that says why — `45-launcher-config.sh` treats
+the launcher's `inert-key` diagnostic on `appearance.transparency` as a failure
+with the launcher's own sentence, rather than letting it pass as a warning and
+reporting a read-back difference in `appearance` a moment later. That is a named
+key, not a rule: a key can be inert in one release and still be the right thing
+to keep writing, which is how `home.dock.enabled` survived the clock removal.
+
+The launcher is **not** pinned. `release_tag` exists for holding a version
+deliberately — while debugging, or to sit out a bad release — but a release that
+does not reach the phones is not a release
+([decision 0012](../decisions/0012-every-zone-updates-itself.md)). The price is
+that a contract change arrives before this side is ready for it; the flag above is
+how that window is survived, and the signer pin still holds either way. See
 [catalog.md](catalog.md).
 
 ## Wallpapers belong to the launcher

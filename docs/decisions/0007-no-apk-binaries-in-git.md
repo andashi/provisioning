@@ -31,6 +31,11 @@ A release that matters is pinned by tag (`release_tag`) rather than followed as
 - The repository stays small enough to read; the binaries are reproducible from
   `fetch.sh`.
 - Pinning is work per app, and a pinned tag has to be bumped deliberately. For our
-  own launcher that is a feature: the bump is the moment to re-verify.
+  own launcher that was meant as a feature: the bump is the moment to re-verify.
+  **Amended 2026-09-21** ([0012](0012-every-zone-updates-itself.md)): the launcher
+  is no longer pinned, because a release that does not reach the phones is not a
+  release. The signer pin stays and does the security work; the re-verification
+  moved into `theming.json`, where a capability flag per contract key says what
+  the installed build can do.
 - A missing APK degrades gracefully — the app lands in the generated `MANUAL.md`
   by name instead of failing an install.
