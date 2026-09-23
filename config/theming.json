@@ -30,9 +30,14 @@
     "zone that wants another tint does not have to repeat blur, radius and contrast.",
     "blur/radius are dp (0..64), tint is the alpha of the zone's Monet color over the",
     "backdrop (0..1), contrast is low|medium|high and scales blur and tint together,",
-    "wallpaperBlur switches the blurred backdrop off. All five are written explicitly",
-    "because the launcher fills its defaults in on read-back and the check compares the",
-    "whole appearance section - an omitted field would read as a difference.",
+    "wallpaperBlur decides whether the WHOLE home background is the blurred copy.",
+    "It is false here, against the launcher default: the zone wallpapers are how a",
+    "zone announces itself, and blurred there is nothing left of any of them but a",
+    "colour field - a gradient would have done. The glass surfaces blur what is",
+    "behind them either way, so the look survives the sharp wallpaper.",
+    "All five fields are written explicitly because the launcher fills its defaults in on read-back",
+    "and the check compares the whole appearance section - an omitted field would read",
+    "as a difference.",
     "",
     "palette = Monet seed (hex without #). SystemUI generates the color overlays from it",
     "live (verified on emu64x: com.android.systemui:accent/neutral get [x]).",
@@ -93,7 +98,7 @@
       "tint": 0.12,
       "radius": 28,
       "contrast": "medium",
-      "wallpaperBlur": true
+      "wallpaperBlur": false
     }
   },
   "per_profile": {

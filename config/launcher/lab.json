@@ -5,7 +5,7 @@
       "contrast": "medium",
       "radius": 28,
       "tint": 0.12,
-      "wallpaperBlur": true
+      "wallpaperBlur": false
     },
     "wallpaper": {
       "image": "lab.jpg",
