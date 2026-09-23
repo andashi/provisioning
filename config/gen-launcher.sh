@@ -209,10 +209,17 @@ gen_profile() {   # $1=profile-key
             # arranged geometry back. 45-launcher-config.sh pulls before it
             # pushes and refuses when the device changed in between.
             locked: false,
-            layouts: {
-              phone: { items: [ { id: "favorites", widget: "favorites" } ] },
-              fold:  { items: [ { id: "favorites", widget: "favorites" } ] }
-            }
+            # The widget is on the grid because an item for it exists, not
+            # because the pin list has entries - the contract keeps those two
+            # apart on purpose. So a zone with no favorites would get an empty
+            # card: a full-width surface promising something that is not there.
+            # It is declared only where there is something to show. A zone can
+            # still get it back by hand: long-press enters edit mode (the grid
+            # is not locked) and the widget picker offers exactly one built-in
+            # widget, the favorites one, labelled "Apps".
+            layouts: (($favs | length > 0) as $any
+              | { phone: { items: (if $any then [ { id: "favorites", widget: "favorites" } ] else [] end) },
+                  fold:  { items: (if $any then [ { id: "favorites", widget: "favorites" } ] else [] end) } })
           # Labels under the grid items, never on the dock. New in 0.5.0, so it
           # rides the same flag as glass - an older pinned release would report
           # it as an unknown key and never echo it back.

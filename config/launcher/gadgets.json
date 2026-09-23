@@ -19,20 +19,10 @@
       "labels": true,
       "layouts": {
         "fold": {
-          "items": [
-            {
-              "id": "favorites",
-              "widget": "favorites"
-            }
-          ]
+          "items": []
         },
         "phone": {
-          "items": [
-            {
-              "id": "favorites",
-              "widget": "favorites"
-            }
-          ]
+          "items": []
         }
       },
       "locked": false

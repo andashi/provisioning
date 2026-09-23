@@ -106,7 +106,10 @@
       "palette": "D8DEE9",
       "style": "MONOCHROMATIC",
       "wallpaper": "themes/synthwave/{aspect}/home.jpg",
-      "favorites": []
+      "favorites": [
+        "Phone",
+        "Vanadium"
+      ]
     },
     "cloud": {
       "palette": "4285F4",

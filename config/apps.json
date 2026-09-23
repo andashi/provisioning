@@ -147,6 +147,30 @@
       "notes": "Default camera"
     },
     {
+      "id": "dialer",
+      "label": "Phone",
+      "pkg": "com.android.dialer",
+      "pkg_status": "verified",
+      "source": "system",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "notes": "Preinstalled. Listed so the home screen can pin it: a favorite must resolve to a catalog entry, and the two apps a phone is expected to have on its home screen were the two the catalog did not know. INTERNET is left alone - revoking it on the dialer is defensible but untested."
+    },
+    {
+      "id": "vanadium",
+      "label": "Vanadium",
+      "pkg": "app.vanadium.browser",
+      "pkg_status": "verified",
+      "source": "system",
+      "profiles": [
+        "home"
+      ],
+      "net": true,
+      "notes": "Preinstalled, the GrapheneOS browser. Same reason as Phone. Deliberately not named \"Browser\": the favorite resolver falls back to a unique partial match, and \"Browser\" would also match Tor Browser."
+    },
+    {
       "id": "opencamera",
       "label": "Open Camera",
       "pkg": "net.sourceforge.opencamera",

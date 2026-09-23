@@ -13,7 +13,14 @@
     }
   },
   "home": {
-    "favorites": [],
+    "favorites": [
+      {
+        "packageName": "com.android.dialer"
+      },
+      {
+        "packageName": "app.vanadium.browser"
+      }
+    ],
     "grid": {
       "columns": 4,
       "labels": true,
