@@ -28,16 +28,24 @@
         "fold": {
           "items": [
             {
+              "h": 1,
               "id": "favorites",
-              "widget": "favorites"
+              "w": 8,
+              "widget": "favorites",
+              "x": 0,
+              "y": 6
             }
           ]
         },
         "phone": {
           "items": [
             {
+              "h": 1,
               "id": "favorites",
-              "widget": "favorites"
+              "w": 4,
+              "widget": "favorites",
+              "x": 0,
+              "y": 5
             }
           ]
         }

@@ -217,9 +217,17 @@ gen_profile() {   # $1=profile-key
             # still get it back by hand: long-press enters edit mode (the grid
             # is not locked) and the widget picker offers exactly one built-in
             # widget, the favorites one, labelled "Apps".
+            # Bottom row, above the search bar - the one place on this screen
+            # where a thumb reaches. That costs the geometry-free stance for
+            # this one item: an item without coordinates goes to the first free
+            # cell, which is the top. Rows are NOT ours to know (the renderer
+            # measures them, MeasuredGridRows.DefaultRows = 6), so the row
+            # index below is an assumption about the device, and the only one
+            # in this file. The fold layout is twice as wide, hence w 8, and
+            # one row taller, hence y 6.
             layouts: (($favs | length > 0) as $any
-              | { phone: { items: (if $any then [ { id: "favorites", widget: "favorites" } ] else [] end) },
-                  fold:  { items: (if $any then [ { id: "favorites", widget: "favorites" } ] else [] end) } })
+              | { phone: { items: (if $any then [ { id: "favorites", widget: "favorites", x: 0, y: 5, w: 4, h: 1 } ] else [] end) },
+                  fold:  { items: (if $any then [ { id: "favorites", widget: "favorites", x: 0, y: 6, w: 8, h: 1 } ] else [] end) } })
           # Labels under the grid items, never on the dock. New in 0.5.0, so it
           # rides the same flag as glass - an older pinned release would report
           # it as an unknown key and never echo it back.
