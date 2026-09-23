@@ -248,6 +248,16 @@ configure_profile() {   # $1=profile-key
       if [ "$got_sha" = "$want_sha" ]; then
         if [ "$success" = "true" ]; then
           ok "reload converged (diagnostics sha256 match)"
+          # The device now holds exactly what we wrote, and that is what the
+          # guard above wants to know - not whether we were happy with it.
+          # Recording only after a successful read-back made a FAILED push
+          # block the next one: the zone kept our rejected file, the record
+          # still named the one before it, and the guard reported a device-side
+          # edit that never happened. Measured 2026-09-23 while testing the
+          # glass: false path against 0.5.0 - six zones refused the correcting
+          # run and pointed at --pull, which would have pulled the bad config
+          # into the catalog.
+          mkdir -p "$(dirname "$rec")" && printf '%s\n' "$want_sha" > "$rec"
           # success=true does not mean the launcher had nothing to say. Warning
           # diagnostics ride the same channel as errors: today `unknown-key`,
           # and from andashi/home#47 on also `inert-key` - "accepted, but this
@@ -372,9 +382,6 @@ configure_profile() {   # $1=profile-key
     | map(select($e[.] != $w[.]))
     | join(", ")')"
   if [ -z "$mism" ]; then
-    # Remember what the device now reports, so the next run can tell our own
-    # push apart from an edit made on the device.
-    mkdir -p "$(dirname "$rec")" && printf '%s\n' "$want_sha" > "$rec"
     ok "$label: effective config verified"
     return 0
   fi
