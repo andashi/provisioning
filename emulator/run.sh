@@ -28,6 +28,9 @@ OVERLAY_DIR="${OVERLAY_DIR:-}"
 # Not needed for side-by-side runs when OVERLAY_DIR is set (own AVD identity =
 # own multi-instance lock).
 READ_ONLY="${READ_ONLY:-0}"
+# Renderer for this instance: empty = the emulator decides (software on this
+# host), "host" = the host GPU, also "swiftshader_indirect", "angle_indirect".
+GPU="${GPU:-}"
 # FOLDABLE=1 makes a NEW instance a foldable: two real files instead of the
 # symlinks to the build tree, written once when the overlay dir is created.
 # The OS image cannot do this on its own - see foldable_setup() for the three
@@ -255,6 +258,16 @@ start() {
   clear_stale_lock
   [ -z "$(emu_pid)" ] || die "an emulator is already running on port $PORT (pid $(emu_pid)) - stop it first"
   local args=(-no-snapshot-save -no-boot-anim -accel on -port "$PORT")
+  # GPU=host renders on the host GPU instead of SwiftShader. Opt-in, because
+  # the emulator's driver blocklist switches this host to software on its own
+  # ("Your GPU drivers may have a bug") and -gpu on the command line is what
+  # overrides that - hw.gpu.mode in config.ini does not. Off by default, so
+  # nothing that works today changes.
+  #
+  # Snapshots carry GPU state: one taken under software rendering may refuse
+  # to load, or load wrong, under a different mode. Treat GPU as part of the
+  # instance's identity, not as a flag to flip between runs.
+  [ -n "${GPU:-}" ] && args+=(-gpu "$GPU")
   if [ "$READ_ONLY" = "1" ]; then
     args+=(-read-only)
   elif [ -z "$OVERLAY_DIR" ]; then

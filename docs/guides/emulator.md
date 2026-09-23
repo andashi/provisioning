@@ -90,6 +90,46 @@ It is **advisory**. Nothing stops a session from using adb without asking — it
 works only because everyone checks first. `status` before any adb run is the habit
 that makes it worth having.
 
+## Rendering on the host GPU
+
+Every instance renders in software by default, even on a machine with a GPU:
+the emulator's driver blocklist decides that on its own and logs
+
+    Your GPU drivers ... may have a bug ... consider switching to software
+    library_mode swangle_indirect gpu mode swangle_indirect
+
+`hw.gpu.mode` in `config.ini` does not override it. `-gpu` on the command line
+does, and `run.sh` passes it through:
+
+```bash
+GPU=host emulator/run.sh start
+```
+
+Measured on this host (AMD Radeon 890M, Mesa 26.1.8) 2026-09-23: the log then
+says `library_mode host gpu mode host`, the guest reports
+
+    GLES: Google (AMD), Android Emulator OpenGL ES Translator
+          (AMD Radeon 890M Graphics (radeonsi, strix1, ACO, ...)), OpenGL ES 3.1
+
+and the home screen renders correctly - wallpaper, status bar, the grid's glass
+surface, no artefacts. So the blocklist entry is cautious rather than right for
+this driver.
+
+**The GPU mode is part of an instance's identity, not a flag to flip between
+runs.** A snapshot carries GPU state, and one taken in software refuses to load
+under `-gpu host`:
+
+    KO: Snapshot load failure: different emulator features
+
+`run.sh` reports that instead of continuing silently, and the instance cold
+boots. An instance that should run on the host GPU therefore needs its own
+snapshots, taken while `GPU=host` was in effect. Mixing the two costs a cold
+boot every time.
+
+Why it exists at all: frame-time measurements on SwiftShader say nothing about
+the device. They are good for comparing two builds against each other on the
+same renderer, and worthless as an answer to "is this fast enough on a Fold".
+
 ## The foldable instance
 
 The everyday image is a phone. `emulator-5560` makes the same build behave as a
