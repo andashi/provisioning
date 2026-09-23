@@ -12,6 +12,14 @@
 # applies it); otherwise the read-back verification would fail on the key. Managed profiles
 # (Work) get no file: they have no home screen of their own.
 #
+# The grid items deliberately carry NO geometry. Rows are derived from the
+# screen, not configured, so "bottom row, full width" is not something a host
+# can compute - it would have to guess the row count of a device it cannot see.
+# The schema allows geometry to be omitted once: the launcher places the item
+# and writes the coordinates back. That is also why the read-back check in
+# 45-launcher-config.sh compares grid items by id and widget and ignores where
+# they sit.
+#
 # Resolution failures are FATAL, not warnings: a favorite that does not
 # resolve to exactly one catalog entry, or an unknown widget name, means the
 # checked-in file would describe a home screen that cannot exist - generation
@@ -127,7 +135,7 @@ gen_profile() {   # $1=profile-key
        | map({ packageName: . })) as $favs
 
     | {
-        schemaVersion: 1,
+        schemaVersion: 2,
         icons: {
           themed: true,
           enforceThemed: true,
@@ -143,10 +151,24 @@ gen_profile() {   # $1=profile-key
         } + (if $wallpaper == null then {} else { wallpaper: $wallpaper } end)),
         home: {
           searchBar: { position: "bottom" },
-          dock: { enabled: true, favorites: $favs },
-          widgets: (if ($widgets | length) == 0
-                    then { enabled: false, widgets: [] }
-                    else { enabled: true, widgets: $widgets } end)
+          # The one pin list, shared by search and the favorites widget.
+          favorites: $favs,
+          # Master switch for the grid. Off would mean no home surface at all,
+          # since the dock became a grid item in v2.
+          widgets: { enabled: true },
+          grid: {
+            # The cover-width page; the fold layout is twice as wide and the
+            # cover renders columns 0 until this number (launcher ADR 0001).
+            columns: 4,
+            # Editing on the device is wanted, so the launcher writes the
+            # arranged geometry back. 45-launcher-config.sh pulls before it
+            # pushes and refuses when the device changed in between.
+            locked: false,
+            layouts: {
+              phone: { items: [ { id: "favorites", widget: "favorites" } ] },
+              fold:  { items: [ { id: "favorites", widget: "favorites" } ] }
+            }
+          }
         }
       }
   ' "$CONFIG_DIR/theming.json"

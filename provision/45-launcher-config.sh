@@ -165,6 +165,15 @@ configure_profile() {   # $1=profile-key
   # reports NOW against what it reported when we last agreed with it, and
   # refuse if someone changed it in between. No record yet means a device we
   # have never written to - nothing to protect, so it proceeds and records.
+  #
+  # Note the deliberate asymmetry with the read-back check further down. That
+  # one IGNORES grid geometry, because we never declared it and the device is
+  # free to place an item. This guard must NOT ignore it: dragging a widget
+  # changes exactly those fields, so geometry is the arrangement, and a guard
+  # that looked past it would silently overwrite what it exists to protect.
+  # Measured on 0.4.0: the launcher completes the geometry in the document it
+  # SERVES but does not rewrite launcher.json for it, so a placement alone
+  # does not move the hash and this does not fire without a real change.
   local rec dev_sha
   rec="$(sha_record "$key")"
   if [ "$DRY_RUN" != "1" ] && [ -f "$rec" ]; then

@@ -12,16 +12,34 @@
     }
   },
   "home": {
-    "dock": {
-      "enabled": true,
-      "favorites": []
+    "favorites": [],
+    "grid": {
+      "columns": 4,
+      "layouts": {
+        "fold": {
+          "items": [
+            {
+              "id": "favorites",
+              "widget": "favorites"
+            }
+          ]
+        },
+        "phone": {
+          "items": [
+            {
+              "id": "favorites",
+              "widget": "favorites"
+            }
+          ]
+        }
+      },
+      "locked": false
     },
     "searchBar": {
       "position": "bottom"
     },
     "widgets": {
-      "enabled": false,
-      "widgets": []
+      "enabled": true
     }
   },
   "icons": {
@@ -29,5 +47,5 @@
     "pack": "app.lawnchair.lawnicons",
     "themed": true
   },
-  "schemaVersion": 1
+  "schemaVersion": 2
 }
