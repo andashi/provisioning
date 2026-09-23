@@ -136,6 +136,21 @@ takes the wallpaper and favorites of that zone with it, in every zone at once.
 Files for profiles that no longer exist, became managed, or lost their feature
 flag are pruned, so nothing stale gets pushed.
 
+**A zone with nothing pinned declares no widget at all.** The pin list and the
+widget are separate in the contract: `home.favorites` is the list, and whether the
+widget is on the grid is whether a grid item for it exists. Declaring it
+unconditionally gave every zone a full-width empty card, so it is declared only
+where something is pinned — and the row is placed explicitly in the bottom row,
+above the search bar, because an item without coordinates goes to the first free
+cell, which is the top.
+
+On a **fresh** profile that emptiness only holds from the second run. The launcher
+writes its own favorites row the first time the zone is opened, which is after our
+push, so the read-back agrees with us while the screen does not
+([andashi/home#92](https://github.com/andashi/home/issues/92): a layout equal to
+the stored state produces no mutation, and nothing then marks the grid
+initialised). Measured on emulator-5558 with 0.5.0.
+
 ## Editing on the device
 
 The grid is not locked (`home.grid.locked: false`), so a zone can be rearranged by
