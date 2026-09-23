@@ -482,7 +482,8 @@
         "only_profiles": [
           "home"
         ]
-      }
+      },
+      "appwidget_bind": true
     },
     {
       "id": "heliboard",

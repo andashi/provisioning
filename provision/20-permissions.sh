@@ -51,6 +51,25 @@ perm_granted() {  # $1=pkg $2=uid $3=perm
   case "$line" in *granted=true*) return 0;; *) return 1;; esac
 }
 
+# Does $1 hold the bind-widget grant for user $2? The grant lives in
+# AppWidgetService, not in the package manager, so perm_granted() cannot see
+# it. dumpsys appwidget lists it under "Grants:" as
+#   [0] user=10 package=org.andashi.home
+# Same reason as above for parsing in bash instead of grep -q in a pipeline.
+bind_granted() {  # $1=pkg $2=uid
+  local out line in_grants=0
+  out="$(ash_ro dumpsys appwidget 2>/dev/null | tr -d '\r')" || return 1
+  while IFS= read -r line; do
+    case "$line" in
+      "Grants:"*) in_grants=1; continue;;
+      [A-Za-z]*)  in_grants=0; continue;;
+    esac
+    [ "$in_grants" = 1 ] || continue
+    case "$line" in *" user=$2 package=$1") return 0;; esac
+  done <<<"$out"
+  return 1
+}
+
 log "Setting permissions"
 while read -r key; do
   label="$(profile_label "$key")"
@@ -124,6 +143,40 @@ while read -r key; do
       else ok "$lbl: -$p"
       fi
     done < <(jq -r '.perms.revoke[]? // empty' <<<"$app")
+    fi
+
+    # Bind-widget grant (appwidget_bind: true). A launcher may only bind the
+    # AppWidgets its home.grid names once the user has said "always allow" in
+    # the system's bind dialog; this gives that same per-package, per-user
+    # grant (AppWidgetServiceImpl.setBindAppWidgetPermission) without the
+    # dialog. It is convenience, not function: without it every widget cell
+    # offers an Allow action and the zone stays usable. Decided in
+    # provisioning#2 - a declared widget should appear, not ask. Applies in
+    # every zone the app lives in, deliberately outside perms.only_profiles:
+    # a grid in Anon is as much the declaration as one in Home.
+    #
+    # AppWidgetService only holds the state of a started, unlocked user: for a
+    # stopped one grantbind dies (exit 137) and dumpsys lists nothing, so it
+    # would read as "not granted" either way. Measured 2026-09-24 on
+    # emulator-5558, where Cloud..Anon sat stopped after the previous run.
+    # Start it the way 10-apps.sh does; 99-finalize puts every zone back into
+    # its target state afterwards.
+    if [ "$(jq -r '.appwidget_bind // false' <<<"$app")" = "true" ]; then
+      if [ "$DRY_RUN" != "1" ] && ! user_running_uid "$uid"; then
+        ash am start-user -w "$uid" >/dev/null && ok "$label started (had been evicted)" \
+          || warn "$label could not be started"
+      fi
+      if [ "$DRY_RUN" != "1" ] && ! user_unlocked "$uid"; then
+        warn "$lbl: $label is locked - bind-widget grant waits for the next run"
+      elif [ "$DRY_RUN" != "1" ] && bind_granted "$pkg" "$uid"; then
+        skip "$lbl: bind-widget grant already given"
+      else
+        ash appwidget grantbind --package "$pkg" --user "$uid" >/dev/null 2>&1 || true
+        if [ "$DRY_RUN" = "1" ]; then :
+        elif bind_granted "$pkg" "$uid"; then ok "$lbl: bind-widget grant"
+        else warn "$lbl: bind-widget grant did NOT take - widget cells will ask instead"
+        fi
+      fi
     fi
 
     # AppOps

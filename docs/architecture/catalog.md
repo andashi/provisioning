@@ -30,6 +30,12 @@ lives in it.
   toggle, applied by `20-permissions.sh`. It is the sharpest tool in the catalog
   and the reason a launcher, a keyboard or a note app can be installed without
   granting it a network at all.
+- **`appwidget_bind: true`** gives the app the bind-widget grant in every zone it
+  lives in (`appwidget grantbind`, applied and read back by `20-permissions.sh`).
+  It is what "always allow" in the system's bind dialog records — per package, per
+  Android user, dropped on uninstall — so the widgets a zone's `home.grid` declares
+  appear without asking. Only the launcher carries it. Without it nothing breaks:
+  each widget cell offers an Allow action instead.
 - **`source`** says how the binary is obtained, and it is also a statement about
   what can be automated: of 50 entries, 22 come from Obtainium and GitHub
   releases, 22 need sandboxed Play and a Google login (manual by design), the rest
