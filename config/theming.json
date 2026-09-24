@@ -41,7 +41,9 @@
     "search_actions are the chips under a search query (Andashi Home with andashi/home#106):",
     "only the built-in recognisers, which appear when a query looks like a number, an",
     "address or a time - never web search, YouTube or Google. A zone may override the list",
-    "with its own search_actions in per_profile.",
+    "with its own search_actions in per_profile. Anon drops website, message and contact:",
+    "Website opens the default browser, which is not Tor Browser there, and the other two",
+    "are identity.",
     "All six fields are written explicitly because the launcher fills its defaults in on read-back",
     "and the check compares the whole appearance section - an omitted field would read",
     "as a difference.",
@@ -146,6 +148,10 @@
       "wallpaper": "themes/synthwave/{aspect}/lab.jpg"
     },
     "anon": {
+      "search_actions": [
+        { "type": "call" }, { "type": "email" },
+        { "type": "alarm" }, { "type": "timer" }, { "type": "calendar" }
+      ],
       "palette": "9E9E9E",
       "style": "MONOCHROMATIC",
       "wallpaper": "themes/synthwave/{aspect}/anon.jpg"

@@ -47,13 +47,7 @@
         "type": "call"
       },
       {
-        "type": "message"
-      },
-      {
         "type": "email"
-      },
-      {
-        "type": "contact"
       },
       {
         "type": "alarm"
@@ -63,9 +57,6 @@
       },
       {
         "type": "calendar"
-      },
-      {
-        "type": "website"
       }
     ],
     "barPosition": "top",
