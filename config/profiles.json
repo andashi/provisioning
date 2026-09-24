@@ -1,5 +1,8 @@
 {
-  "_comment": "Declarative zone model. 'home' is the owner (user 0) and is NEVER created.",
+  "_comment": [
+    "Declarative zone model. 'home' is the owner (user 0) and is NEVER created.",
+    "browser: the default browser of the zone (android.app.role.BROWSER) - every link opened in the zone goes there. Anon sets Tor Browser; without it, Vanadium (a system app present in every user) holds the role and links leave Tor."
+  ],
   "profiles": [
     {
       "key": "home",
@@ -96,6 +99,7 @@
       "key": "anon",
       "label": "Anon",
       "zone": "-",
+      "browser": "org.torproject.torbrowser",
       "create": true,
       "runtime": "stopped",
       "vpn": "orbot",

@@ -47,6 +47,15 @@ without it, traffic leaves past Tor silently. For **Gadgets** it is what keeps t
 IoT zone from bypassing its own filter. For Tailscale zones it is wrong — Tailscale
 is not a full tunnel, and lockdown would break LAN access and split routing.
 
+Lockdown keeps Anon's *traffic* on Tor; it does not decide which *app* a link opens
+in. Vanadium is a system app present in every user, and without a choice it holds
+the browser role — so a link from Molly or a typed address went to a clearnet
+browser, fingerprint and all, through a tunnel that only hides the address. Anon
+therefore names its browser (`"browser"` in `profiles.json`): `40-theming.sh` gives
+Tor Browser the role and reads back where a plain `https` link resolves, and
+`make check` refuses a zone browser the catalog does not place in that zone
+(provisioning#10).
+
 ## Why the model holds
 
 **One VPN slot per profile.** Android allows exactly one VPN app per user, so the

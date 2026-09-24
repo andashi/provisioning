@@ -124,6 +124,36 @@ while read -r key; do
     fi
   fi
 
+  # ---- Browser: android.app.role.BROWSER ----
+  # Only where the zone names one (profiles.json "browser"). Every user has
+  # Vanadium, a system app the chain never removes, and without a choice it
+  # holds the role - measured 2026-09-24 on emulator-5558: in Anon, every
+  # https link resolved to Vanadium alone, outside Tor. With the role on Tor
+  # Browser, the same link resolves to it (provisioning#10).
+  # Read back twice: the holder, and where a plain link actually resolves -
+  # the second is the effect, the first only the acceptance.
+  zone_browser="$(profile_field "$key" browser)"
+  if [ -n "$zone_browser" ]; then
+    if pkg_installed_for_user "$zone_browser" "$uid"; then
+      cur_browser="$(ash_ro cmd role get-role-holders --user "$uid" android.app.role.BROWSER 2>/dev/null | tr -d '\r')" || cur_browser=""
+      if [ "$cur_browser" != "$zone_browser" ]; then
+        ash cmd role add-role-holder --user "$uid" android.app.role.BROWSER "$zone_browser" >/dev/null || true
+      fi
+      if [ "$DRY_RUN" != "1" ]; then
+        cur_browser="$(ash_ro cmd role get-role-holders --user "$uid" android.app.role.BROWSER 2>/dev/null | tr -d '\r')" || cur_browser=""
+        link_to="$(ash_ro cmd package resolve-activity --brief --user "$uid" -a android.intent.action.VIEW \
+                     -c android.intent.category.BROWSABLE -d https://example.org 2>/dev/null | tr -d '\r' | tail -1)"
+        if [ "$cur_browser" = "$zone_browser" ] && [ "${link_to%%/*}" = "$zone_browser" ]; then
+          ok "browser: $zone_browser (role held, links resolve to it)"
+        else
+          warn "browser: wanted $zone_browser, role is ${cur_browser:-<empty>}, a link resolves to ${link_to:-<nothing>}"
+        fi
+      fi
+    else
+      warn "browser $zone_browser not installed (user $uid) - run 10-apps.sh first"
+    fi
+  fi
+
   # ---- Keyboard: default IME ----
   if [ -n "$KEYBOARD" ]; then
     if pkg_installed_for_user "$KEYBOARD" "$uid"; then

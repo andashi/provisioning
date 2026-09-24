@@ -17,6 +17,12 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	  [ -z "$$unreachable" ] || { echo "apps that need the private tailnet, in zones that cannot reach it:"; \
 	    echo "$$unreachable"; echo "  a zone has ONE always-on VPN slot - see docs/architecture/zones.md"; exit 1; }; \
 	  echo "ok: tailnet reachability"
+	@stray=$$(jq -r -n --slurpfile a config/apps.json --slurpfile p config/profiles.json \
+	  '$$p[0].profiles[] | select(.browser) | . as $$z \
+	   | select([ $$a[0].apps[] | select(.pkg == $$z.browser) | (.profiles // [])[] | select(. == $$z.key) ] | length == 0) \
+	   | "  \($$z.label): browser \($$z.browser) is not placed in this zone"'); \
+	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
+	  echo "ok: zone browsers"
 	@t=$$(mktemp); OUT=$$t config/gen-obtainium.sh >/dev/null; \
 	  if diff -q <(jq -S . $$t) <(jq -S . config/obtainium.json) >/dev/null; then \
 	    echo "ok: obtainium.json in sync"; else \
