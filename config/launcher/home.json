@@ -65,5 +65,8 @@
     "pack": "app.lawnchair.lawnicons",
     "themed": true
   },
-  "schemaVersion": 2
+  "schemaVersion": 2,
+  "search": {
+    "contacts": true
+  }
 }

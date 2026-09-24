@@ -163,6 +163,19 @@ gen_profile() {   # $1=profile-key
        # serialized back, so this stays correct when that feature arrives.
        | map({ packageName: . })) as $favs
 
+    # Contacts in search (Andashi Home 0.6.0+, search.contacts) follow the
+    # permission, not a taste: true only where the catalog grants the launcher
+    # READ_CONTACTS in this zone. Everywhere else the launcher has no access by
+    # design, and search.contacts: true would put "Contacts permission is
+    # required - Grant" under every query, inviting exactly the grant the
+    # catalog withholds. Derived from the same perms block 20-permissions.sh
+    # applies, so the two cannot drift apart.
+    | ([ $apps[0].apps[]
+         | select(.pkg == $l.pkg)
+         | select((.perms.grant // []) | index("android.permission.READ_CONTACTS"))
+         | select((.perms.only_profiles // null) == null or ((.perms.only_profiles | index($key)) != null)) ]
+       | length > 0) as $contacts
+
     | {
         schemaVersion: 2,
         icons: {
@@ -242,7 +255,11 @@ gen_profile() {   # $1=profile-key
           # rides the same flag as glass - an older pinned release would report
           # it as an unknown key and never echo it back.
           } + (if $glass_on then { labels: true } else {} end))
-        }
+        },
+        # Only the keys this distribution decides. A key left out stays as it
+        # is on the device, and 45-launcher-config.sh compares just the keys
+        # written here, because the read-back serves all eleven.
+        search: { contacts: $contacts }
       }
   ' "$CONFIG_DIR/theming.json"
 }

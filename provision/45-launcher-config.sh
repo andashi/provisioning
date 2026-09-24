@@ -378,8 +378,14 @@ configure_profile() {   # $1=profile-key
     | ($eff | canon) as $e0
     | ($w0 | drop_grid_if_one_sided($e0)) as $w
     | ($e0 | drop_grid_if_one_sided($w0)) as $e
-    | [ "schemaVersion", "icons", "appearance", "home" ]
-    | map(select($e[.] != $w[.]))
+    | ( [ "schemaVersion", "icons", "appearance", "home" ]
+        | map(select($e[.] != $w[.])) )
+    # search (0.6.0+): the launcher serves the whole section with its defaults
+    # filled in, and a key we leave out is the device'"'"'s to keep. So compare
+    # the keys we wrote, each one, and nothing else - an unwritten key that
+    # differs is not a mismatch, a written one that did not take is.
+    + ( ($w.search // {}) | keys
+        | map(select($e.search[.] != $w.search[.]) | "search.\(.)") )
     | join(", ")')"
   if [ -z "$mism" ]; then
     ok "$label: effective config verified"

@@ -155,6 +155,18 @@ Measured on emulator-5558 with 0.5.0. Since 0.6.1 a config that names
 first run — measured on emulator-5558 from `profiles-ready`: Cloud opened for the
 first time after the push, both layouts read back empty, no card on screen.
 
+**Search writes one key, derived rather than chosen.** `search.contacts` (0.6.0+)
+is `true` only in a zone where the catalog grants the launcher `READ_CONTACTS`
+(`perms.grant` with `perms.only_profiles` in `apps.json`) — today that is Home. So
+contact search never exists without the permission, and a zone without it does not
+show "Contacts permission is required — Grant" under every query, an invitation to
+exactly the grant the catalog withholds. Home is the only zone with a contacts
+source (DAVx5, Signal, the dialer); a zone that gains one goes into
+`perms.only_profiles`, and search follows. The launcher has no network in any zone,
+so what it reads stays on the phone either way. The other ten `search` keys are
+left to the device, and the read-back compares only the keys the generator wrote,
+because the launcher serves all eleven.
+
 ## Editing on the device
 
 The grid is not locked (`home.grid.locked: false`), so a zone can be rearranged by
