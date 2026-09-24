@@ -194,6 +194,31 @@ so it tests what the software makes of two displays and four states. It says
 nothing about GrapheneOS's own foldable handling on real hardware, where both
 tables come from the vendor partition.
 
+## Recordings for the website
+
+The videos on andashi.org are taken here, and the website repository now has a
+rule that a new take happens on "the same instance and the same GPU mode" as the
+one it replaces ([its README, 3c31a20](https://github.com/andashi/website)). That
+rule only works if the take says which those were, so every recording writes them
+down next to the file:
+
+    instance   emulator-5560, emulator/instances/test-fold
+    gpu        host | software
+    launcher   org.andashi.home <version>, from apks/SHA256SUMS
+    source     adb -s <serial> emu screenrecord start --time-limit <n> <file>
+    delivered  <what was cut, scaled or cropped before it went to the website>
+
+The reason is not bookkeeping. A recording is a performance claim - "the inner
+home screen appears in one step" is a statement about frame timing - and frame
+timing on SwiftShader says nothing about a device
+([above](#rendering-on-the-host-gpu)). Two takes are only comparable when both
+say which renderer drew them.
+
+**The 0.7.1 unfold take predates this.** Its source was the unfolded inner
+display (2076x2152, cut down to 948x1080 at 30 fps for the site), but nothing
+records the instance or the GPU mode, so it cannot be reproduced exactly - only
+replaced by a take that does record them.
+
 ## Snapshots
 
 - **`clean`** — first boot of the build, Owner only, nothing provisioned. The base
