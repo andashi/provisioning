@@ -60,10 +60,17 @@ images and its own AVD identity, so instances never touch each other's disks.
 | `emulator-5556` | `emulator/instances/test` | launcher e2e from the [andashi/home](https://github.com/andashi/home) repo |
 | `emulator-5558` | `emulator/instances/test-2` | this repo's verification runs |
 | `emulator-5560` | `emulator/instances/test-fold` | foldable, for the launcher's grid tests on the Fold |
+| `emulator-5562` | `emulator/instances/test-fold-gpu` | foldable on the host GPU, claimed by the launcher's unfold-timing work ([andashi/home#94](https://github.com/andashi/home/issues/94)) |
 
 ```bash
 SERIAL=emulator-5558 OVERLAY_DIR=$PWD/emulator/instances/test-2 emulator/run.sh start
 ```
+
+`test-fold-gpu` is the one instance that runs `GPU=host` from its first start, so
+every snapshot on it is a host-GPU snapshot and none of them load in software.
+That is not duplication of `test-fold`: frame times measured on SwiftShader say
+nothing about a device, and mixing the two modes on one instance costs a cold
+boot every time (see [below](#rendering-on-the-host-gpu)).
 
 Each instance costs a few GB of RAM. Two side by side are comfortable on a large
 host, but a cold boot of the second one under load takes minutes, not seconds.
