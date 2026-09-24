@@ -268,12 +268,15 @@ gen_profile() {   # $1=profile-key
         # with the best match directly below it and the keyboard alone at the
         # bottom. Chosen from recordings of three variants (provisioning#9).
         # search.reversed stays unwritten: with a top bar it would be wrong.
-        # actions (andashi/home#106): no chips under a query, in any zone. Search
-        # here finds apps; a web search is one tap away in the browser. The
-        # launcher seeds Web search, YouTube and Google on existing installs, and
-        # only an explicit list replaces them - so [] is written, not left out.
-        # Decided by Dob (provisioning#8).
-        search: { contacts: $contacts, barPosition: "top", actions: [] }
+        # actions (andashi/home#106): the built-in recognisers only - Call,
+        # Message, Email, Contact, Alarm, Timer, Calendar, Website appear when a
+        # query looks like a number, an address or a time. No web search chips:
+        # existing installs had Web search, YouTube and Google seeded, and only
+        # an explicit list replaces them. all_profiles.search_actions in
+        # theming.json, a zone may override it (provisioning#8).
+        search: { contacts: $contacts, barPosition: "top",
+                  actions: ($p.search_actions // $t.all_profiles.search_actions
+                            // error("theming.json: all_profiles.search_actions missing")) }
       }
   ' "$CONFIG_DIR/theming.json"
 }

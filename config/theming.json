@@ -38,6 +38,10 @@
     "searchWallpaperBlur (0.6.0+) is the same question for the search screen, and the",
     "answer there is true: search is a list of results over the wallpaper, and the blur",
     "behind it is what makes it readable. Home stays sharp, search does not.",
+    "search_actions are the chips under a search query (Andashi Home with andashi/home#106):",
+    "only the built-in recognisers, which appear when a query looks like a number, an",
+    "address or a time - never web search, YouTube or Google. A zone may override the list",
+    "with its own search_actions in per_profile.",
     "All six fields are written explicitly because the launcher fills its defaults in on read-back",
     "and the check compares the whole appearance section - an omitted field would read",
     "as a difference.",
@@ -103,7 +107,11 @@
       "contrast": "medium",
       "wallpaperBlur": false,
       "searchWallpaperBlur": true
-    }
+    },
+    "search_actions": [
+      { "type": "call" }, { "type": "message" }, { "type": "email" }, { "type": "contact" },
+      { "type": "alarm" }, { "type": "timer" }, { "type": "calendar" }, { "type": "website" }
+    ]
   },
   "per_profile": {
     "home": {

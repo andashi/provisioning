@@ -42,7 +42,32 @@
   },
   "schemaVersion": 2,
   "search": {
-    "actions": [],
+    "actions": [
+      {
+        "type": "call"
+      },
+      {
+        "type": "message"
+      },
+      {
+        "type": "email"
+      },
+      {
+        "type": "contact"
+      },
+      {
+        "type": "alarm"
+      },
+      {
+        "type": "timer"
+      },
+      {
+        "type": "calendar"
+      },
+      {
+        "type": "website"
+      }
+    ],
     "barPosition": "top",
     "contacts": false
   }

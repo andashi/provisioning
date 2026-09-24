@@ -168,11 +168,13 @@ with andashi/home#107) puts the bar at the top of open search while the home scr
 it at the bottom: the thumb reaches it there, and in search the keyboard owns the
 bottom anyway, so field and best match sit together at the top. Chosen from screen
 recordings of three variants (provisioning#9); `search.reversed` stays unwritten,
-because with a top bar it would put the best match at the far end. `search.actions: []`
-(andashi/home#106) removes the chips under every query in every zone — Web search,
-YouTube and Google were seeded into existing installs, and only an explicit list
-replaces them, so the empty list is written rather than left out
-(provisioning#8). The other `search` keys are left to the device, and the read-back compares only the keys the generator wrote,
+because with a top bar it would put the best match at the far end. `search.actions`
+(andashi/home#106) keeps only the built-in recognisers — Call, Message, Email,
+Contact, Alarm, Timer, Calendar, Website, which appear when a query looks like a
+number, an address or a time — and drops the web search chips in every zone. Web
+search, YouTube and Google were seeded into existing installs, and only an explicit
+list replaces them, so the list is always written (`all_profiles.search_actions` in
+`theming.json`, overridable per zone; provisioning#8). The other `search` keys are left to the device, and the read-back compares only the keys the generator wrote,
 because the launcher serves all eleven.
 
 ## Editing on the device
