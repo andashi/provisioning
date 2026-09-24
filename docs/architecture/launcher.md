@@ -163,8 +163,8 @@ show "Contacts permission is required — Grant" under every query, an invitatio
 exactly the grant the catalog withholds. Home is the only zone with a contacts
 source (DAVx5, Signal, the dialer); a zone that gains one goes into
 `perms.only_profiles`, and search follows. The launcher has no network in any zone,
-so what it reads stays on the phone either way. `search.barPosition: top` (0.7.0+,
-andashi/home#107) puts the bar at the top of open search while the home screen keeps
+so what it reads stays on the phone either way. `search.barPosition: top` (the release
+with andashi/home#107) puts the bar at the top of open search while the home screen keeps
 it at the bottom: the thumb reaches it there, and in search the keyboard owns the
 bottom anyway, so field and best match sit together at the top. Chosen from screen
 recordings of three variants (provisioning#9); `search.reversed` stays unwritten,
