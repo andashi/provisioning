@@ -145,12 +145,15 @@ where something is pinned — and the row is placed explicitly in the bottom row
 above the search bar, because an item without coordinates goes to the first free
 cell, which is the top.
 
-On a **fresh** profile that emptiness only holds from the second run. The launcher
-writes its own favorites row the first time the zone is opened, which is after our
-push, so the read-back agrees with us while the screen does not
+Up to 0.6.0 that emptiness held on a **fresh** profile only from the second run:
+the launcher wrote its own favorites row the first time the zone was opened, after
+our push, so the read-back agreed with us while the screen did not
 ([andashi/home#92](https://github.com/andashi/home/issues/92): a layout equal to
-the stored state produces no mutation, and nothing then marks the grid
-initialised). Measured on emulator-5558 with 0.5.0.
+the stored state produced no mutation, and nothing marked the grid initialised).
+Measured on emulator-5558 with 0.5.0. Since 0.6.1 a config that names
+`home.grid.layouts` marks the grid initialised, and an empty zone is empty from the
+first run — measured on emulator-5558 from `profiles-ready`: Cloud opened for the
+first time after the push, both layouts read back empty, no card on screen.
 
 ## Editing on the device
 

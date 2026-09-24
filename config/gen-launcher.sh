@@ -222,13 +222,11 @@ gen_profile() {   # $1=profile-key
             # is not locked) and the widget picker offers exactly one built-in
             # widget, the favorites one, labelled "Apps".
             #
-            # On a fresh profile an empty layout does not stay empty until the
-            # SECOND run: the launcher writes its own favorites row when the
-            # zone is first opened (andashi/home#92 - a layout that equals the
-            # stored state produces no mutation, so nothing marks the grid
-            # initialised). Declaring the item only where it has content keeps
-            # that out of sight; once #92 ships, an empty zone is empty from
-            # the first run.
+            # Before Andashi Home 0.6.1 an empty layout on a fresh profile only
+            # stayed empty from the SECOND run: the launcher wrote its own
+            # favorites row when the zone was first opened (andashi/home#92).
+            # 0.6.1 marks the grid initialised as soon as a config names
+            # home.grid.layouts, so an empty zone is empty from the first run.
             # Bottom row, above the search bar - the one place on this screen
             # where a thumb reaches. That costs the geometry-free stance for
             # this one item: an item without coordinates goes to the first free
