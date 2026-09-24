@@ -4,6 +4,7 @@
       "blur": 24,
       "contrast": "medium",
       "radius": 28,
+      "searchWallpaperBlur": true,
       "tint": 0.12,
       "wallpaperBlur": false
     },

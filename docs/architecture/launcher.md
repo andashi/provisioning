@@ -79,7 +79,8 @@ Schema version 2, one file per non-managed profile, generated into
   "schemaVersion": 2,
   "icons":      { "themed": true, "enforceThemed": true, "pack": "app.lawnchair.lawnicons" },
   "appearance": { "glass":     { "blur": 24, "tint": 0.12, "radius": 28,
-                                 "contrast": "medium", "wallpaperBlur": true },
+                                 "contrast": "medium", "wallpaperBlur": false,
+                                 "searchWallpaperBlur": true },
                   "wallpaper": { "image": "cloud.jpg", "target": "both" } },
   "home":       { "searchBar": { "position": "bottom" },
                   "favorites": [],
@@ -123,7 +124,7 @@ names to the fork's widget ids, favorite labels to package names from the catalo
 The glass values are the one exception to "per-profile wins as a whole": they
 merge **field by field**, `all_profiles.glass` first and the zone's own object on
 top. Three transparency values were always written together, so replacing the
-whole object was harmless; with five fields it is a trap, because a zone that
+whole object was harmless; with six fields it is a trap, because a zone that
 only wants a darker tint would silently reset blur, radius and contrast.
 
 **Resolution failures are fatal.** A favorite that matches no catalog entry or

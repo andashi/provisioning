@@ -76,7 +76,7 @@ gen_profile() {   # $1=profile-key
     # the glass object of the zone on top - FIELD BY FIELD, not as a whole. The old
     # transparency rule let a per-profile object win entirely, which was
     # harmless for three values that were always written together and is a trap
-    # for five: a zone that wants a darker tint would silently reset blur,
+    # for six: a zone that wants a darker tint would silently reset blur,
     # radius and contrast to the fallbacks in this generator.
     | (($t.all_profiles.glass // {}) + ($p.glass // {})) as $g
     | (($l.glass // false) == true) as $glass_on
@@ -87,7 +87,7 @@ gen_profile() {   # $1=profile-key
     # tint 0..1, contrast low|medium|high); checking them here turns six broken
     # zones into one failed generation.
     | (if $glass_on then
-         ([ $g | keys[] | . as $k | select([ "blur", "tint", "radius", "contrast", "wallpaperBlur" ] | index($k) | not) ]) as $unknown
+         ([ $g | keys[] | . as $k | select([ "blur", "tint", "radius", "contrast", "wallpaperBlur", "searchWallpaperBlur" ] | index($k) | not) ]) as $unknown
          | if ($unknown | length) > 0
              then error("profile \($key): unknown glass key(s): \($unknown | join(", "))")
            elif (($g.blur // 24) < 0 or ($g.blur // 24) > 64)
@@ -184,7 +184,11 @@ gen_profile() {   # $1=profile-key
             tint: ($g.tint // 0.12),
             radius: ($g.radius // 28),
             contrast: ($g.contrast // "medium"),
-            wallpaperBlur: (if $g | has("wallpaperBlur") then $g.wallpaperBlur else true end)
+            wallpaperBlur: (if $g | has("wallpaperBlur") then $g.wallpaperBlur else true end),
+            # Andashi Home 0.6.0+ (andashi/home#91): search blurs its own
+            # background, independent of wallpaperBlur. Served back in the glass
+            # block from 0.6.0 on, so it has to be written like the other five.
+            searchWallpaperBlur: (if $g | has("searchWallpaperBlur") then $g.searchWallpaperBlur else true end)
           }
         } else {
           transparency: {
