@@ -263,7 +263,12 @@ gen_profile() {   # $1=profile-key
         # Only the keys this distribution decides. A key left out stays as it
         # is on the device, and 45-launcher-config.sh compares just the keys
         # written here, because the read-back serves all eleven.
-        search: { contacts: $contacts }
+        # barPosition (andashi/home#107): the bar sits at the bottom of the
+        # home screen, where the thumb reaches, and at the top of open search,
+        # with the best match directly below it and the keyboard alone at the
+        # bottom. Chosen from recordings of three variants (provisioning#9).
+        # search.reversed stays unwritten: with a top bar it would be wrong.
+        search: { contacts: $contacts, barPosition: "top" }
       }
   ' "$CONFIG_DIR/theming.json"
 }
