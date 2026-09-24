@@ -69,6 +69,23 @@ provider answers "External files directory unavailable" or cannot be found at al
 Exactly those two messages are retried, bounded to about 30 seconds. Anything else
 fails immediately.
 
+**A build with a different signer leaves a trap behind.** Swapping the release
+launcher for a debug build - which is what launcher work does - means uninstall
+and install, and the per-user external directory survives that with the
+ownership of the install that made it. The new build then cannot write into its
+own directory, and every upload into that zone fails with a null file
+descriptor over `IOException: Permission denied`. It is not a race and retrying
+never helps; the step says so and prints the remedy. The user has to be running
+for it, because `pm clear` on a stopped user prints `Success` and does nothing:
+
+```bash
+adb -s <serial> shell am start-user -w <uid>
+adb -s <serial> shell pm clear --user <uid> org.andashi.home
+```
+
+The step will not do that by itself. `pm clear` also destroys whatever was
+arranged on the device, and protecting that is the reason the push guard exists.
+
 ## The config document
 
 Schema version 2, one file per non-managed profile, generated into

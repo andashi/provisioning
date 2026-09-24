@@ -107,6 +107,7 @@ query_state() {   # $1=path (config|diagnostics) $2=uid
 ingest_write() {   # $1=uri $2=file $3=uid
   local attempt=0
   INGEST_RETRIES=""
+  INGEST_HINT=""
   _adb_args
   while :; do
     WRITE_OUT="$("$ADB" "${_AA[@]}" shell "content write --user $3 --uri $1" < "$2" 2>&1 | tr -d '\r')" || WRITE_OUT="${WRITE_OUT:-content write failed}"
@@ -117,6 +118,24 @@ ingest_write() {   # $1=uri $2=file $3=uid
         INGEST_RETRIES=$attempt
         [ $attempt -ge 15 ] && return 1
         sleep 2;;
+      # Not a race, so not retried: the app cannot create a file in its own
+      # per-user external directory. That directory survives an uninstall and
+      # keeps the ownership of the install that made it, so a build installed
+      # with a different signer - release traded for debug, which is what
+      # launcher work does - finds a directory it may not write to and every
+      # upload into that zone fails for good. Measured 2026-09-24 on
+      # emulator-5558: twelve attempts over 24s, always
+      # "IOException: Permission denied" in File.createTempFile, and a
+      # `pm clear` for that user fixed it immediately - but only while the
+      # user was running. On a stopped user the same command prints Success
+      # and changes nothing, because its storage is not mounted.
+      #
+      # Only the hint is given, never the command: `pm clear` also destroys the
+      # arrangement somebody made on the device, and this step exists to
+      # protect exactly that.
+      *"getFileDescriptor()"*|*"Permission denied"*)
+        INGEST_HINT="the per-user data of $PKG is from an earlier install (different signer?). The user has to be RUNNING for the clear to take, it reports Success either way: adb -s ${ADB_SERIAL:-<serial>} shell am start-user -w $3 \&\& adb -s ${ADB_SERIAL:-<serial>} shell pm clear --user $3 $PKG"
+        return 1;;
       *) return 1;;
     esac
   done
@@ -200,7 +219,7 @@ configure_profile() {   # $1=profile-key
     else
       if ! ingest_write "content://$PKG.config-ingest/wallpapers/$wpname" "$wpf" "$uid"; then
         printf '%s\n' "$WRITE_OUT" >&2
-        problem "$key" "$label: wallpaper upload of $wpname failed (user $uid)"
+        problem "$key" "$label: wallpaper upload of $wpname failed (user $uid)${INGEST_HINT:+ - $INGEST_HINT}"
         return 1
       fi
       ok "wallpaper uploaded ($wpname, $(du -h "$wpf" | cut -f1)${INGEST_RETRIES:+, after $INGEST_RETRIES retries})"
@@ -212,7 +231,7 @@ configure_profile() {   # $1=profile-key
   else
     if ! ingest_write "$ingest_uri" "$cfgfile" "$uid"; then
       printf '%s\n' "$WRITE_OUT" >&2
-      problem "$key" "$label: content write into $ingest_uri failed (user $uid)"
+      problem "$key" "$label: content write into $ingest_uri failed (user $uid)${INGEST_HINT:+ - $INGEST_HINT}"
       return 1
     fi
     ok "config written ($(basename "$cfgfile"), sha256 ${want_sha:0:12}...${INGEST_RETRIES:+, after $INGEST_RETRIES retries})"
