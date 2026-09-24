@@ -214,10 +214,13 @@ timing on SwiftShader says nothing about a device
 ([above](#rendering-on-the-host-gpu)). Two takes are only comparable when both
 say which renderer drew them.
 
-**The 0.7.1 unfold take predates this.** Its source was the unfolded inner
-display (2076x2152, cut down to 948x1080 at 30 fps for the site), but nothing
-records the instance or the GPU mode, so it cannot be reproduced exactly - only
-replaced by a take that does record them.
+**The 0.7.1 unfold take predates this**, and what is known about it lives in the
+handover message rather than beside the file: `adb emu screenrecord` on the Fold
+emulator, host GPU. Its source was the unfolded inner display (2076x2152, cut to
+948x1080 at 30 fps for the site). That is enough to take a comparable one - the
+foldable, `GPU=host` - and not enough to reproduce it: no overlay directory, no
+launcher build, and nothing on this side that can check the claim. Which is the
+whole reason the lines above exist.
 
 ## Snapshots
 
