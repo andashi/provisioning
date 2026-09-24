@@ -268,7 +268,12 @@ gen_profile() {   # $1=profile-key
         # with the best match directly below it and the keyboard alone at the
         # bottom. Chosen from recordings of three variants (provisioning#9).
         # search.reversed stays unwritten: with a top bar it would be wrong.
-        search: { contacts: $contacts, barPosition: "top" }
+        # actions (andashi/home#106): no chips under a query, in any zone. Search
+        # here finds apps; a web search is one tap away in the browser. The
+        # launcher seeds Web search, YouTube and Google on existing installs, and
+        # only an explicit list replaces them - so [] is written, not left out.
+        # Decided by Dob (provisioning#8).
+        search: { contacts: $contacts, barPosition: "top", actions: [] }
       }
   ' "$CONFIG_DIR/theming.json"
 }

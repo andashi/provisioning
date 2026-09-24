@@ -155,7 +155,7 @@ Measured on emulator-5558 with 0.5.0. Since 0.6.1 a config that names
 first run — measured on emulator-5558 from `profiles-ready`: Cloud opened for the
 first time after the push, both layouts read back empty, no card on screen.
 
-**Search writes two keys.** The first is derived rather than chosen: `search.contacts` (0.6.0+)
+**Search writes three keys.** The first is derived rather than chosen: `search.contacts` (0.6.0+)
 is `true` only in a zone where the catalog grants the launcher `READ_CONTACTS`
 (`perms.grant` with `perms.only_profiles` in `apps.json`) — today that is Home. So
 contact search never exists without the permission, and a zone without it does not
@@ -168,8 +168,11 @@ with andashi/home#107) puts the bar at the top of open search while the home scr
 it at the bottom: the thumb reaches it there, and in search the keyboard owns the
 bottom anyway, so field and best match sit together at the top. Chosen from screen
 recordings of three variants (provisioning#9); `search.reversed` stays unwritten,
-because with a top bar it would put the best match at the far end. The other
-`search` keys are left to the device, and the read-back compares only the keys the generator wrote,
+because with a top bar it would put the best match at the far end. `search.actions: []`
+(andashi/home#106) removes the chips under every query in every zone — Web search,
+YouTube and Google were seeded into existing installs, and only an explicit list
+replaces them, so the empty list is written rather than left out
+(provisioning#8). The other `search` keys are left to the device, and the read-back compares only the keys the generator wrote,
 because the launcher serves all eleven.
 
 ## Editing on the device

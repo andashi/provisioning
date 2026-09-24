@@ -42,6 +42,7 @@
   },
   "schemaVersion": 2,
   "search": {
+    "actions": [],
     "barPosition": "top",
     "contacts": false
   }
