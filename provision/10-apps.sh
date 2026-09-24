@@ -34,16 +34,23 @@ ensure_pinned_version() {   # $1=pkg $2=label
   fi
   [ "$cur" = "$want" ] && return 0
 
+  # Say why this build is the target. Most apps carry no release_tag and simply
+  # follow the newest APK the host has; calling that a pin sent people looking
+  # for a pin in the catalog that was never there.
+  local tag why
+  tag="$(jq -r --arg p "$pkg" '[.apps[]|select(.pkg==$p)|.release_tag//empty][0] // empty' "$CONFIG_DIR/apps.json")"
+  if [ -n "$tag" ]; then why="pinned by release_tag $tag"; else why="newest in the host inventory"; fi
+
   if [ "$cur" -gt "$want" ]; then
     # A rollback must be deliberate and loud. 'install -r' refuses a downgrade
     # without -d, and doing it silently would make the pin a lie in the other
     # direction - the device would keep a build the catalog does not name.
-    warn "$lbl: device has $cur, catalog pins $want ($(basename "$apk")) - refusing to downgrade automatically"
+    warn "$lbl: device has $cur, target is $want ($(basename "$apk"), $why) - refusing to downgrade automatically"
     warn "$lbl: uninstall it first, or move release_tag to what should actually run"
     return 0
   fi
 
-  log "$lbl: $cur -> $want (pinned by release_tag)"
+  log "$lbl: $cur -> $want ($why)"
   adb_ install -r "$apk" >/dev/null \
     && ok "$lbl upgraded to $want from $(basename "$apk")" \
     || warn "$lbl: upgrade to $want FAILED - device stays on $cur"
