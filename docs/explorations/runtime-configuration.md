@@ -266,6 +266,45 @@ authorisation at all. Whether a key authorised over USB is accepted over TLS
 without a pairing code stays a hardware measurement. The source suggests yes
 (adbd authorises against `adb_keys` alone), which is a reading, not a result.
 
+### Revised 2026-09-24: a switch on the phone, not a bell from the laptop
+
+The doorbell above does not survive its own premise. To be rung, the app has to
+listen, and a listening socket needs `INTERNET` — the one permission this app must
+not have. So the door opens from the phone: a Quick Settings tile in an app holding
+`WRITE_SECURE_SETTINGS`, which sets `adb_wifi_enabled` and clears it again after the
+run or after 30 minutes. The trigger itself is proven above. What falls away with
+the bell: the listening interface, the signed message, and the laptop key in
+`laptops.json` (point 2 of the next section) — the adb authorisation is the only
+pairing left. What it costs: the phone has to be in hand to open the door, which is
+the moment someone wants a change to arrive anyway. A small laptop-side agent that
+sees the door open and applies what is pending makes it hands-free. The decided
+model lives in provisioning#7.
+
+### What reaches a zone that is not running (measured 2026-09-24)
+
+Emulator-5558, Andashi Home 0.6.1, every probe as shell. Lab got a PIN and was
+stopped, so its credential-encrypted storage was locked.
+
+```
+pm install-existing --user 14 im.molly.app     installed; app data created on next unlock
+pm revoke --user 14 … INTERNET                 granted=false, USER_SET
+settings put --user 14 secure …                written, read back
+launcher ingest/state provider                 "Could not find provider"
+unlock Lab by PIN                              Molly present, no network, setting present
+am start-user -w 14 (locked)                   120 s, "could not start user", RUNNING_LOCKED,
+                                               Cloud evicted, launcher provider still absent
+am start-user -w 14 (no PIN)                   3.6 s
+launcher-only change, running zone             ~1.0 s write + reload, ~1.9 s converged (4 runs)
+```
+
+So the system layer reaches every zone at any time without starting it, and the
+launcher layer only reaches running, unlocked ones — in about two seconds. Starting
+a locked zone buys nothing and evicts the zone that must keep running. Parking
+launcher config in device-protected storage (Direct Boot) was considered and
+dropped: it needs the same start, and a document parked blind could overwrite what
+was changed on the phone. Launcher changes for other zones wait on the laptop until
+the zone runs.
+
 ## Pairing a laptop
 
 Two things are paired, and they are not the same thing.
@@ -557,8 +596,9 @@ Done, on the GrapheneOS emulator, 2026-09-21 and after:
 
 Open, on the emulator:
 
-1. The chain with selective steps: only the steps whose inputs changed, and what a
-   dock-only change then costs in seconds.
+1. The chain with selective steps: only the steps whose inputs changed. The launcher
+   half is answered — about two seconds per running zone — the rest of the chain is
+   not.
 
 Open, hardware only:
 
