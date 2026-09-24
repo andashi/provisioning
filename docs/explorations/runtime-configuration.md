@@ -235,18 +235,36 @@ doorbell reply; the laptop fixes the port with `adb tcpip` after a first
 connection, which holds until reboot; or the tailnet stage is simply not offered
 and the cable or the local network is the answer from afar too.
 
-**The emulator's limit, stated plainly.** Its adbd already speaks TCP on 5555.
-After the app set the flag, still only 5555 listened, no TLS listener appeared,
-`dumpsys nsd` was empty, and the same test APK browsing
-`_adb-tls-connect._tcp` through `NsdManager` for twelve seconds found nothing —
-no service, no error. The reading, and not a sharper one: on the emulator the
-flag alone does not bring up the wireless-debugging path, so there is nothing to
-announce. Whether on hardware the flag is enough, or the Settings toggle does
-more than write this one value, is **not answered** — and that question is
-bigger than discoverability. If the flag alone is not the trigger, the tailnet
-stage lacks its trigger, not just its port. Both, and whether a key authorised
-over USB is accepted wirelessly without a pairing code, are hardware
-measurements.
+**What the emulator answered on the second attempt (2026-09-24).** The first run
+above set the flag and saw nothing come up; it did not look for a dialog. The
+framework source says why (`AdbDebuggingManager`, `MSG_ADBDWIFI_ENABLE`): the flag
+starts exactly the path the Settings toggle starts, but only on a connected Wi-Fi
+network whose BSSID is on the user's trusted list. Otherwise SystemUI asks —
+"Allow wireless debugging on this network?", with "Always allow on this network" —
+and the flag is not acted on. The rerun, on emulator-5556 from `clean`, developer
+options **off**, every write as **shell (uid 2000)**:
+
+```
+settings put global adb_wifi_enabled 1   -> "isn't a trusted network, Displaying auth prompt"
+"Always allow" + Allow (by hand, once)   -> adbd: "adb wifi started on port 34033",
+                                            _adb-tls-connect._tcp registered via mDNS
+flag 0                                   -> TLS listener gone
+flag 1                                   -> new random port 45525, no dialog
+```
+
+So on a trusted network **the flag alone is the trigger**, in both directions, and
+the doorbell has what it needs: an app holding `WRITE_SECURE_SETTINGS` can open and
+close wireless debugging, and the one consent the system insists on — per network,
+once — is a tap the user makes anyway. Two limits follow from the same code and are
+not negotiable: it runs **only on Wi-Fi** (no Wi-Fi, no wireless debugging, so no
+tailnet stage over mobile data), and a network change switches it off.
+
+What the emulator **cannot** answer is the key question. A TLS connection with this
+laptop's key succeeded without pairing — and so did one with a freshly generated
+key that was never authorised: the emulator runs `ro.adb.secure=0` and enforces no
+authorisation at all. Whether a key authorised over USB is accepted over TLS
+without a pairing code stays a hardware measurement. The source suggests yes
+(adbd authorises against `adb_keys` alone), which is a reading, not a result.
 
 ## Pairing a laptop
 
@@ -513,9 +531,11 @@ Done, on the GrapheneOS emulator, 2026-09-21 and after:
   survives a reboot, **per user**. Details above.
 - `adb_wifi_enabled`: global, written by an ordinary app holding only that
   permission, with developer options off, against a control run without it. The
-  port is not readable from a property (SELinux). `NsdManager` on the device sees
-  no `_adb-tls-connect._tcp`, because the emulator brings up no wireless path
-  from the flag alone.
+  port is not readable from a property (SELinux).
+- `adb_wifi_enabled` as the trigger (2026-09-24): on a trusted Wi-Fi network the
+  flag alone starts and stops wireless debugging, random TLS port, mDNS
+  `_adb-tls-connect._tcp`. On an untrusted one SystemUI asks first, once per
+  network. Wi-Fi only. The first run missed the dialog.
 
 - QR enrolment: the six-tap gesture does nothing on GrapheneOS's welcome screen,
   reached with root on a throwaway instance. Details above.
@@ -542,9 +562,9 @@ Open, on the emulator:
 
 Open, hardware only:
 
-- Whether `adb_wifi_enabled` alone brings up wireless debugging, or the Settings
-  toggle does more. This decides whether the tailnet stage has a trigger at all.
-- If it does: whether a TLS port appears, and how the laptop finds it on the local
-  network and over the tailnet.
 - Whether a key authorised over USB connects wirelessly without a pairing code.
+  The emulator enforces no authorisation (`ro.adb.secure=0`) and cannot say.
+- Whether GrapheneOS changes anything in the path the emulator showed.
+- How the laptop reaches the port over the tailnet while the phone is on Wi-Fi:
+  no mDNS there, so the doorbell would have to hand the port back.
 - Whether the six-tap QR enrolment exists on a real device's welcome screen.
