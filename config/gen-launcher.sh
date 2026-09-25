@@ -261,7 +261,15 @@ gen_profile() {   # $1=profile-key
                   # edge - on both displays, where the right thumb already is,
                   # and the default of the launcher itself. A full-width row would cross the
                   # fold. Decided 2026-09-24 (provisioning#6).
-                  fold:  { items: (if $any then [ ({ id: "favorites", widget: "favorites", x: 7, y: 0, w: 1, h: 7 } + $opts) ] else [] end) } })
+                  #
+                  # h 6, not 7: the favorites widget maxes out at six cells tall.
+                  # h 7 was accepted, stored as 6 and served back as 6 without a
+                  # diagnostic (measured 2026-09-25 on emulator-5560, 0.7.3), so
+                  # the file claimed a height that never existed. The grid itself
+                  # has more than six rows there - an item at y 1 with h 6 is kept
+                  # unchanged - which is how the limit was told apart from the
+                  # row count.
+                  fold:  { items: (if $any then [ ({ id: "favorites", widget: "favorites", x: 7, y: 0, w: 1, h: 6 } + $opts) ] else [] end) } })
           # Labels under the grid items, never on the dock. New in 0.5.0, so it
           # rides the same flag as glass - an older pinned release would report
           # it as an unknown key and never echo it back.

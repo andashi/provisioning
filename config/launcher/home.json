@@ -31,7 +31,7 @@
             {
               "background": true,
               "borderless": false,
-              "h": 7,
+              "h": 6,
               "id": "favorites",
               "themeColors": true,
               "w": 1,
