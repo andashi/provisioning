@@ -29,7 +29,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	    echo "obtainium.json is stale - run 'make obtainium'"; diff <(jq -S . config/obtainium.json) <(jq -S . $$t) | head -20; \
 	    rm -f $$t; exit 1; fi; rm -f $$t
 	@t=$$(mktemp -d); OUT_DIR=$$t config/gen-launcher.sh >/dev/null; \
-	  if diff -rq config/launcher $$t >/dev/null; then \
+	  if diff -rq -x ".*" config/launcher $$t >/dev/null; then \
 	    echo "ok: launcher/*.json in sync"; else \
 	    echo "config/launcher is stale - run 'make launcher-config'"; diff -r config/launcher $$t | head -20; \
 	    rm -rf $$t; exit 1; fi; rm -rf $$t

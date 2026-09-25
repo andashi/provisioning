@@ -25,3 +25,7 @@ emulator/instances/
 
 # Screenshot and report staging, not part of the distribution
 .artifact/
+
+# The generator records what it wrote, so it can refuse to overwrite a pull
+# (provisioning#11). Machine-local, like the sha records in .provision-state.
+config/launcher/.generated.sha256
