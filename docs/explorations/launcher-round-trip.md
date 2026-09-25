@@ -1,6 +1,8 @@
 # Getting a device edit back into the source
 
-**Status:** two shapes, one decision open ([provisioning#11](https://github.com/andashi/provisioning/issues/11))
+**Status:** decided 2026-09-25 — **neither shape** ([provisioning#11](https://github.com/andashi/provisioning/issues/11)).
+The two below are kept because the record of a wrong premise is worth more than
+a menu; what was actually decided is at the end.
 
 The launcher writes every managed section back into its own `launcher.json` as
 soon as somebody changes it on the device (andashi/home D2, no switch, present
@@ -123,3 +125,38 @@ values that have a perfectly good home already (B for everything).
   widget arrive in the same file and would be split across two destinations.
 - Whether `make check` should fail or merely report when an overlay shadows a
   generated key.
+
+## What was decided, and why neither shape was taken
+
+`per_profile.<zone>.layouts.{phone,fold}` in `theming.json`, holding the grid
+block **exactly as `launcher.json` carries it**. The generator copies it through
+instead of inventing it, `--pull` writes what the device had straight back into
+that field, and there is no second file.
+
+Two things collapsed when Dob looked at the premise rather than the options.
+
+**The device dimension was speculative.** I scoped the overlay by device because
+the Fold and a phone disagree — and they do, `544df48` shows it. But the
+generator already emits one layout per *form factor*, `phone` and `fold`, which
+is what that disagreement actually needs. A path like
+`launcher-overrides/pixel-fold/home.json` only earns its keep with two devices of
+the **same** form factor and different row counts. Nobody has that; there is not
+even one device yet. I had designed for a fleet that does not exist, and
+presented it as a choice instead of noticing.
+
+**Shape A's fatal cost was in the translation, not in the file.** My objection
+was that `theming.json` would grow a second copy of the launcher's schema — true
+of a translated grid, false of a verbatim one. Carried through untouched, the
+field is opaque here: a grid feature the launcher gains later passes through
+without this repository learning anything about it, and there is nothing to keep
+in step because nothing was copied.
+
+What survives from the shapes above is the reasoning, not the structures: geometry
+belongs to a device and not to a zone, and that is why it lives in per-form-factor
+layouts rather than in one arrangement per zone. It just turns out to be data in a
+file instead of a decision in a script.
+
+The consequence to watch: a verbatim field means a malformed or stale block is
+caught by the launcher at push time, not by `make check`. That is the price of not
+having a schema here, and it is the right price — the alternative is the second
+copy.
