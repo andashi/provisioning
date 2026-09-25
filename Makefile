@@ -23,6 +23,18 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	   | "  \($$z.label): browser \($$z.browser) is not placed in this zone"'); \
 	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
 	  echo "ok: zone browsers"
+	@pkg=$$(jq -r --arg k "$$(jq -r .launcher config/theming.json)" '.launchers[$$k].pkg' config/theming.json); \
+	  bad=$$(for f in config/launcher/*.json; do \
+	    z=$$(basename $$f .json); \
+	    jq -e '.search.contacts == true' $$f >/dev/null || continue; \
+	    jq -e --arg z "$$z" --arg p "$$pkg" '[.apps[] | select(.pkg == $$p) \
+	       | select((.perms.grant // []) | index("android.permission.READ_CONTACTS")) \
+	       | select(((.perms.only_profiles // .profiles) | index($$z)) != null)] | length > 0' \
+	       config/apps.json >/dev/null || echo "  $$z"; \
+	  done); \
+	  [ -z "$$bad" ] || { echo "search.contacts is true in zones the catalog denies READ_CONTACTS:"; echo "$$bad"; \
+	    echo "  the launcher accepts it and shows a Grant banner under every query (andashi/home#140)"; exit 1; }; \
+	  echo "ok: contact search only where the permission is"
 	@t=$$(mktemp); OUT=$$t config/gen-obtainium.sh >/dev/null; \
 	  if diff -q <(jq -S . $$t) <(jq -S . config/obtainium.json) >/dev/null; then \
 	    echo "ok: obtainium.json in sync"; else \

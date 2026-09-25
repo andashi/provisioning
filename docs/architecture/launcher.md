@@ -194,7 +194,19 @@ number, an address or a time — and drops the web search chips in every zone. W
 search, YouTube and Google were seeded into existing installs, and only an explicit
 list replaces them, so the list is always written (`all_profiles.search_actions` in
 `theming.json`, overridable per zone; provisioning#8). The other `search` keys are left to the device, and the read-back compares only the keys the generator wrote,
-because the launcher serves all eleven.
+because the launcher serves all thirteen.
+
+**Nothing on the launcher's side enforces the permission.** Measured on
+emulator-5560 with 0.7.2: a config that sets `search.contacts: true` in Anon, the
+zone the catalog denies `READ_CONTACTS`, is accepted, applied and served back as
+`true` without a diagnostic. The derivation above is therefore the only thing
+standing between a zone and a permanent "Contacts permission is required - Grant"
+banner under every query, and a guarantee that lives in one generator branch is
+one hand edit or one pull away from being lost. So `make check` asserts it against
+the generated files instead of trusting the code that wrote them. Reported as
+[andashi/home#140](https://github.com/andashi/home/issues/140), which asks for a
+diagnostic rather than a clamp - the same question is open for the other
+permission-gated providers.
 
 ## Editing on the device
 
