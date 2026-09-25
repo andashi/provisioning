@@ -69,10 +69,12 @@ provider answers "External files directory unavailable" or cannot be found at al
 Exactly those two messages are retried, bounded to about 30 seconds. Anything else
 fails immediately.
 
-**A build with a different signer leaves a trap behind.** Swapping the release
-launcher for a debug build - which is what launcher work does - means uninstall
-and install, and the per-user external directory survives that with the
-ownership of the install that made it. The new build then cannot write into its
+**A build with a different signer leaves a trap behind.** Not the debug variant,
+which installs as `org.andashi.home.debug` and coexists: the case that bites is a
+release build made without the keystore, which keeps the release application id
+and falls back to the debug key ([andashi/home#137](https://github.com/andashi/home/issues/137)).
+Installing that means uninstall and install, and the per-user external directory
+survives that with the ownership of the install that made it. The new build then cannot write into its
 own directory, and every upload into that zone fails with a null file
 descriptor over `IOException: Permission denied`. It is not a race and retrying
 never helps; the step says so and prints the remedy. The user has to be running

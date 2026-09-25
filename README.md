@@ -106,9 +106,13 @@ ADB_SERIAL=$SERIAL provision/run.sh
 `SERIAL` and `OVERLAY_DIR` always travel together and pick the instance; without
 them you are on the working instance, `emulator-5554`.
 
-**Swapping a debug build in for the release one breaks every secondary zone.**
-It is worth knowing before it happens, because it does not look like what it is.
-A different signer means uninstall and install, and the app's per-user directory
+**A build with the same application id but a different signer breaks every
+secondary zone.** It is worth knowing before it happens, because it does not
+look like what it is. The debug *variant* is harmless - it installs as
+`org.andashi.home.debug` beside the release one. The trap is a **release** build
+made without the keystore: it keeps the release application id and falls back to
+the debug key ([andashi/home#137](https://github.com/andashi/home/issues/137)),
+so installing it means uninstall and install - and the app's per-user directory
 in external storage survives that with the ownership of the install that created
 it. The new build then cannot write into its own directory: `content write`
 fails with a null `ParcelFileDescriptor`, and underneath it is
