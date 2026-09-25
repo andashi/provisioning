@@ -106,6 +106,27 @@ ADB_SERIAL=$SERIAL provision/run.sh
 `SERIAL` and `OVERLAY_DIR` always travel together and pick the instance; without
 them you are on the working instance, `emulator-5554`.
 
+**Swapping a debug build in for the release one breaks every secondary zone.**
+It is worth knowing before it happens, because it does not look like what it is.
+A different signer means uninstall and install, and the app's per-user directory
+in external storage survives that with the ownership of the install that created
+it. The new build then cannot write into its own directory: `content write`
+fails with a null `ParcelFileDescriptor`, and underneath it is
+`IOException: Permission denied` in `ConfigIngestProvider.newTempFile`. It is
+permanent, not a race — measured on emulator-5558, twelve attempts over 24
+seconds, identical every time — so retrying is twenty minutes wasted. Zone by
+zone, and the user has to be **running** first, because `pm clear` on a stopped
+user prints `Success` and does nothing:
+
+```bash
+adb -s "$SERIAL" shell am start-user -w <uid>
+adb -s "$SERIAL" shell pm clear --user <uid> org.andashi.home
+```
+
+`45-launcher-config.sh` recognises the failure and prints both commands. It does
+not run them: `pm clear` also destroys whatever was arranged on the device.
+Starting from a snapshot that predates the swap avoids the whole thing.
+
 Details, instances and snapshots: [docs/guides/emulator.md](docs/guides/emulator.md).
 
 ## Your catalog, not the template
