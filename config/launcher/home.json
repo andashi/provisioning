@@ -29,8 +29,11 @@
         "fold": {
           "items": [
             {
+              "background": true,
+              "borderless": false,
               "h": 7,
               "id": "favorites",
+              "themeColors": true,
               "w": 1,
               "widget": "favorites",
               "x": 7,
@@ -41,8 +44,11 @@
         "phone": {
           "items": [
             {
+              "background": true,
+              "borderless": false,
               "h": 1,
               "id": "favorites",
+              "themeColors": true,
               "w": 4,
               "widget": "favorites",
               "x": 0,

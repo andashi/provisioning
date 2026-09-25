@@ -248,13 +248,20 @@ gen_profile() {   # $1=profile-key
             # index below is an assumption about the device, and the only one
             # in this file. The fold layout is one row taller (7 rows).
             layouts: (($favs | length > 0) as $any
-              | { phone: { items: (if $any then [ { id: "favorites", widget: "favorites", x: 0, y: 5, w: 4, h: 1 } ] else [] end) },
+              # borderless, background and themeColors are written although they
+              # look like defaults: an absent one is NOT unmanaged - the launcher
+              # stores false/true/true and serves them back (andashi/home ADR
+              # 0002, a named exception). Leaving them out ships three values
+              # nobody chose, which is how a distribution ends up with a look it
+              # cannot explain.
+              | ({ borderless: false, background: true, themeColors: true }) as $opts
+              | { phone: { items: (if $any then [ ({ id: "favorites", widget: "favorites", x: 0, y: 5, w: 4, h: 1 } + $opts) ] else [] end) },
                   # Fold (Andashi Home with andashi/home#93): the cover is the
                   # RIGHT half, columns 4-7, so the dock is a column on the right
                   # edge - on both displays, where the right thumb already is,
                   # and the default of the launcher itself. A full-width row would cross the
                   # fold. Decided 2026-09-24 (provisioning#6).
-                  fold:  { items: (if $any then [ { id: "favorites", widget: "favorites", x: 7, y: 0, w: 1, h: 7 } ] else [] end) } })
+                  fold:  { items: (if $any then [ ({ id: "favorites", widget: "favorites", x: 7, y: 0, w: 1, h: 7 } + $opts) ] else [] end) } })
           # Labels under the grid items, never on the dock. New in 0.5.0, so it
           # rides the same flag as glass - an older pinned release would report
           # it as an unknown key and never echo it back.

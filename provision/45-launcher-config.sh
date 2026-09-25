@@ -384,7 +384,17 @@ configure_profile() {   # $1=profile-key
       # or a swallowed item all remain mismatches.
       | (if ((.home.grid.layouts // null) | type) == "object" then
            .home.grid.layouts |= with_entries(
-             .value.items |= map({ id: .id, widget: .widget, profile: (.profile // "personal") }))
+             .value.items |= map({ id: .id, widget: .widget, profile: (.profile // "personal"),
+               # NOT geometry, so these are checked: they decide how the item
+               # looks. An absent one is not unmanaged - the launcher stores
+               # false/true/true and serves them back (andashi/home ADR 0002) -
+               # so the same defaults are filled in on both sides, and a file
+               # that omits them still compares equal while one that sets them
+               # differently is verified. has() and not //, because false is a
+               # value here.
+               borderless:  (if has("borderless")  then .borderless  else false end),
+               background:  (if has("background")  then .background  else true  end),
+               themeColors: (if has("themeColors") then .themeColors else true  end) }))
          else . end);
     # A grid only exists on one side while the generator still emits v1 - the
     # launcher migrates and invents one. Comparing that would report a
