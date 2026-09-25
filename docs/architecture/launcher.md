@@ -115,6 +115,17 @@ Schema version 2, one file per non-managed profile, generated into
 Two properties of this document are worth stating, because the read-back check
 depends on both.
 
+**A geometry the device does not honour comes back changed, silently.** The
+launcher stores what it can apply and serves that; nothing reports the
+difference, and our read-back ignores geometry by design, so the file can claim
+a shape the screen never had. Two things cause it and they look identical from
+here - the grid's row count, and a widget's own maximum size. One push tells
+them apart: move the item down and keep its size. An item at `y 1` with `h 6`
+cannot survive on a six-row grid, so if it comes back unchanged the limit was
+the widget, not the grid. Measured that way on 2026-09-25: the favorites widget
+maxes out at six cells tall, which is why the Fold column is `h 6` and not the
+`h 7` it was first declared as.
+
 **We write less than we read.** Grid items carry no geometry: rows come from the
 screen, so "bottom row, full width" is not something a host can compute for a
 device it cannot see. The launcher places the item and writes the coordinates
