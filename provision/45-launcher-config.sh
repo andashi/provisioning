@@ -435,15 +435,26 @@ configure_profile() {   # $1=profile-key
 # arrangement has no business in it. A private catalog is selected with
 # CONFIG_DIR (lib/common.sh).
 pull_all() {
-  local repo_config="$REPO_ROOT/config"
-  case "$(cd "$LAUNCHER_CFG_DIR/.." 2>/dev/null && pwd)" in
-    "$repo_config")
-      die "refusing to pull into the repository's template ($LAUNCHER_CFG_DIR).
+  # The destination is the SOURCE, not the generated files. Writing the
+  # arrangement back into config/launcher/<zone>.json would put it where the
+  # generator rebuilds over it; theming.json is the file a person edits, which
+  # is the whole point of the round trip (provisioning#11, decided 2026-09-26).
+  #
+  # The grid block is copied through UNREAD. The launcher is the only component
+  # that understands grid geometry, so any representation of ours would be a
+  # second truth that has to be kept in step. An overlay file was considered and
+  # rejected for the reason ricing already knows: your dotfiles are the truth,
+  # nothing merges invisibly on top of them.
+  local theme="$THEME_FILE"
+  case "$(cd "$(dirname "$theme")" 2>/dev/null && pwd)" in
+    "$REPO_ROOT/config")
+      die "refusing to pull into the repository's template ($theme).
    Point the chain at your own catalog first:  CONFIG_DIR=/path/to/config $0 --pull" ;;
   esac
   require_device
-  local key label uid eff dev_sha rec n=0
-  log "Pulling the effective launcher config into $LAUNCHER_CFG_DIR"
+  local key label uid eff dev_sha rec n=0 tmp lay favs glass unres
+  tmp="$(mktemp)"; cp "$theme" "$tmp"
+  log "Pulling what the device has into $theme"
   while read -r key; do
     label="$(profile_label "$key")"
     [ "$(profile_field "$key" type)" = "managed" ] && { skip "$label: managed profile - no home screen"; continue; }
@@ -452,16 +463,56 @@ pull_all() {
     user_running_uid "$uid" || ash am start-user -w "$uid" >/dev/null 2>&1
     eff="$(query_state config "$uid")" || { warn "$label: /config not served - skipped"; continue; }
     dev_sha="$(query_state diagnostics "$uid" 2>/dev/null | jq -r '.configSha256 // empty')"
-    printf '%s\n' "$eff" | jq -S . > "$LAUNCHER_CFG_DIR/$key.json" \
-      || { warn "$label: could not write $LAUNCHER_CFG_DIR/$key.json"; continue; }
+
+    lay="$(printf '%s' "$eff" | jq -c '.home.grid.layouts // null')"
+
+    # Favorites come back as package names and go into the catalog vocabulary,
+    # because that is what a person reads. A package the catalog does not know
+    # has no label to become, and writing the raw name would produce a file that
+    # fails its own generation later - so the zone keeps its list and says which
+    # app is missing.
+    unres="$(printf '%s' "$eff" | jq -r --slurpfile cat "$CONFIG_DIR/apps.json" '
+      [ (.home.favorites // [])[].packageName
+        | . as $p | select(([ $cat[0].apps[] | select(.pkg == $p) ] | length) != 1) ] | join(", ")')"
+    if [ -n "$unres" ]; then
+      warn "$label: favorites left alone - not in the catalog: $unres"
+      favs="null"
+    else
+      favs="$(printf '%s' "$eff" | jq -c --slurpfile cat "$CONFIG_DIR/apps.json" '
+        [ (.home.favorites // [])[].packageName
+          | . as $p | ([ $cat[0].apps[] | select(.pkg == $p) | .label ])[0] ]')"
+    fi
+
+    # Glass: only what differs from all_profiles.glass. The device serves the
+    # section complete, so copying it whole would write five values per zone
+    # and bury the one somebody changed.
+    glass="$(printf '%s' "$eff" | jq -c --slurpfile t "$tmp" '
+      ($t[0].all_profiles.glass // {}) as $d
+      | [ (.appearance.glass // {}) | to_entries[] | select($d[.key] != .value) ] | from_entries')"
+
+    jq --indent 2 --arg k "$key" --argjson lay "$lay" --argjson favs "$favs" --argjson glass "$glass" '
+      (if $lay  == null then . else .per_profile[$k].layouts   = $lay  end)
+      | (if $favs == null then . else .per_profile[$k].favorites = $favs end)
+      | (if ($glass | length) > 0 then .per_profile[$k].glass = $glass
+         else (if (.per_profile[$k] | type) == "object" then .per_profile[$k] |= del(.glass) else . end) end)
+    ' "$tmp" > "$tmp.new" && mv "$tmp.new" "$tmp" \
+      || { warn "$label: could not update $theme"; continue; }
+
     rec="$(sha_record "$key")"
     mkdir -p "$(dirname "$rec")"
     printf '%s\n' "$dev_sha" > "$rec"
     ok "$label: pulled (device sha ${dev_sha:0:12}...)"
     n=$((n + 1))
   done < <(profile_keys)
+
+  mv "$tmp" "$theme"
   printf '\n'
-  ok "$n profile(s) pulled - review the diff and commit it like any other change"
+  # The wallpaper is not pulled: the launcher reports the image NAME it applied,
+  # and theming.json holds a repo path with an {aspect} placeholder - one name
+  # can come from several paths, so the reverse is a guess. The palette is not
+  # in launcher.json at all; it is a system setting 40-theming.sh writes.
+  ok "$n profile(s) pulled into $(basename "$theme") - wallpaper and palette are not pulled"
+  log "now regenerate and review:  config/gen-launcher.sh && git diff"
 }
 
 [ "${1:-}" = "--pull" ] && { pull_all; exit 0; }

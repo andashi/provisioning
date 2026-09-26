@@ -247,7 +247,14 @@ gen_profile() {   # $1=profile-key
             # measures them, MeasuredGridRows.DefaultRows = 6), so the row
             # index below is an assumption about the device, and the only one
             # in this file. The fold layout is one row taller (7 rows).
-            layouts: (($favs | length > 0) as $any
+            # A zone that carries `layouts` in theming.json wins, and its
+            # block is passed through UNREAD: the launcher is the only thing
+            # that understands grid geometry, so a representation of our own
+            # would be a second truth to keep in step. This is where `--pull`
+            # puts what somebody arranged on the device (provisioning#11).
+            # Everything below is the default for a zone that has none.
+            layouts: (if ($p | has("layouts")) then $p.layouts else
+              (($favs | length > 0) as $any
               # borderless, background and themeColors are written although they
               # look like defaults: an absent one is NOT unmanaged - the launcher
               # stores false/true/true and serves them back (andashi/home ADR
@@ -269,7 +276,7 @@ gen_profile() {   # $1=profile-key
                   # has more than six rows there - an item at y 1 with h 6 is kept
                   # unchanged - which is how the limit was told apart from the
                   # row count.
-                  fold:  { items: (if $any then [ ({ id: "favorites", widget: "favorites", x: 7, y: 0, w: 1, h: 6 } + $opts) ] else [] end) } })
+                  fold:  { items: (if $any then [ ({ id: "favorites", widget: "favorites", x: 7, y: 0, w: 1, h: 6 } + $opts) ] else [] end) } }) end)
           # Labels under the grid items, never on the dock. New in 0.5.0, so it
           # rides the same flag as glass - an older pinned release would report
           # it as an unknown key and never echo it back.

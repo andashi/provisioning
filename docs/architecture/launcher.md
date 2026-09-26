@@ -229,11 +229,49 @@ the last run and refuses to overwrite an arrangement it has not seen.
 
 ```bash
 CONFIG_DIR=/path/to/your/config provision/45-launcher-config.sh --pull
+config/gen-launcher.sh && git diff
 ```
 
-`--pull` writes the effective config of every zone into the catalog the chain was
-pointed at, never into this repository's template — the template demonstrates
-mechanisms and is diffed against the generator by `make check`.
+**`--pull` writes into the source, not into the generated files.** It updates
+`theming.json` — the file a person edits — and never this repository's template,
+which demonstrates mechanisms and is diffed against the generator by `make check`.
+Writing into `config/launcher/<zone>.json` would put the arrangement exactly where
+the next generation rebuilds over it, which is the defect this exists to close
+([provisioning#11](https://github.com/andashi/provisioning/issues/11)).
+
+Three things travel, and each one differently:
+
+| What | Where it lands | How |
+|---|---|---|
+| the grid arrangement | `per_profile.<zone>.layouts` | **verbatim**, the launcher's own block, copied unread |
+| favourites | `per_profile.<zone>.favorites` | package names translated back to catalog labels |
+| glass values | `per_profile.<zone>.glass` | only the fields that differ from `all_profiles.glass` |
+
+The grid block is opaque here on purpose. The launcher is the only component that
+understands grid geometry, so a representation of our own would be a second truth
+to keep in step; carried through unread, a grid feature it gains later passes
+through without this repository learning anything about it. An overlay file that
+merged over `theming.json` was considered and rejected for the reason ricing
+already knows: your dotfiles are the truth, and nothing should merge invisibly on
+top of them.
+
+A favourite whose package the catalog does not know has no label to become, so
+that zone's list is left alone and the missing app is named — writing the raw
+package would produce a file that fails its own generation later.
+
+**The wallpaper and the palette are not pulled.** The launcher reports the image
+*name* it applied while `theming.json` holds a repo path with an `{aspect}`
+placeholder, so the reverse is a guess; the palette is not in `launcher.json` at
+all, it is a system setting `40-theming.sh` writes.
+
+**What comes back is the effective config, not the file.** The state provider
+serves `config` and `diagnostics`, and the app's per-user directory is unreachable
+from the shell, so the launcher's own file — where write-back preserves comments
+and touches only keys that are already there — is something no one here will ever
+see. For the grid that costs nothing, because items are explicit. For anything
+scalar it means "somebody set this to the default" and "nobody touched it" are the
+same bytes, which is why the round trip stays narrow rather than becoming *pull
+everything back*.
 
 **A pulled fold layout can make phones complain** (andashi/home#90): a phone
 validates a `fold` layout against its own row count, six, while the Fold has
