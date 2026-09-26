@@ -33,6 +33,12 @@ emulator/run.sh restore <name>     # load into the running instance
 emulator/run.sh stop               # waits for the process to be gone
 ```
 
+`stop` is safe to check: it exits 0 when the port is free, whether or not
+anything was running, and non-zero when it is not — the lock refused, or the
+emulator outlived the 30 second wait. So a script wanting certainty writes
+`run.sh stop || die`, and one writing `run.sh stop || true` is muting the
+refusal rather than the noise.
+
 `restore` and `snapshot` fail on the console's `KO:` reply — adb itself exits 0
 there, which is exactly the kind of proxy success
 [provisioning.md](../architecture/provisioning.md#verifying-and-the-one-recurring-defect)

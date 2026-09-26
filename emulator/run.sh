@@ -378,13 +378,27 @@ start() {
 # Stop, then WAIT for the process: 'emu kill' returns immediately, while the
 # emulator takes up to 20 s to shut down and holds its lock and port until
 # then. A start right after an unwaited stop collides with exactly that.
+# Exit status is the whole point of calling this from a script: 0 means the
+# port is free - whether or not anything was running - and non-zero means it
+# is NOT, either because the lock refused or because the emulator outlived the
+# wait. It used to return whatever clear_stale_lock happened to return, so
+# "still alive after 30 s" exited 0: a failure reported as success, in the one
+# verb whose entire job is to make something stop. Found 2026-09-27 while
+# looking at why other sessions write `|| true` around it - the refusal was
+# the loud part and the real failure was the silent one.
 stop() {
   require_lock "stop it"
   adb -s "$SERIAL" emu kill 2>/dev/null && ok "stop requested" || warn "was not running"
   local i=0
   while [ -n "$(emu_pid)" ] && [ $i -lt 30 ]; do sleep 1; i=$((i+1)); done
-  [ -z "$(emu_pid)" ] && ok "stopped (port $PORT free)" || warn "emulator on port $PORT still alive after 30 s (pid $(emu_pid))"
+  if [ -n "$(emu_pid)" ]; then
+    warn "emulator on port $PORT still alive after 30 s (pid $(emu_pid))"
+    clear_stale_lock
+    return 1
+  fi
+  ok "stopped (port $PORT free)"
   clear_stale_lock
+  return 0
 }
 # The console answers a failed load or save with "KO: ..." and adb still exits
 # 0. Measured 2026-09-19: `snapshot load does-not-exist` printed "KO: Snapshot
