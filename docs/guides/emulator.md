@@ -93,9 +93,41 @@ The lock is **per instance**. Without an argument the serial comes from `SERIAL`
 then `ADB_SERIAL`, then `ANDROID_SERIAL`. Scripts put serial and pid in the owner
 name (`l4-config@emulator-5556#<pid>`); `acquire` is re-entrant for the same owner.
 
-It is **advisory**. Nothing stops a session from using adb without asking — it
-works only because everyone checks first. `status` before any adb run is the habit
-that makes it worth having.
+It is advisory for **adb**: nothing stops a session from talking to a device
+without asking, and that still works only because everyone checks first.
+`status` before any adb run is the habit that makes it worth having.
+
+It is **not** advisory for `run.sh` any more. `start`, `stop`, `snapshot` and
+`restore` refuse an instance somebody else holds:
+
+    x emulator-5562 is held by optimization-boot, refusing to stop it.
+       If that session is gone:   LOCK_FORCE=1 emulator/run.sh stop
+       If it is you:              LOCK_OWNER=optimization-boot emulator/run.sh stop
+
+Say who you are with `LOCK_OWNER`, the same string you passed to `acquire`. An
+unlocked instance is allowed with a warning, because not every use takes a lock;
+`LOCK_FORCE=1` walks past a held one and prints whose run it is walking past.
+
+This exists because on 2026-09-27 a sweep runner called `acquire` without
+checking the result, `start` correctly refused with "already running", and `stop`
+then killed the instance out from under the session that held it. The runner's
+bug was fixed the same night, but it only reached the instance because `stop` let
+it through: a lock that stops only the careful is not a lock, because any script
+with a bug in its acquisition path becomes a script that ignores it.
+
+**The lock and the instance are two different things**, and `status` says both
+now — an instance can run with nobody holding it, and a lock can outlive the
+emulator it was taken for:
+
+```
+device emulator-5556 held by: l4-grid@emulator-5556#2957191 (1m), running
+device emulator-5560 held by: rows@emulator-5560 (2h 14m), NOT running
+device emulator-5562 free, but an emulator is RUNNING on it - anybody may stop it
+```
+
+The last line is the dangerous one: it reads as free to whoever checks, which is
+how an instance stayed up unlocked for five hours on a loaded host. `release`
+says the same thing when it hands back an instance that is still running.
 
 ## Rendering on the host GPU
 
