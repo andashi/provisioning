@@ -1,0 +1,492 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "launcher.json",
+    "description": "The Andashi Home launcher configuration, schemaVersion 2. Generated from the parser; see docs/configuration and ADR 0002.",
+    "type": "object",
+    "properties": {
+        "schemaVersion": {
+            "const": 2
+        },
+        "icons": {
+            "type": "object",
+            "properties": {
+                "themed": {
+                    "type": "boolean"
+                },
+                "enforceThemed": {
+                    "type": "boolean"
+                },
+                "pack": {
+                    "oneOf": [
+                        {
+                            "const": "none",
+                            "description": "The apps' own icons: no pack, and no Lawnicons fallback."
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                            "maxLength": 256
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "appearance": {
+            "type": "object",
+            "properties": {
+                "glass": {
+                    "type": "object",
+                    "properties": {
+                        "blur": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 64.0
+                        },
+                        "tint": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0
+                        },
+                        "radius": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 64.0
+                        },
+                        "contrast": {
+                            "type": "string",
+                            "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                            ]
+                        },
+                        "wallpaperBlur": {
+                            "type": "boolean"
+                        },
+                        "searchWallpaperBlur": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "wallpaper": {
+                    "type": "object",
+                    "properties": {
+                        "image": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                        },
+                        "target": {
+                            "type": "string",
+                            "enum": [
+                                "home",
+                                "lock",
+                                "both"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "transparency": {
+                    "deprecated": true,
+                    "description": "Accepted and ignored: replaced by appearance.glass (#24); the file no longer feeds the transparency scheme"
+                }
+            },
+            "additionalProperties": false
+        },
+        "home": {
+            "type": "object",
+            "properties": {
+                "searchBar": {
+                    "type": "object",
+                    "properties": {
+                        "position": {
+                            "type": "string",
+                            "enum": [
+                                "top",
+                                "bottom"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "favorites": {
+                    "type": "array",
+                    "items": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                "maxLength": 256
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "packageName": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                        "maxLength": 256
+                                    },
+                                    "profile": {
+                                        "type": "string",
+                                        "enum": [
+                                            "personal",
+                                            "work",
+                                            "private"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "packageName"
+                                ],
+                                "additionalProperties": false
+                            }
+                        ]
+                    },
+                    "maxItems": 64
+                },
+                "widgets": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "grid": {
+                    "type": "object",
+                    "properties": {
+                        "columns": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "maximum": 8
+                        },
+                        "locked": {
+                            "type": "boolean"
+                        },
+                        "layouts": {
+                            "type": "object",
+                            "properties": {
+                                "fold": {
+                                    "type": "object",
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+                                                    },
+                                                    "widget": {
+                                                        "oneOf": [
+                                                            {
+                                                                "const": "favorites"
+                                                            },
+                                                            {
+                                                                "type": "string",
+                                                                "pattern": "^(?=[^/]{1,256}/)[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+/\\.?[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*)*$",
+                                                                "description": "An AppWidget provider as package/class."
+                                                            }
+                                                        ]
+                                                    },
+                                                    "x": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 64
+                                                    },
+                                                    "y": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 64
+                                                    },
+                                                    "w": {
+                                                        "type": "integer",
+                                                        "minimum": 1,
+                                                        "maximum": 64
+                                                    },
+                                                    "h": {
+                                                        "type": "integer",
+                                                        "minimum": 1,
+                                                        "maximum": 64
+                                                    },
+                                                    "profile": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "personal",
+                                                            "work",
+                                                            "private"
+                                                        ]
+                                                    },
+                                                    "borderless": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "background": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "themeColors": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "widget"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            "maxItems": 32
+                                        }
+                                    },
+                                    "required": [
+                                        "items"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "phone": {
+                                    "type": "object",
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+                                                    },
+                                                    "widget": {
+                                                        "oneOf": [
+                                                            {
+                                                                "const": "favorites"
+                                                            },
+                                                            {
+                                                                "type": "string",
+                                                                "pattern": "^(?=[^/]{1,256}/)[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+/\\.?[A-Za-z_][A-Za-z0-9_$]*(\\.[A-Za-z_][A-Za-z0-9_$]*)*$",
+                                                                "description": "An AppWidget provider as package/class."
+                                                            }
+                                                        ]
+                                                    },
+                                                    "x": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 64
+                                                    },
+                                                    "y": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "maximum": 64
+                                                    },
+                                                    "w": {
+                                                        "type": "integer",
+                                                        "minimum": 1,
+                                                        "maximum": 64
+                                                    },
+                                                    "h": {
+                                                        "type": "integer",
+                                                        "minimum": 1,
+                                                        "maximum": 64
+                                                    },
+                                                    "profile": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "personal",
+                                                            "work",
+                                                            "private"
+                                                        ]
+                                                    },
+                                                    "borderless": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "background": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "themeColors": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "widget"
+                                                ],
+                                                "additionalProperties": false
+                                            },
+                                            "maxItems": 32
+                                        }
+                                    },
+                                    "required": [
+                                        "items"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            },
+                            "additionalProperties": false
+                        },
+                        "labels": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        },
+        "search": {
+            "type": "object",
+            "properties": {
+                "favorites": {
+                    "type": "boolean"
+                },
+                "allApps": {
+                    "type": "boolean"
+                },
+                "layout": {
+                    "type": "string",
+                    "enum": [
+                        "grid",
+                        "list"
+                    ]
+                },
+                "labels": {
+                    "type": "boolean"
+                },
+                "contacts": {
+                    "type": "boolean"
+                },
+                "shortcuts": {
+                    "type": "boolean"
+                },
+                "filterBar": {
+                    "type": "boolean"
+                },
+                "openKeyboard": {
+                    "type": "boolean"
+                },
+                "launchOnEnter": {
+                    "type": "boolean"
+                },
+                "reversed": {
+                    "type": "boolean"
+                },
+                "hiddenItemsButton": {
+                    "type": "boolean"
+                },
+                "barPosition": {
+                    "type": "string",
+                    "enum": [
+                        "top",
+                        "bottom",
+                        "follow"
+                    ]
+                },
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "alarm",
+                                    "app",
+                                    "calendar",
+                                    "call",
+                                    "contact",
+                                    "email",
+                                    "intent",
+                                    "message",
+                                    "private_space",
+                                    "share",
+                                    "timer",
+                                    "url",
+                                    "websearch",
+                                    "website"
+                                ]
+                            },
+                            "label": {
+                                "type": "string"
+                            },
+                            "url": {
+                                "type": "string",
+                                "pattern": "\\$\\{1\\}"
+                            },
+                            "package": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                "maxLength": 256
+                            },
+                            "encoding": {
+                                "type": "string",
+                                "enum": [
+                                    "form",
+                                    "none",
+                                    "url"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ],
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "type": {
+                                            "const": "url"
+                                        }
+                                    },
+                                    "required": [
+                                        "type"
+                                    ]
+                                },
+                                "then": {
+                                    "required": [
+                                        "label",
+                                        "url"
+                                    ],
+                                    "properties": {
+                                        "label": {
+                                            "pattern": "\\S"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "type": {
+                                            "const": "app"
+                                        }
+                                    },
+                                    "required": [
+                                        "type"
+                                    ]
+                                },
+                                "then": {
+                                    "required": [
+                                        "label",
+                                        "package"
+                                    ],
+                                    "properties": {
+                                        "label": {
+                                            "pattern": "\\S"
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "maxItems": 32
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "required": [
+        "schemaVersion"
+    ],
+    "additionalProperties": false
+}

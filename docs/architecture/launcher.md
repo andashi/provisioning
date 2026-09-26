@@ -243,6 +243,26 @@ Nothing generated here hits this today, because the generator writes no geometry
 at all — the warning becomes reachable the moment the first Fold arrangement is
 pulled and shared.
 
+## The schema is checked, not assumed
+
+The launcher publishes a JSON Schema for `launcher.json` as a release asset. A
+copy lives in `config/schema/`, with `config/schema/FROM` naming the release it
+came from, and `make schema` refreshes it. `make check` validates every generated
+config against it.
+
+This closes a gap that the rest of the chain does not cover. `make check` already
+proves the files match the generator, and the read-back proves the device agrees
+— but the read-back needs a device, and it compares whole sections, so a key the
+contract has removed shows up at best as "the section differs". When schema 1
+became schema 2 and `home.dock` disappeared, nothing structural would have caught
+a generator that kept writing it; it was caught because the same person changed
+both in the same week.
+
+It is deliberately not a full validator. It checks the part that matters here —
+keys the contract does not have, values outside an `enum` or `const`, and basic
+types — and leaves patterns, ranges and required fields to the launcher, which
+reports them per zone in its own words. `oneOf` passes when any branch does.
+
 ## Version coupling
 
 The launcher entry in `theming.json` declares what that build can do:

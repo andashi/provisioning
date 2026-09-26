@@ -23,6 +23,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	   | "  \($$z.label): browser \($$z.browser) is not placed in this zone"'); \
 	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
 	  echo "ok: zone browsers"
+	@config/check-schema.sh
 	@pkg=$$(jq -r --arg k "$$(jq -r .launcher config/theming.json)" '.launchers[$$k].pkg' config/theming.json); \
 	  bad=$$(for f in config/launcher/*.json; do \
 	    z=$$(basename $$f .json); \
@@ -45,6 +46,14 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	    echo "ok: launcher/*.json in sync"; else \
 	    echo "config/launcher is stale - run 'make launcher-config'"; diff -r config/launcher $$t | head -20; \
 	    rm -rf $$t; exit 1; fi; rm -rf $$t
+
+schema: ## Refresh config/schema/launcher.schema.json from the newest launcher release
+	@tag=$$(gh release view --repo andashi/home --json tagName -q .tagName); \
+	  gh release download $$tag --repo andashi/home --pattern 'launcher.schema.json' \
+	    --dir config/schema --clobber; \
+	  echo "$$tag" > config/schema/FROM; \
+	  echo "schema from $$tag"; \
+	  config/check-schema.sh
 
 todo: ## List unverified package names
 	@jq -r '.apps[]|select(.pkg_status=="unverified")|"  \(.label)  ->  \(.pkg)"' config/apps.json
