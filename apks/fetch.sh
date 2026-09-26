@@ -24,8 +24,14 @@ bad(){ c '1;31' " x $*" >&2; }; log(){ c '1;34' ":: $*"; }
 # emulator, so it's only kept once. Only the few APKs that ship exactly one
 # architecture exist twice.
 classify_abi() {   # $1 = apk file
-  local abis
-  abis="$(unzip -l "$1" 2>/dev/null | grep -oE 'lib/[a-z0-9_-]+/' | sed 's|lib/||;s|/||' | sort -u)"
+  local listing abis
+  # unzip's own status decides, not its output. An empty listing has two
+  # meanings - an APK with no native libraries, which IS universal, and an
+  # unzip that failed on a truncated or unreadable download, which is nothing
+  # at all. Treating both as universal filed a broken file as the one build
+  # that installs on every device and the emulator alike.
+  listing="$(unzip -l "$1" 2>/dev/null)" || return 1
+  abis="$(printf '%s\n' "$listing" | grep -oE 'lib/[a-z0-9_-]+/' | sed 's|lib/||;s|/||' | sort -u)"
   if [ -z "$abis" ]; then echo universal
   elif grep -q arm64-v8a <<<"$abis" && grep -q x86_64 <<<"$abis"; then echo universal
   elif grep -q arm64-v8a <<<"$abis"; then echo arm64-v8a
@@ -270,7 +276,8 @@ for id in "${ids[@]}"; do
       || { rm -f ".$name.part"; fail=1; continue; }
   fi
   # The ABI can only be determined after the download, so sort it in now.
-  sub="$(classify_abi ".$name.part")"
+  sub="$(classify_abi ".$name.part")" \
+    || { bad "$label: cannot read the downloaded APK - not an archive?"; rm -f ".$name.part"; fail=1; continue; }
   mkdir -p "$sub"
   out="$sub/$name"
   mv ".$name.part" "$out"
