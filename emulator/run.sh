@@ -7,6 +7,9 @@
 set -euo pipefail
 
 GOS_SRC="${GOS_SRC:-$HOME/android/grapheneos}"
+# Absolute, because load_env cds into the build tree: anything this script
+# reads from the repository afterwards must not depend on where it started.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GOS_TARGET="${GOS_TARGET:-sdk_phone64_x86_64-cur-userdebug}"
 AVD_NAME="${AVD_NAME:-graphene-fold}"
 SERIAL="${SERIAL:-emulator-5554}"
@@ -240,6 +243,47 @@ clear_stale_lock() {
 # instances"). A qemu on ANOTHER port using the same dir means SERIAL and
 # OVERLAY_DIR were paired wrong: both would write the same qcow2 files, and
 # clear_stale_lock would take the live one's multiinstance.lock for stale.
+# ---- The device lock, enforced rather than hoped for ----------------------
+# The lock was advisory: device-lock.sh knew who held an instance, and run.sh
+# killed it regardless. On 2026-09-27 that cost another session its run - a
+# sweep runner called acquire without checking the result, start correctly
+# refused with "already running", and stop then killed the instance out from
+# under its owner. The runner's bug is theirs and fixed; it only reached the
+# instance because stop let it through.
+#
+# Four autonomous sessions share five instances here. A lock that only stops
+# the careful is not a lock, because any script with a bug in its acquisition
+# path becomes a script that ignores it.
+#
+# LOCK_OWNER says who you are - the same string you passed to
+# `device-lock.sh acquire`. Without it you are refused whenever somebody else
+# holds the instance. LOCK_FORCE=1 overrides, for cleaning up after a session
+# that is really gone; it prints who is being walked past.
+lock_holder() {
+  local f=".provision-state/device-${SERIAL}.lock" HOLDER="" SINCE="" SERIAL=""
+  [ -f "$REPO_ROOT/$f" ] || return 1
+  # shellcheck disable=SC1090
+  . "$REPO_ROOT/$f"
+  [ -n "$HOLDER" ] && printf '%s' "$HOLDER"
+}
+
+require_lock() {   # $1 = what is about to happen
+  local holder
+  if ! holder="$(lock_holder)"; then
+    warn "$SERIAL is not locked - $1 anyway. Other sessions cannot tell this instance is yours:"
+    warn "  emulator/device-lock.sh acquire \"<owner>\" $SERIAL"
+    return 0
+  fi
+  [ "$holder" = "${LOCK_OWNER:-}" ] && return 0
+  if [ "${LOCK_FORCE:-0}" = "1" ]; then
+    warn "$SERIAL is held by $holder - $1 anyway (LOCK_FORCE=1)"
+    return 0
+  fi
+  die "$SERIAL is held by $holder, refusing to $1.
+   If that session is gone:   LOCK_FORCE=1 $0 $CMD
+   If it is you:              LOCK_OWNER=$holder $0 $CMD"
+}
+
 guard_overlay_dir() {
   [ -n "$OVERLAY_DIR" ] || return 0
   [[ "$OVERLAY_DIR" = /* ]] || die "OVERLAY_DIR must be an absolute path (run.sh changes into $GOS_SRC), got: $OVERLAY_DIR"
@@ -250,6 +294,7 @@ guard_overlay_dir() {
 }
 
 start() {
+  require_lock "start it"
   ensure_kvm "$@"
   guard_overlay_dir
   [ "$READ_ONLY" != "1" ] || [ -z "${SNAPSHOT:-}" ] \
@@ -334,6 +379,7 @@ start() {
 # emulator takes up to 20 s to shut down and holds its lock and port until
 # then. A start right after an unwaited stop collides with exactly that.
 stop() {
+  require_lock "stop it"
   adb -s "$SERIAL" emu kill 2>/dev/null && ok "stop requested" || warn "was not running"
   local i=0
   while [ -n "$(emu_pid)" ] && [ $i -lt 30 ]; do sleep 1; i=$((i+1)); done
@@ -355,15 +401,16 @@ emu_snapshot() {   # $1 = save|load, $2 = name
     die "snapshot $1 '$2' on $SERIAL: unexpected console reply: $out"
   fi
 }
-snapshot() { [ -n "${1:-}" ] || die "name missing"; emu_snapshot save "$1"; ok "snapshot '$1' saved"; }
-restore()  { [ -n "${1:-}" ] || die "name missing"; emu_snapshot load "$1"; ok "snapshot '$1' loaded"; }
+snapshot() { [ -n "${1:-}" ] || die "name missing"; require_lock "write a snapshot on it"; emu_snapshot save "$1"; ok "snapshot '$1' saved"; }
+restore()  { [ -n "${1:-}" ] || die "name missing"; require_lock "load a snapshot into it"; emu_snapshot load "$1"; ok "snapshot '$1' loaded"; }
 shell_()   { adb -s "$SERIAL" shell; }
 status() {
   adb -s "$SERIAL" shell getprop ro.modversion 2>/dev/null | tr -d '\r' | sed 's/^/   GrapheneOS: /' || true
   adb -s "$SERIAL" shell pm list users 2>/dev/null | tr -d '\r' | sed 's/^/   /' || true
 }
 
-case "${1:-status}" in
+CMD="${1:-status}"
+case "$CMD" in
   start) shift; start "$@" ;;
   stop) stop ;;
   snapshot) shift; snapshot "${1:-}" ;;

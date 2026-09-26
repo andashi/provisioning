@@ -87,13 +87,33 @@ migrate_legacy() {
   fi
 }
 
+# Is an emulator actually running on that instance? The lock and the instance
+# had no connection in either direction: you could hold a lock on something
+# that was never started, and an instance could run with nobody holding it -
+# which is how one stayed up unlocked for five hours on a loaded host
+# (2026-09-27). Knowing costs one pgrep, so status says it and release warns.
+port_of() { printf '%s' "${1##*-}"; }
+instance_running() {   # $1 = serial
+  [ -n "$(pgrep -f "qemu-system.* -port $(port_of "$1")( |$)" 2>/dev/null | head -1)" ]
+}
+running_serials() {
+  pgrep -af "qemu-system.* -port " 2>/dev/null \
+    | sed -n 's/.* -port \([0-9][0-9]*\).*/emulator-\1/p' | sort -u
+}
+
 show() {   # $1 = serial
   if read_lock "$(lock_for "$1")"; then
-    echo "device $1 held by: $HOLDER ($(fmt_age "$SINCE"))"
+    if instance_running "$1"; then
+      echo "device $1 held by: $HOLDER ($(fmt_age "$SINCE")), running"
+    else
+      echo "device $1 held by: $HOLDER ($(fmt_age "$SINCE")), NOT running"
+    fi
     if [ $(( ($(now) - SINCE) / 60 )) -ge "$STALE_MINUTES" ]; then
       echo "  held for over $((STALE_MINUTES/60))h - check whether that session is still alive"
       echo "  (ListAgents, or just ask it). 'steal <yourname> $1' takes it anyway."
     fi
+  elif instance_running "$1"; then
+    echo "device $1 free, but an emulator is RUNNING on it - anybody may stop it"
   else
     echo "device $1 free"
   fi
@@ -108,7 +128,14 @@ cmd_status() {
     read_lock "$f" || continue
     show "$s"; any=1
   done
-  [ "$any" = 1 ] || echo "all devices free"
+  # A running instance nobody holds is the case worth seeing: it is the one
+  # that gets stopped by somebody who checked and found it free.
+  for s in $(running_serials); do
+    read_lock "$(lock_for "$s")" && continue
+    echo "device $s free, but an emulator is RUNNING on it - anybody may stop it"
+    any=1
+  done
+  [ "$any" = 1 ] || echo "all devices free, nothing running"
 }
 
 cmd_acquire() {
@@ -133,6 +160,10 @@ cmd_release() {
   fi
   rm -f "$LOCK"
   echo "device $INSTANCE released by $owner"
+  if instance_running "$INSTANCE"; then
+    echo "  note: an emulator is still running on $INSTANCE. It is unlocked now," >&2
+    echo "  so any session may stop it or load a snapshot into it." >&2
+  fi
 }
 
 cmd_steal() {
