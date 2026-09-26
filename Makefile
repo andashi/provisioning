@@ -49,10 +49,17 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 
 schema: ## Refresh config/schema/launcher.schema.json from the newest launcher release
 	@tag=$$(gh release view --repo andashi/home --json tagName -q .tagName); \
-	  gh release download $$tag --repo andashi/home --pattern 'launcher.schema.json' \
-	    --dir config/schema --clobber; \
-	  echo "$$tag" > config/schema/FROM; \
-	  echo "schema from $$tag"; \
+	  tmp=$$(mktemp -d); \
+	  gh release download $$tag --repo andashi/home --pattern 'launcher.schema.json' --dir $$tmp; \
+	  gh release download $$tag --repo andashi/home --pattern 'SHA256SUMS' --dir $$tmp; \
+	  want=$$(awk '$$2 ~ /launcher\.schema\.json$$/ { print $$1 }' $$tmp/SHA256SUMS); \
+	  got=$$(sha256sum $$tmp/launcher.schema.json | cut -d' ' -f1); \
+	  [ -n "$$want" ] || { echo "$$tag: SHA256SUMS names no launcher.schema.json"; rm -rf $$tmp; exit 1; }; \
+	  [ "$$want" = "$$got" ] || { echo "$$tag: schema hash mismatch"; echo "  want $$want"; echo "  got  $$got"; rm -rf $$tmp; exit 1; }; \
+	  mv $$tmp/launcher.schema.json config/schema/launcher.schema.json; \
+	  printf '%s\n%s  launcher.schema.json\n' "$$tag" "$$got" > config/schema/FROM; \
+	  rm -rf $$tmp; \
+	  echo "schema from $$tag, hash verified"; \
 	  config/check-schema.sh
 
 todo: ## List unverified package names
