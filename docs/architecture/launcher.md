@@ -58,7 +58,24 @@ carries the sha256 of the config the launcher last read plus success or error
 detail. A matching sha with `success: false` is a failure with an explanation from
 the launcher itself, so it is surfaced, not retried away. `config` then answers
 *and did it mean what I meant*: the launcher serves its fully populated effective
-state, which is compared field by field against the file that was written.
+state, and **every value the file wrote must be what comes back**. A key the file
+left out is the device's to keep.
+
+That is one rule for every section, and it used to be four sections compared
+whole plus `search` carved out. Whole-section equality broke every time the
+contract grew: the read-back is fully populated with defaults by design, so a
+release that adds one key to a section makes the section differ from a file that
+never claimed to set it. It happened twice in one day (andashi/home#181 adding
+`icons.size`, `adaptify` and `badges`; #189 adding `home.searchBar.fixed`,
+`home.lockRotation` and `appearance.systemBars`), which is what turned a carve-out
+into a rule.
+
+Objects are walked; anything else is a leaf compared whole, arrays included, so a
+swallowed favourite or a flipped `locked` is still one mismatch and not a list of
+them. What it gives up is noticing that the contract grew — which was never drift
+and never ours to report. The failures that matter are caught elsewhere and more
+precisely: the launcher's own diagnostics for a key it ignores, and
+`config/check-schema.sh` for a key the contract no longer has.
 
 Failure is per profile and strict: the step attempts every zone, then fails if any
 one of them did not converge. A locked profile is reported, never unlocked.

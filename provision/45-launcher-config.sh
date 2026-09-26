@@ -362,7 +362,10 @@ configure_profile() {   # $1=profile-key
   local eff mism
   eff="$(query_state config "$uid")" \
     || { problem "$key" "$label: state provider did not serve /config"; return 1; }
-  mism="$(jq -r -n --argjson eff "$eff" --slurpfile want "$cfgfile" '
+  # The exit status decides, not the output: a jq that fails prints nothing,
+  # and nothing is what "no mismatches" looks like. A comparison that cannot
+  # run must fail the profile, not bless it.
+  if ! mism="$(jq -r -n --argjson eff "$eff" --slurpfile want "$cfgfile" '
     def canon:
       # v1 -> v2 shape first, so a file we still generate as v1 can be compared
       # against a launcher that has already migrated it. That transition is the
@@ -410,15 +413,45 @@ configure_profile() {   # $1=profile-key
     | ($eff | canon) as $e0
     | ($w0 | drop_grid_if_one_sided($e0)) as $w
     | ($e0 | drop_grid_if_one_sided($w0)) as $e
-    | ( [ "schemaVersion", "icons", "appearance", "home" ]
-        | map(select($e[.] != $w[.])) )
-    # search (0.6.0+): the launcher serves the whole section with its defaults
-    # filled in, and a key we leave out is the device'"'"'s to keep. So compare
-    # the keys we wrote, each one, and nothing else - an unwritten key that
-    # differs is not a mismatch, a written one that did not take is.
-    + ( ($w.search // {}) | keys
-        | map(select($e.search[.] != $w.search[.]) | "search.\(.)") )
-    | join(", ")')"
+    # ONE rule for every section: every value the file wrote must be what the
+    # launcher serves, and a key the file left out is the device'"'"'s to keep.
+    # Objects are walked; anything else - a scalar, or an array like favorites
+    # or a layout'"'"'s items - is a leaf and compared whole, so a swallowed
+    # favorite or a flipped `locked` is still reported.
+    #
+    # This replaces comparing schemaVersion, icons, appearance and home as
+    # whole sections, which broke every time the contract GREW. The read-back
+    # is fully populated with defaults - that is the launcher'"'"'s contract,
+    # not an accident - so a release that adds one key to a section makes the
+    # whole section differ from a file that never claimed to set it. It
+    # happened twice in one day (andashi/home#181 adding icons.size, adaptify
+    # and badges; #189 adding home.searchBar.fixed, home.lockRotation and
+    # appearance.systemBars), and the search section had already been carved
+    # out for exactly this reason. One rule, no carve-outs.
+    #
+    # What this gives up: noticing that the contract grew. That is not drift
+    # and never was ours to report - a key we never wrote saying something we
+    # never asked for is the device being itself. What catches the real
+    # version-coupling failures is elsewhere and sharper: the launcher'"'"'s
+    # own diagnostics for a key it ignores, and config/check-schema.sh for a
+    # key the contract no longer has.
+    # Walk objects, stop at anything else. NOT jq'"'"'s paths(type != "object"):
+    # that also descends INTO arrays, so one swallowed favorite is reported as
+    # the array plus every field of the element that is no longer there -
+    # "home.favorites, home.favorites.0.packageName, home.favorites.0.profile"
+    # for a list that simply differs. An array is one value we declared.
+    | def written_leaves($p):
+        if type == "object"
+          then (to_entries[] | .key as $k | (.value | written_leaves($p + [$k])))
+          else $p end;
+      ( [ $w | written_leaves([]) ] as $leaves
+        | [ $leaves[] as $p
+            | select(($e | getpath($p)) != ($w | getpath($p)))
+            | $p | map(tostring) | join(".") ] )
+    | join(", ")')"; then
+    problem "$key" "$label: the read-back comparison could not run (jq failed)"
+    return 1
+  fi
   if [ -z "$mism" ]; then
     ok "$label: effective config verified"
     return 0
