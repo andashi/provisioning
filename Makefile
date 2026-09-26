@@ -23,6 +23,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	   | "  \($$z.label): browser \($$z.browser) is not placed in this zone"'); \
 	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
 	  echo "ok: zone browsers"
+	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison"
 	@config/check-schema.sh
 	@pkg=$$(jq -r --arg k "$$(jq -r .launcher config/theming.json)" '.launchers[$$k].pkg' config/theming.json); \
 	  bad=$$(for f in config/launcher/*.json; do \
