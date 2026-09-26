@@ -64,13 +64,15 @@
     "change, because launchers cache icon tints until the process ends.",
     "favorites (per profile): app LABELS, resolved by gen-launcher.sh against the catalog",
     "(a label that does not resolve to exactly one entry fails generation) and written as",
-    "home.dock.favorites objects ({packageName: ...}) in the generated config.",
-    "WHAT THEY DO IN 0.3.0: the apps are pinned - they show up in the launcher's favorites",
-    "section in search and in the apps widget. They do NOT produce a dock band at the bottom:",
-    "that renderer hung in the clock widget and fell with it (andashi/home, 0.3.0). The key",
-    "home.dock.enabled is therefore inert for now and stays in the contract on purpose,",
-    "because the dock returns with the HomeGrid work (andashi/home ADR 0001) and removing",
-    "plus reintroducing it would be two contract changes instead of none.",
+    "home.favorites objects ({packageName: ...}) in the generated config (schema 2).",
+    "WHAT THEY DO: the apps are pinned - they appear in search and in the favorites",
+    "widget on the home grid, which is where the dock went in schema 2 (andashi/home",
+    "ADR 0001 revised). The widget is on the grid only in a zone that pins something:",
+    "gen-launcher.sh declares the grid item where this list is non-empty, and declares",
+    "none where it is empty, so a zone without favorites has no empty card.",
+    "home.dock and home.dock.enabled are GONE, not inert. They belonged to schema 1,",
+    "the launcher migrates a file that declares schemaVersion 1, and a schema 2 file",
+    "carrying them gets 'unknown-key home.dock' and loses them silently.",
     "Apps that aren't installed yet (e.g. Play apps on the emulator) simply are not pinned.",
     "WARNING, unlike settings.json: per_profile WINS over all_profiles here.",
     "All packages (launchers, keyboard_pkg) must be in the catalog",
@@ -111,8 +113,30 @@
       "searchWallpaperBlur": true
     },
     "search_actions": [
-      { "type": "call" }, { "type": "message" }, { "type": "email" }, { "type": "contact" },
-      { "type": "alarm" }, { "type": "timer" }, { "type": "calendar" }, { "type": "website" }
+      {
+        "type": "call"
+      },
+      {
+        "type": "message"
+      },
+      {
+        "type": "email"
+      },
+      {
+        "type": "contact"
+      },
+      {
+        "type": "alarm"
+      },
+      {
+        "type": "timer"
+      },
+      {
+        "type": "calendar"
+      },
+      {
+        "type": "website"
+      }
     ]
   },
   "per_profile": {
@@ -149,8 +173,21 @@
     },
     "anon": {
       "search_actions": [
-        { "type": "call" }, { "type": "email" },
-        { "type": "alarm" }, { "type": "timer" }, { "type": "calendar" }
+        {
+          "type": "call"
+        },
+        {
+          "type": "email"
+        },
+        {
+          "type": "alarm"
+        },
+        {
+          "type": "timer"
+        },
+        {
+          "type": "calendar"
+        }
       ],
       "palette": "9E9E9E",
       "style": "MONOCHROMATIC",

@@ -305,7 +305,10 @@ configure_profile() {   # $1=profile-key
           # Deliberately a named key and not "every inert key is fatal": a key
           # can be inert in one release and still be the right thing to keep
           # writing. home.dock.enabled was exactly that - inert since 0.3.0 and
-          # kept on purpose, because the dock came back with the grid.
+          # kept on purpose - and then schema 2 removed it outright, with the
+          # dock returning as a grid item rather than as a key. So a blanket
+          # rule would have been wrong twice: fatal while it was merely quiet,
+          # and silent about the release that actually deleted it.
           fatal_diag="$(printf '%s' "$diag" | jq -r '
             (.diagnostics // [])[]
             | select((.code // "") == "inert-key" and (.path // "") == "appearance.transparency")

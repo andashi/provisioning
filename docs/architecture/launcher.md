@@ -267,7 +267,9 @@ the launcher's `inert-key` diagnostic on `appearance.transparency` as a failure
 with the launcher's own sentence, rather than letting it pass as a warning and
 reporting a read-back difference in `appearance` a moment later. That is a named
 key, not a rule: a key can be inert in one release and still be the right thing
-to keep writing, which is how `home.dock.enabled` survived the clock removal.
+to keep writing - `home.dock.enabled` was kept through two releases while it
+drew nothing, and then schema 2 removed it and the dock came back as a grid
+item instead of a key.
 
 The launcher is **not** pinned. `release_tag` exists for holding a version
 deliberately — while debugging, or to sit out a bad release — but a release that
