@@ -30,6 +30,14 @@ classify_abi() {   # $1 = apk file
   # unzip that failed on a truncated or unreadable download, which is nothing
   # at all. Treating both as universal filed a broken file as the one build
   # that installs on every device and the emulator alike.
+  #
+  # What that cost, measured rather than assumed: less than it looks. A
+  # truncated download is caught two steps below, where `aapt2 dump
+  # packagename` comes back empty and the package-name check quarantines it -
+  # verified on a half-copy of 0.8.0 - so this never put a corrupt APK into
+  # SHA256SUMS. What it did cost is a misfiled one: an APK that unzip cannot
+  # read but aapt2 can, sorted as universal and then offered by apk_for_pkg
+  # for an architecture it does not carry.
   listing="$(unzip -l "$1" 2>/dev/null)" || return 1
   abis="$(printf '%s\n' "$listing" | grep -oE 'lib/[a-z0-9_-]+/' | sed 's|lib/||;s|/||' | sort -u)"
   if [ -z "$abis" ]; then echo universal
