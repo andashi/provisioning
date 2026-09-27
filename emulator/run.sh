@@ -54,7 +54,13 @@ ensure_kvm() {
   [ "${GOS_NEWGRP_RETRY:-0}" = "1" ] && die "no KVM access even after newgrp - check 'ls -l /dev/kvm'"
   local grp=""
   for g in plugdev kvm; do
-    getent group "$g" 2>/dev/null | grep -qw "$USER" && { grp="$g"; break; }
+    # The member list is the fourth colon field, comma separated, and it is
+    # compared field by field. `grep -qw "$USER"` read the whole line, where a
+    # hyphen counts as a word boundary: user `dob` matched a member `dob-test`,
+    # and the group name itself was in range too.
+    getent group "$g" 2>/dev/null | awk -F: -v u="$USER" '
+      { n = split($4, m, ","); for (i = 1; i <= n; i++) if (m[i] == u) { found = 1 } }
+      END { exit !found }' && { grp="$g"; break; }
   done
   [ -n "$grp" ] || die "no KVM access. Fix: sudo setfacl -m u:$USER:rw /dev/kvm"
   warn "KVM group '$grp' not active in this shell yet - re-exec via newgrp"

@@ -108,8 +108,15 @@ while read -r key; do
     # perms.only_profiles narrows them to named zones - without it they apply
     # in EVERY profile the app lives in, and a launcher that may read contacts
     # in Home has no business doing so in Anon.
+    # Membership is decided in jq, on the array, not by matching text. It was
+    # `grep -qw "$key"` against the space-joined list, and -w does not protect
+    # a name with a hyphen in it: a hyphen is a word boundary, so a zone key
+    # `home` would match an entry `home-lab` and the grant would land in a zone
+    # the catalog never named. No zone key has a hyphen today, which is the
+    # only reason this was not already wrong - in the one place whose entire
+    # job is that a launcher which may read contacts in Home may not in Anon.
     only="$(jq -r '.perms.only_profiles // [] | join(" ")' <<<"$app")"
-    if [ -n "$only" ] && ! grep -qw "$key" <<<"$only"; then
+    if [ -n "$only" ] && ! jq -e --arg k "$key" '((.perms.only_profiles // []) | index($k)) != null' <<<"$app" >/dev/null; then
       skip "$lbl: perms only in [$only], not in '$key'"
     else
 
