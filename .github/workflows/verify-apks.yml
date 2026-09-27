@@ -10,13 +10,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate JSON configuration
+        # The failure is collected. A bare loop reports only its LAST
+        # iteration, so an invalid file anywhere but the end passed this step
+        # green - demonstrated 2026-09-27 with a three-file loop whose middle
+        # member was broken: exit 0.
         run: |
-          for f in config/*.json; do jq -e . "$f" >/dev/null && echo "ok: $f"; done
+          fail=0
+          for f in config/*.json; do
+            if jq -e . "$f" >/dev/null; then echo "ok: $f"; else echo "invalid: $f"; fail=1; fi
+          done
+          exit $fail
       - name: Catalog consistency
         run: |
           # Every profile in apps.json must exist in profiles.json
           known=$(jq -r '.profiles[].key' config/profiles.json | sort -u)
           used=$(jq -r '.apps[].profiles[]' config/apps.json | sort -u)
+          # Empty lists compare clean, so a jq that failed would read as
+          # "nothing is wrong" here. Both sides have to have content.
+          [ -n "$known" ] && [ -n "$used" ] \
+            || { echo "could not read the catalog or the profiles"; exit 1; }
           bad=$(comm -13 <(echo "$known") <(echo "$used"))
           [ -z "$bad" ] || { echo "Unknown profiles in apps.json: $bad"; exit 1; }
           # Package names unique
@@ -39,7 +51,14 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: bash -n
-        run: for f in $(find . -name '*.sh'); do bash -n "$f"; done
+        # Same collector, same reason: this loop reported only the last file,
+        # so a syntax error in any other script was green here while `make
+        # check` caught it locally. The gate that runs on every push was the
+        # weaker of the two.
+        run: |
+          fail=0
+          for f in $(find . -name '*.sh'); do bash -n "$f" || { echo "syntax error: $f"; fail=1; }; done
+          exit $fail
       - name: shellcheck
         run: shellcheck -S warning $(find . -name '*.sh') || true
 
