@@ -89,11 +89,18 @@ user switch fires mid-run, and the result looks like a flaky script rather than 
 collision.
 
 ```bash
-emulator/device-lock.sh status                  # every held instance
+emulator/device-lock.sh status                  # every held instance, for a person
+emulator/device-lock.sh holder  [serial]        # the owner or nothing, for a script
 emulator/device-lock.sh acquire <owner> [serial]
 emulator/device-lock.sh release <owner> [serial]
 emulator/device-lock.sh steal   <owner> [serial]   # prints who lost it
 ```
+
+`status` is prose and will be reworded; `holder` is the one to script against —
+it prints the owner and nothing else, and exits non-zero when the instance is
+free. The same split applies to the instance itself: `run.sh running` prints the
+emulator's pid or exits non-zero, so nothing has to infer it from a sentence or
+run its own `pgrep`.
 
 The lock is **per instance**. Without an argument the serial comes from `SERIAL`,
 then `ADB_SERIAL`, then `ANDROID_SERIAL`. Scripts put serial and pid in the owner

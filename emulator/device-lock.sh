@@ -173,16 +173,25 @@ cmd_steal() {
   echo "device $INSTANCE acquired by $owner"
 }
 
-usage() { echo "usage: $0 {status [serial]|acquire <owner> [serial]|release <owner> [serial]|steal <owner> [serial]}" >&2; exit 2; }
+cmd_holder() {
+  # For scripts. `status` is prose for a person - "held by X (2h 14m), running"
+  # - and a caller grepping that makes a lifecycle decision out of an English
+  # sentence: one rewording and it silently flips. This prints the owner and
+  # nothing else, and the exit status says whether there is one.
+  if read_lock "$LOCK"; then printf '%s\n' "$HOLDER"; return 0; fi
+  return 1
+}
+
+usage() { echo "usage: $0 {status [serial]|holder [serial]|acquire <owner> [serial]|release <owner> [serial]|steal <owner> [serial]}" >&2; exit 2; }
 
 cmd="${1:-status}"
 case "$cmd" in
-  status)               arg="${2:-}" ;;
+  status|holder)        arg="${2:-}" ;;
   acquire|release|steal) [ $# -ge 2 ] || usage; arg="${3:-}" ;;
   *) usage ;;
 esac
 INSTANCE="${arg:-${SERIAL:-${ADB_SERIAL:-${ANDROID_SERIAL:-}}}}"
-[ "$cmd" = status ] || INSTANCE="${INSTANCE:-$DEFAULT_SERIAL}"
+case "$cmd" in status) ;; *) INSTANCE="${INSTANCE:-$DEFAULT_SERIAL}" ;; esac
 # Adb serials: emulator-5556, a hardware serial, host:port. Never a path.
 [ -z "$INSTANCE" ] || [[ "$INSTANCE" =~ ^[A-Za-z0-9._:-]+$ ]] || { echo "not an adb serial: $INSTANCE" >&2; exit 2; }
 LOCK="$(lock_for "${INSTANCE:-$DEFAULT_SERIAL}")"
@@ -191,6 +200,7 @@ migrate_legacy
 
 case "$cmd" in
   status)  cmd_status ;;
+  holder)  cmd_holder ;;
   acquire) cmd_acquire "$2" ;;
   release) cmd_release "$2" ;;
   steal)   cmd_steal "$2" ;;

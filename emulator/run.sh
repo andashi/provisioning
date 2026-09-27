@@ -220,7 +220,35 @@ ash_() { adb -s "$SERIAL" shell "$@" </dev/null >/dev/null 2>&1; }
 
 # The qemu process of THIS instance: the console port is unique per instance,
 # so it identifies the process without touching the other one's.
-emu_pid() { pgrep -f "qemu-system.* -port $PORT( |$)" 2>/dev/null | head -1 || true; }
+# Which process IS this instance? `pgrep -f "qemu-system.* -port $PORT"` was
+# not an answer to that: -f matches the whole command line, so any shell that
+# merely mentions the string counts. Demonstrated 2026-09-27 - a bash whose
+# argv contained "qemu-system-x86_64 -port 5599" was reported as the emulator
+# on 5599, which makes `start` refuse, `stop` wait thirty seconds and fail,
+# and `status` lie. A check that can find itself is the purest form of a check
+# that means nothing.
+#
+# So: the PROGRAM has to be a qemu-system binary (/proc/<pid>/comm, not the
+# command line), and the port has to be an actual argument pair rather than a
+# substring anywhere in it.
+qemu_pids() {
+  local pid comm
+  for pid in $(pgrep -f qemu-system 2>/dev/null); do
+    comm="$(cat "/proc/$pid/comm" 2>/dev/null)" || continue
+    case "$comm" in qemu-system*) printf '%s\n' "$pid" ;; esac
+  done
+}
+has_arg_pair() {   # $1=pid $2=flag $3=value - adjacent argv entries
+  tr '\0' '\n' < "/proc/$1/cmdline" 2>/dev/null \
+    | awk -v f="$2" -v v="$3" 'p == f && $0 == v { hit = 1; exit } { p = $0 } END { exit !hit }'
+}
+emu_pid() {
+  local pid
+  for pid in $(qemu_pids); do
+    has_arg_pair "$pid" -port "$PORT" && { printf '%s' "$pid"; return 0; }
+  done
+  return 1
+}
 
 # The emulator keeps a multiinstance.lock next to its images (per
 # ANDROID_PRODUCT_OUT, i.e. per instance). It stays behind when the process
@@ -288,7 +316,11 @@ guard_overlay_dir() {
   [ -n "$OVERLAY_DIR" ] || return 0
   [[ "$OVERLAY_DIR" = /* ]] || die "OVERLAY_DIR must be an absolute path (run.sh changes into $GOS_SRC), got: $OVERLAY_DIR"
   local pid
-  pid="$(pgrep -f "qemu-system.* -snapstorage $OVERLAY_DIR/snapshots.img( |$)" 2>/dev/null | head -1 || true)"
+  pid=""
+  for pid in $(qemu_pids) ""; do
+    [ -n "$pid" ] || break
+    has_arg_pair "$pid" -snapstorage "$OVERLAY_DIR/snapshots.img" && break
+  done
   [ -z "$pid" ] || [ "$pid" = "$(emu_pid)" ] \
     || die "$OVERLAY_DIR is in use by the emulator pid $pid on another port - SERIAL and OVERLAY_DIR must stay paired"
 }
@@ -418,6 +450,13 @@ emu_snapshot() {   # $1 = save|load, $2 = name
 snapshot() { [ -n "${1:-}" ] || die "name missing"; require_lock "write a snapshot on it"; emu_snapshot save "$1"; ok "snapshot '$1' saved"; }
 restore()  { [ -n "${1:-}" ] || die "name missing"; require_lock "load a snapshot into it"; emu_snapshot load "$1"; ok "snapshot '$1' loaded"; }
 shell_()   { adb -s "$SERIAL" shell; }
+# An answer instead of an inference: callers were deducing this from the prose
+# of `status`, or running their own pgrep with the flaw described above.
+running() {
+  local pid
+  if pid="$(emu_pid)"; then echo "$pid"; return 0; fi
+  return 1
+}
 status() {
   adb -s "$SERIAL" shell getprop ro.modversion 2>/dev/null | tr -d '\r' | sed 's/^/   GrapheneOS: /' || true
   adb -s "$SERIAL" shell pm list users 2>/dev/null | tr -d '\r' | sed 's/^/   /' || true
@@ -427,6 +466,7 @@ CMD="${1:-status}"
 case "$CMD" in
   start) shift; start "$@" ;;
   stop) stop ;;
+  running) running ;;
   snapshot) shift; snapshot "${1:-}" ;;
   restore)  shift; restore  "${1:-}" ;;
   foldable-setup) foldable_setup ;;
