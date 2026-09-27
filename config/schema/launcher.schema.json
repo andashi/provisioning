@@ -28,6 +28,30 @@
                             "maxLength": 256
                         }
                     ]
+                },
+                "size": {
+                    "type": "integer",
+                    "minimum": 32,
+                    "maximum": 64,
+                    "multipleOf": 8
+                },
+                "adaptify": {
+                    "type": "boolean"
+                },
+                "badges": {
+                    "type": "object",
+                    "properties": {
+                        "notifications": {
+                            "type": "boolean"
+                        },
+                        "shortcuts": {
+                            "type": "boolean"
+                        },
+                        "suspendedApps": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
                 }
             },
             "additionalProperties": false
@@ -88,6 +112,68 @@
                     },
                     "additionalProperties": false
                 },
+                "theme": {
+                    "type": "object",
+                    "properties": {
+                        "mode": {
+                            "type": "string",
+                            "enum": [
+                                "light",
+                                "dark",
+                                "system"
+                            ]
+                        },
+                        "colors": {
+                            "type": "string",
+                            "enum": [
+                                "system",
+                                "black-and-white",
+                                "high-contrast"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "systemBars": {
+                    "type": "object",
+                    "properties": {
+                        "statusBar": {
+                            "type": "object",
+                            "properties": {
+                                "hidden": {
+                                    "type": "boolean"
+                                },
+                                "icons": {
+                                    "type": "string",
+                                    "enum": [
+                                        "auto",
+                                        "light",
+                                        "dark"
+                                    ]
+                                }
+                            },
+                            "additionalProperties": false
+                        },
+                        "navigationBar": {
+                            "type": "object",
+                            "properties": {
+                                "hidden": {
+                                    "type": "boolean"
+                                },
+                                "icons": {
+                                    "type": "string",
+                                    "enum": [
+                                        "auto",
+                                        "light",
+                                        "dark"
+                                    ]
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "transparency": {
                     "deprecated": true,
                     "description": "Accepted and ignored: replaced by appearance.glass (#24); the file no longer feeds the transparency scheme"
@@ -107,6 +193,9 @@
                                 "top",
                                 "bottom"
                             ]
+                        },
+                        "fixed": {
+                            "type": "boolean"
                         }
                     },
                     "additionalProperties": false
@@ -329,6 +418,9 @@
                         }
                     },
                     "additionalProperties": false
+                },
+                "lockRotation": {
+                    "type": "boolean"
                 }
             },
             "additionalProperties": false
@@ -480,6 +572,33 @@
                         ]
                     },
                     "maxItems": 32
+                },
+                "listIcons": {
+                    "type": "boolean"
+                },
+                "appDetails": {
+                    "type": "boolean"
+                },
+                "contactsCallOnTap": {
+                    "type": "boolean"
+                },
+                "frequentlyUsed": {
+                    "type": "boolean"
+                },
+                "frequentlyUsedRows": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4
+                },
+                "favoritesEditButton": {
+                    "type": "boolean"
+                },
+                "compactTags": {
+                    "type": "boolean"
+                },
+                "transliterator": {
+                    "type": "string",
+                    "pattern": "^(?=.{1,64}$)[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*(?:/[A-Za-z0-9_]+)?$"
                 }
             },
             "additionalProperties": false
