@@ -17,10 +17,30 @@
 # grid block verbatim, so the first pull from a device where somebody added an
 # AppWidget puts a provider component into theming.json.
 #
-# When this fires, the question is not "how do I silence it" but: has #219
-# shipped in the release we install? If yes, delete this check and say so in
-# the commit. If no, the config is fine and the verification is weaker than it
-# looks - which is worth knowing before the run that proves nothing.
+# It guards TWO defects that fire on the same condition and have different
+# answers, which is why the message asks two questions rather than giving one
+# instruction.
+#
+#   1. The silence above is TEMPORARY. andashi/home#219 makes every reload
+#      re-report a missing provider; it is merged and lands in an ordinary
+#      release. When it is in the release we install, that half is answered.
+#
+#   2. The bind is PERMANENT, by their design and with our agreement. If the
+#      provider resolves but Android refuses the bind, the grid records it and
+#      the cell shows "could not load" - and the reload report stays silent,
+#      because it is a CONFIGURATION report, not a capability one. It says what
+#      the device is configured to do; binding is the grid's act. The same rule
+#      keeps a missing permission and an uninstalled favorite's app out of it.
+#      So no release fixes this, and "has it shipped" is the wrong question.
+#      The right one is whether anything here proves a declared widget is on
+#      the screen - and today nothing does. The chain grants the bind
+#      permission per zone (20-permissions.sh, appwidget_bind), so a refusal
+#      would be surprising; it would also be invisible.
+#
+# The honest summary for whoever trips this: a converged run proves the file
+# reached the device and the launcher agreed with it. For a built-in favorites
+# widget that is the whole story. For an AppWidget it is not, and no amount of
+# reading the report will make it one.
 set -euo pipefail
 cd "$(dirname "$0")"
 : "${CONFIG_DIR:=$PWD}"
@@ -39,10 +59,15 @@ done
 if [ -n "$found" ]; then
   echo "a zone declares an AppWidget provider, not the built-in favorites widget:" >&2
   printf '%s' "$found" >&2
-  echo "  On 0.9.0 a missing provider is reported only on the FIRST reload, so a" >&2
-  echo "  re-run or a second device reports success for a widget that is absent." >&2
-  echo "  Check whether andashi/home#219 is in the release we install; if it is," >&2
-  echo "  this check has done its job and can go." >&2
+  echo "  Two questions, and they have different answers:" >&2
+  echo "  1. Is andashi/home#219 in the release we install? Before it, a missing" >&2
+  echo "     provider is reported only on the FIRST reload, so a re-run or a" >&2
+  echo "     second device reports success for a widget that is absent. That" >&2
+  echo "     half is temporary and retires with the release." >&2
+  echo "  2. Does anything here prove the widget is actually BOUND? Nothing does," >&2
+  echo "     and no release will change it: the reload report is a configuration" >&2
+  echo "     report, not a capability one, so a refused bind is silent by design." >&2
+  echo "     A converged run stops being proof that the screen matches the file." >&2
   exit 1
 fi
 echo "ok: no AppWidget providers declared (see check-appwidgets.sh)"
