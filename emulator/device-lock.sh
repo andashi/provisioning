@@ -138,9 +138,19 @@ cmd_status() {
   [ "$any" = 1 ] || echo "all devices free, nothing running"
 }
 
+# run.sh refuses an instance held by somebody else, and it decides who you are
+# from LOCK_OWNER. Taking a lock without exporting it is therefore a trap that
+# springs one command later - and it sprang on the author of the check within
+# hours of writing it, as a start that "hung" because its output was muted.
+# The hint goes where the situation is created, not where it is discovered.
+hint_owner() {   # $1 = owner
+  [ "${LOCK_OWNER:-}" = "$1" ] && return 0
+  echo "  export LOCK_OWNER=$(printf '%q' "$1")   # so run.sh knows this instance is yours"
+}
+
 cmd_acquire() {
   local owner="$1"
-  claim "$owner" && { echo "device $INSTANCE acquired by $owner"; return 0; }
+  claim "$owner" && { echo "device $INSTANCE acquired by $owner"; hint_owner "$owner"; return 0; }
   if read_lock "$LOCK" && [ "$HOLDER" != "$owner" ]; then
     echo "device $INSTANCE held by $HOLDER since $(fmt_age "$SINCE") ago - not acquired" >&2
     return 1
@@ -148,6 +158,7 @@ cmd_acquire() {
   # Our own claim (refreshed) or an empty leftover file.
   overwrite "$owner"
   echo "device $INSTANCE acquired by $owner"
+  hint_owner "$owner"
 }
 
 cmd_release() {

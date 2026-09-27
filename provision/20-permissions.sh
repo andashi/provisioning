@@ -27,7 +27,7 @@ require_device
 # pipefail is active - both exit on the match, the upstream dies from SIGPIPE,
 # and a GRANTED permission then reads as "not granted".
 perm_granted() {  # $1=pkg $2=uid $3=perm
-  local out line in_install=0 in_user=0 by_user="" by_default=""
+  local out line in_install=0 in_user=0 by_user="" by_default="" perm_name uid_of
   out="$(ash_ro dumpsys package "$1" 2>/dev/null | tr -d '\r')" || return 1
   while IFS= read -r line; do
     case "$line" in
@@ -35,15 +35,25 @@ perm_granted() {  # $1=pkg $2=uid $3=perm
       *"User $2:"*)             in_user=1;    in_install=0; continue;;
       *"User "[0-9]*":"*)       in_user=0;    in_install=0; continue;;
     esac
-    case "$line" in *"$3: granted="*) ;; *) continue;; esac
+    # The permission name is a FIELD, so it is compared as one. As a substring
+    # match, `*"$3: granted="*` also accepted a different permission whose name
+    # ends with the one asked for - com.vendor.android.permission.READ_CONTACTS
+    # answering for android.permission.READ_CONTACTS - and this function decides
+    # whether a grant took.
+    perm_name="${line%%:*}"; perm_name="${perm_name#"${perm_name%%[![:space:]]*}"}"
+    [ "$perm_name" = "$3" ] || continue
     if [ "$in_user" = 1 ]; then
       # The user's own runtime block is authoritative - decide here.
       case "$line" in *granted=true*) return 0;; *) return 1;; esac
     elif [ "$in_install" = 1 ]; then
+      # Same again, on the user id: `, userId=1` matched `, userId=15` as a
+      # substring, so one user's override could answer for another. The value
+      # is read out and compared as a number.
       case "$line" in
-        *", userId=$2"*) by_user="$line";;   # an override for exactly this user
-        *", userId="*)   ;;                  # some other user's override
-        *)               by_default="$line";;
+        *", userId="*)
+          uid_of="${line##*, userId=}"; uid_of="${uid_of%%[!0-9]*}"
+          [ "$uid_of" = "$2" ] && by_user="$line" ;;
+        *) by_default="$line";;
       esac
     fi
   done <<<"$out"
