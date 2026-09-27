@@ -21,9 +21,14 @@
 # answers, which is why the message asks two questions rather than giving one
 # instruction.
 #
-#   1. The silence above is TEMPORARY. andashi/home#219 makes every reload
-#      re-report a missing provider; it is merged and lands in an ordinary
-#      release. When it is in the release we install, that half is answered.
+#   1. TEMPORARY, and it is two fixes rather than one. andashi/home#219 makes
+#      every reload re-report a missing provider. andashi/home#213 fixes a
+#      second one that needs neither a missing provider nor a refused bind: an
+#      already-bound widget whose provider is briefly unavailable at the cell's
+#      first composition - an app mid-update, "replacing", while the launcher
+#      starts - caches null and shows "loading failed" until the host id
+#      changes, which it never does. Any widget app updating can trigger it,
+#      and it is in 0.9.0. Both are merged; both land in an ordinary release.
 #
 #   2. The bind is PERMANENT, by their design and with our agreement. If the
 #      provider resolves but Android refuses the bind, the grid records it and
@@ -60,10 +65,12 @@ if [ -n "$found" ]; then
   echo "a zone declares an AppWidget provider, not the built-in favorites widget:" >&2
   printf '%s' "$found" >&2
   echo "  Two questions, and they have different answers:" >&2
-  echo "  1. Is andashi/home#219 in the release we install? Before it, a missing" >&2
-  echo "     provider is reported only on the FIRST reload, so a re-run or a" >&2
-  echo "     second device reports success for a widget that is absent. That" >&2
-  echo "     half is temporary and retires with the release." >&2
+  echo "  1. Are andashi/home#219 AND #213 in the release we install? Before" >&2
+  echo "     #219 a missing provider is reported only on the FIRST reload, so a" >&2
+  echo "     re-run or a second device reports success for a widget that is" >&2
+  echo "     absent. Before #213 an already-bound widget whose provider is" >&2
+  echo "     briefly unavailable - any widget app updating - shows \"loading" >&2
+  echo "     failed\" permanently. Both halves retire with a release." >&2
   echo "  2. Does anything here prove the widget is actually BOUND? Nothing does," >&2
   echo "     and no release will change it: the reload report is a configuration" >&2
   echo "     report, not a capability one, so a refused bind is silent by design." >&2
