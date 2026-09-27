@@ -73,7 +73,13 @@ into a rule.
 Objects are walked; anything else is a leaf compared whole, arrays included, so a
 swallowed favourite or a flipped `locked` is still one mismatch and not a list of
 them. What it gives up is noticing that the contract grew — which was never drift
-and never ours to report. The failures that matter are caught elsewhere and more
+and never ours to report. Be clear about how far that reaches: a **section we
+do not write at all** is invisible in both directions. When 0.8.0's write-back
+began duplicating entries in an `apps` section on the launcher's `main`, nothing
+here could have seen it, and nothing here needed to; the day a zone adopts that
+section, the blind spot arrives with it, already switched on. That is the price
+of checking our own claim rather than the device's whole state, and it is the
+right price — but it is a limit, not an accident. The failures that matter are caught elsewhere and more
 precisely: the launcher's own diagnostics for a key it ignores, and
 `config/check-schema.sh` for a key the contract no longer has.
 
