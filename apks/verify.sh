@@ -14,7 +14,22 @@ command -v apksigner >/dev/null || { bad "apksigner missing"; exit 1; }
 shopt -s nullglob
 # All ABI subdirectories; the flat layout remains allowed as legacy inventory.
 apks=(universal/*.apk arm64-v8a/*.apk x86_64/*.apk *.apk)
-if [ ${#apks[@]} -eq 0 ]; then warn "no APKs present - nothing to check"; exit 0; fi
+if [ ${#apks[@]} -eq 0 ]; then
+  # Exit 0 stays: a fresh clone has no binaries by design, and this is the
+  # documented state before fetch.sh runs. What changes is the sentence. "No
+  # APKs present - nothing to check" reads as a clean bill of health, and the
+  # trust anchor beside it may be claiming dozens of artefacts that are not
+  # here. Say the size of the gap, so nobody mistakes an unverified inventory
+  # for a verified one.
+  listed=0
+  [ -f SHA256SUMS ] && listed="$(grep -c . SHA256SUMS 2>/dev/null || echo 0)"
+  if [ "$listed" -gt 0 ]; then
+    warn "no APKs present: SHA256SUMS lists $listed artefact(s), none of them here - NOTHING was verified"
+  else
+    warn "no APKs present and no SHA256SUMS - nothing to check, and nothing is claimed"
+  fi
+  exit 0
+fi
 
 fail=0
 
