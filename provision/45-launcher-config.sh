@@ -82,6 +82,39 @@ problem() {   # $1=profile-key $2=reason; in DRY_RUN only a warning
 device_id() { printf '%s' "${ADB_SERIAL:-$(adb get-serialno 2>/dev/null || echo unknown)}" | tr -c 'A-Za-z0-9_.-' '_'; }
 sha_record() { printf '%s/launcher-sha/%s/%s' "$STATE_DIR" "$(device_id)" "$1"; }
 
+# What we last agreed with a zone about. It used to be a bare sha; since
+# andashi/home#226 the launcher also reports `sequence` and `storeId`, so the
+# record carries all three as JSON. A file from before that is a bare sha and
+# is read as one - rewriting the format must not invent agreement we never had.
+record_write() {   # $1=file $2=sha $3=sequence-or-empty $4=storeId-or-empty
+  mkdir -p "$(dirname "$1")"
+  jq -n --arg sha "$2" --arg seq "$3" --arg store "$4" \
+    '{sha: $sha, sequence: (if $seq == "" then null else ($seq|tonumber) end),
+      storeId: (if $store == "" then null else $store end)}' > "$1"
+}
+# Has the launcher saved a report since the one we agreed on? True only when
+# all four values allow the question to be asked: both sides know their number,
+# both name the SAME store, and the device's is higher. Anything else is "we
+# cannot tell", which must not read as "nothing happened" - the fields are null
+# on every build before andashi/home#226, and a different storeId is a new
+# store rather than a number that went backwards.
+#
+# Deliberately `-gt` and never a difference of one: the numbers may have gaps,
+# because a save that failed half way leaves one.
+report_moved() {   # $1=dev_seq $2=dev_store $3=rec_seq $4=rec_store
+  [ -n "$1" ] && [ -n "$3" ] && [ -n "$2" ] && [ "$2" = "$4" ] || return 1
+  [ "$1" -gt "$3" ]
+}
+
+record_field() {   # $1=file $2=sha|sequence|storeId
+  [ -f "$1" ] || return 1
+  if jq -e . "$1" >/dev/null 2>&1; then
+    jq -r --arg f "$2" '.[$f] // empty' "$1"
+  elif [ "$2" = "sha" ]; then
+    tr -d '[:space:]' < "$1"
+  fi
+}
+
 query_state() {   # $1=path (config|diagnostics) $2=uid
   local out json
   out="$(ash_ro content query --uri "content://$PKG.state/$1" --user "$2" 2>/dev/null | tr -d '\r')" || return 1
@@ -193,13 +226,47 @@ configure_profile() {   # $1=profile-key
   # Measured on 0.4.0: the launcher completes the geometry in the document it
   # SERVES but does not rewrite launcher.json for it, so a placement alone
   # does not move the hash and this does not fire without a real change.
-  local rec dev_sha
+  #
+  # The sha alone cannot see everything worth refusing. Since andashi/home#226
+  # a report carries `sequence`, which counts SAVED REPORTS - not reloads - and
+  # moves for two things the sha does not: a reload that changed nothing, and a
+  # change made on the device that the launcher kept OUT of the file (a
+  # `write-back-skipped:` warning added to the last report). The second is the
+  # one this guard exists for and could not see: a push then overwrites the
+  # change somebody made.
+  #
+  # Three rules, all of them theirs and none of them guessable:
+  #   - `sequence` is comparable only within one `storeId`. A different id is a
+  #     NEW store (pm clear, reinstall, signer swap), not a number that went
+  #     backwards, so nothing may be concluded across it.
+  #   - Numbers may have GAPS. A save that failed half way leaves one. Compare,
+  #     never count.
+  #   - Both fields are null on a build before 0.10.x, meaning UNKNOWN, not
+  #     zero. Every device we run today answers null, which is why the sha path
+  #     below stays the primary one rather than a fallback.
+  #
+  # And what it does NOT mean: an unchanged `sequence` does not prove no reload
+  # happened. A reload that found nothing new saves nothing. That is correct
+  # here - neither changed anything the file cares about - but this field is not
+  # a reload detector, and reading it as one later would be a quiet mistake.
+  local rec diag_now dev_sha dev_seq dev_store rec_sha rec_seq rec_store
   rec="$(sha_record "$key")"
   if [ "$DRY_RUN" != "1" ] && [ -f "$rec" ]; then
-    dev_sha="$(query_state diagnostics "$uid" 2>/dev/null | jq -r '.configSha256 // empty')"
-    if [ -n "$dev_sha" ] && [ "$dev_sha" != "$(tr -d '[:space:]' < "$rec")" ]; then
-      warn "$label: device has ${dev_sha:0:12}..., we last agreed on $(tr -d '[:space:]' < "$rec" | cut -c1-12)..."
+    diag_now="$(query_state diagnostics "$uid" 2>/dev/null || true)"
+    dev_sha="$(printf '%s' "$diag_now" | jq -r '.configSha256 // empty' 2>/dev/null || true)"
+    dev_seq="$(printf '%s' "$diag_now" | jq -r '.sequence // empty' 2>/dev/null || true)"
+    dev_store="$(printf '%s' "$diag_now" | jq -r '.storeId // empty' 2>/dev/null || true)"
+    rec_sha="$(record_field "$rec" sha || true)"
+    rec_seq="$(record_field "$rec" sequence || true)"
+    rec_store="$(record_field "$rec" storeId || true)"
+    if [ -n "$dev_sha" ] && [ "$dev_sha" != "$rec_sha" ]; then
+      warn "$label: device has ${dev_sha:0:12}..., we last agreed on $(printf '%s' "$rec_sha" | cut -c1-12)..."
       problem "$key" "$label: the config changed on the device since our last run - pull it first ($0 --pull), then push"
+      return 1
+    fi
+    if report_moved "$dev_seq" "$dev_store" "$rec_seq" "$rec_store"; then
+      warn "$label: same config, but the launcher saved report $dev_seq since our $rec_seq"
+      problem "$key" "$label: something was saved on the device since our last run - a reload, or a device change kept out of the file - pull it first ($0 --pull), then push"
       return 1
     fi
   fi
@@ -259,14 +326,19 @@ configure_profile() {   # $1=profile-key
   # The launcher records the sha256 of the file it last loaded plus success /
   # error details. A matching sha with success=false is a failure with an
   # explanation from the launcher itself - surface it, don't retry it away.
-  local attempt=0 diag got_sha success n_diag fatal_diag
+  local attempt=0 diag got_sha success n_diag fatal_diag seq_now
   while [ $attempt -lt 30 ]; do
     if diag="$(query_state diagnostics "$uid")"; then
       got_sha="$(printf '%s' "$diag" | jq -r '.configSha256 // empty')"
       success="$(printf '%s' "$diag" | jq -r '.success // empty')"
       if [ "$got_sha" = "$want_sha" ]; then
         if [ "$success" = "true" ]; then
-          ok "reload converged (diagnostics sha256 match)"
+          # The report number is printed, not just recorded: our runs show
+          # `.diagnostics[]` and no top-level fields, so a counter nobody can
+          # see while watching a push is a counter that helps only a script.
+          # Absent on a build before andashi/home#226, and absent is fine.
+          seq_now="$(printf '%s' "$diag" | jq -r '.sequence // empty')"
+          ok "reload converged (diagnostics sha256 match${seq_now:+, report $seq_now})"
           # The device now holds exactly what we wrote, and that is what the
           # guard above wants to know - not whether we were happy with it.
           # Recording only after a successful read-back made a FAILED push
@@ -276,7 +348,9 @@ configure_profile() {   # $1=profile-key
           # glass: false path against 0.5.0 - six zones refused the correcting
           # run and pointed at --pull, which would have pulled the bad config
           # into the catalog.
-          mkdir -p "$(dirname "$rec")" && printf '%s\n' "$want_sha" > "$rec"
+          record_write "$rec" "$want_sha" \
+            "$(printf '%s' "$diag" | jq -r '.sequence // empty')" \
+            "$(printf '%s' "$diag" | jq -r '.storeId // empty')"
           # success=true does not mean the launcher had nothing to say. Warning
           # diagnostics ride the same channel as errors: today `unknown-key`,
           # and from andashi/home#47 on also `inert-key` - "accepted, but this
@@ -402,7 +476,7 @@ pull_all() {
    Point the chain at your own catalog first:  CONFIG_DIR=/path/to/config $0 --pull" ;;
   esac
   require_device
-  local key label uid eff dev_sha rec n=0 tmp lay favs glass unres
+  local key label uid eff diag_pull dev_sha rec n=0 tmp lay favs glass unres
   tmp="$(mktemp)"; cp "$theme" "$tmp"
   log "Pulling what the device has into $theme"
   while read -r key; do
@@ -412,7 +486,8 @@ pull_all() {
     [ -n "$uid" ] || { warn "$label: profile does not exist - skipped"; continue; }
     user_running_uid "$uid" || ash am start-user -w "$uid" >/dev/null 2>&1
     eff="$(query_state config "$uid")" || { warn "$label: /config not served - skipped"; continue; }
-    dev_sha="$(query_state diagnostics "$uid" 2>/dev/null | jq -r '.configSha256 // empty')"
+    diag_pull="$(query_state diagnostics "$uid" 2>/dev/null || true)"
+    dev_sha="$(printf '%s' "$diag_pull" | jq -r '.configSha256 // empty' 2>/dev/null || true)"
 
     lay="$(printf '%s' "$eff" | jq -c '.home.grid.layouts // null')"
 
@@ -449,8 +524,9 @@ pull_all() {
       || { warn "$label: could not update $theme"; continue; }
 
     rec="$(sha_record "$key")"
-    mkdir -p "$(dirname "$rec")"
-    printf '%s\n' "$dev_sha" > "$rec"
+    record_write "$rec" "$dev_sha" \
+      "$(printf '%s' "$diag_pull" | jq -r '.sequence // empty')" \
+      "$(printf '%s' "$diag_pull" | jq -r '.storeId // empty')"
     ok "$label: pulled (device sha ${dev_sha:0:12}...)"
     n=$((n + 1))
   done < <(profile_keys)

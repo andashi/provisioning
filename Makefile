@@ -24,6 +24,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
 	  echo "ok: zone browsers"
 	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison (cases)"
+	@lib/report-moved.test.sh > /dev/null && echo "ok: report-moved condition (cases)"
 	@config/check-schema.test.sh > /dev/null && echo "ok: schema check (cases)"
 	@config/check-contacts.test.sh > /dev/null && echo "ok: contact rule (cases)"
 	@config/check-appwidgets.test.sh > /dev/null && echo "ok: appwidget tripwire (cases)"
