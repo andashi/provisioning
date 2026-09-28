@@ -130,6 +130,25 @@
                                 "black-and-white",
                                 "high-contrast"
                             ]
+                        },
+                        "shapes": {
+                            "type": "string",
+                            "enum": [
+                                "default",
+                                "cut",
+                                "extra-round",
+                                "rect"
+                            ]
+                        },
+                        "typography": {
+                            "type": "string",
+                            "enum": [
+                                "google-sans",
+                                "google-sans-rounded",
+                                "system",
+                                "serif",
+                                "monospace"
+                            ]
                         }
                     },
                     "additionalProperties": false
@@ -324,7 +343,15 @@
                                                     "id",
                                                     "widget"
                                                 ],
-                                                "additionalProperties": false
+                                                "additionalProperties": false,
+                                                "dependentRequired": {
+                                                    "x": [
+                                                        "y"
+                                                    ],
+                                                    "y": [
+                                                        "x"
+                                                    ]
+                                                }
                                             },
                                             "maxItems": 32
                                         }
@@ -400,7 +427,15 @@
                                                     "id",
                                                     "widget"
                                                 ],
-                                                "additionalProperties": false
+                                                "additionalProperties": false,
+                                                "dependentRequired": {
+                                                    "x": [
+                                                        "y"
+                                                    ],
+                                                    "y": [
+                                                        "x"
+                                                    ]
+                                                }
                                             },
                                             "maxItems": 32
                                         }
@@ -599,6 +634,492 @@
                 "transliterator": {
                     "type": "string",
                     "pattern": "^(?=.{1,64}$)[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*(?:/[A-Za-z0-9_]+)?$"
+                }
+            },
+            "additionalProperties": false
+        },
+        "apps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "packageName": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                        "maxLength": 256
+                    },
+                    "profile": {
+                        "type": "string",
+                        "enum": [
+                            "personal",
+                            "work",
+                            "private"
+                        ]
+                    },
+                    "activity": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*$",
+                        "maxLength": 256
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "default",
+                            "search-only",
+                            "hidden"
+                        ]
+                    },
+                    "icon": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "system",
+                                    "themed",
+                                    "placeholder"
+                                ]
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "pack": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                        "maxLength": 256
+                                    },
+                                    "drawable": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}(,[A-Za-z_][A-Za-z0-9_]{0,99}){0,30}$"
+                                    },
+                                    "themed": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "pack",
+                                    "drawable"
+                                ],
+                                "additionalProperties": false
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "scale": {
+                                        "type": "number",
+                                        "minimum": 0.5,
+                                        "maximum": 1.5
+                                    },
+                                    "background": {
+                                        "oneOf": [
+                                            {
+                                                "type": "string",
+                                                "enum": [
+                                                    "icon",
+                                                    "theme"
+                                                ]
+                                            },
+                                            {
+                                                "type": "string",
+                                                "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+                                                "description": "A colour as #RRGGBB or #AARRGGBB."
+                                            }
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "scale",
+                                    "background"
+                                ],
+                                "additionalProperties": false
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "packageName"
+                ],
+                "additionalProperties": false
+            },
+            "maxItems": 512
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                    },
+                    "icon": {
+                        "oneOf": [
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "pack": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                        "maxLength": 256
+                                    },
+                                    "drawable": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}(,[A-Za-z_][A-Za-z0-9_]{0,99}){0,30}$"
+                                    },
+                                    "themed": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "pack",
+                                    "drawable"
+                                ],
+                                "additionalProperties": false
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "text": {
+                                        "type": "string",
+                                        "maxLength": 16,
+                                        "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                                    }
+                                },
+                                "required": [
+                                    "text"
+                                ],
+                                "additionalProperties": false
+                            }
+                        ]
+                    },
+                    "apps": {
+                        "type": "array",
+                        "items": {
+                            "oneOf": [
+                                {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "packageName": {
+                                            "type": "string",
+                                            "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                            "maxLength": 256
+                                        },
+                                        "profile": {
+                                            "type": "string",
+                                            "enum": [
+                                                "personal",
+                                                "work",
+                                                "private"
+                                            ]
+                                        },
+                                        "activity": {
+                                            "type": "string",
+                                            "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*$",
+                                            "maxLength": 256
+                                        }
+                                    },
+                                    "required": [
+                                        "packageName"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            ]
+                        },
+                        "maxItems": 512
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "additionalProperties": false
+            },
+            "maxItems": 200
+        },
+        "gestures": {
+            "type": "object",
+            "properties": {
+                "swipeDown": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
+                },
+                "swipeUp": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
+                },
+                "swipeLeft": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
+                },
+                "swipeRight": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
+                },
+                "doubleTap": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
+                },
+                "longPress": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
+                },
+                "homeButton": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "search",
+                                "notifications",
+                                "quick-settings",
+                                "screen-lock",
+                                "power-menu",
+                                "recents",
+                                "launcher-settings"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "packageName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                    "maxLength": 256
+                                },
+                                "profile": {
+                                    "type": "string",
+                                    "enum": [
+                                        "personal",
+                                        "work",
+                                        "private"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "packageName"
+                            ],
+                            "additionalProperties": false
+                        }
+                    ]
                 }
             },
             "additionalProperties": false

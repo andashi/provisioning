@@ -21,14 +21,14 @@
 # answers, which is why the message asks two questions rather than giving one
 # instruction.
 #
-#   1. TEMPORARY, and it is two fixes rather than one. andashi/home#219 makes
-#      every reload re-report a missing provider. andashi/home#213 fixes a
-#      second one that needs neither a missing provider nor a refused bind: an
-#      already-bound widget whose provider is briefly unavailable at the cell's
-#      first composition - an app mid-update, "replacing", while the launcher
-#      starts - caches null and shows "loading failed" until the host id
-#      changes, which it never does. Any widget app updating can trigger it,
-#      and it is in 0.9.0. Both are merged; both land in an ordinary release.
+#   1. TEMPORARY, and ANSWERED BY THE SCRIPT rather than by a person. Two
+#      launcher defects made a declared widget unverifiable: #219 (a missing
+#      provider reported only on the first reload) and #224 (an already-bound
+#      widget whose provider was briefly unavailable at first composition -
+#      an app mid-update - cached null and showed "loading failed" for good).
+#      Both shipped in 0.10.0. So the question "is it in the release we
+#      install" is one this script can answer by looking at the inventory,
+#      and a question a script can answer is not a question to print.
 #
 #   2. The bind is PERMANENT, by their design and with our agreement. If the
 #      provider resolves but Android refuses the bind, the grid records it and
@@ -51,6 +51,20 @@ cd "$(dirname "$0")"
 : "${CONFIG_DIR:=$PWD}"
 : "${OUT_DIR:=$CONFIG_DIR/launcher}"
 
+# The newest launcher APK on this host is what the next run installs, because
+# the launcher is deliberately unpinned (decision 0012). release_tag would
+# override that, which is exactly when this matters again.
+: "${APKS_DIR:=$PWD/../apks}"
+WIDGET_SAFE_FROM="0.10.0"
+launcher_version() {
+  local pkg tag newest
+  pkg="$(jq -r --arg k "$(jq -r .launcher "$CONFIG_DIR/theming.json")" '.launchers[$k].pkg' "$CONFIG_DIR/theming.json")"
+  tag="$(jq -r --arg p "$pkg" '[.apps[]|select(.pkg==$p)|.release_tag//empty][0] // empty' "$CONFIG_DIR/apps.json")"
+  [ -n "$tag" ] && { printf '%s' "${tag#v}"; return 0; }
+  newest="$(ls "$APKS_DIR"/*/"$pkg"-*.apk 2>/dev/null | sed "s|.*/$pkg-||; s|\.apk$||" | sort -V | tail -1)"
+  [ -n "$newest" ] && printf '%s' "$newest"
+}
+
 found=""
 for f in "$OUT_DIR"/*.json; do
   [ -e "$f" ] || continue
@@ -65,12 +79,27 @@ if [ -n "$found" ]; then
   echo "a zone declares an AppWidget provider, not the built-in favorites widget:" >&2
   printf '%s' "$found" >&2
   echo "  Two questions, and they have different answers:" >&2
-  echo "  1. Are andashi/home#219 AND #213 in the release we install? Before" >&2
-  echo "     #219 a missing provider is reported only on the FIRST reload, so a" >&2
-  echo "     re-run or a second device reports success for a widget that is" >&2
-  echo "     absent. Before #213 an already-bound widget whose provider is" >&2
-  echo "     briefly unavailable - any widget app updating - shows \"loading" >&2
-  echo "     failed\" permanently. Both halves retire with a release." >&2
+  # `|| true` with the emptiness checked on the next line, not as a shrug:
+  # launcher_version returns non-zero for "no APK here", which is an answer,
+  # and under set -e the assignment alone killed the script mid-message. The
+  # tripwire against invisible states was exiting invisibly.
+  have="$(launcher_version || true)"
+  if [ -z "$have" ]; then
+    echo "  1. UNKNOWN: no launcher APK in $APKS_DIR, so this script cannot tell" >&2
+    echo "     whether the build you will install carries andashi/home#219 and" >&2
+    echo "     #224. Without them a declared widget can be absent or permanently" >&2
+    echo "     broken while the report says success. Run apks/fetch.sh." >&2
+  elif [ "$(printf '%s\n%s\n' "$WIDGET_SAFE_FROM" "$have" | sort -V | head -1)" != "$WIDGET_SAFE_FROM" ]; then
+    echo "  1. The build you would install is $have, older than $WIDGET_SAFE_FROM." >&2
+    echo "     Before andashi/home#219 a missing provider is reported only on the" >&2
+    echo "     FIRST reload, so a re-run reports success for a widget that is" >&2
+    echo "     absent; before #224 an already-bound widget whose provider was" >&2
+    echo "     briefly unavailable shows \"loading failed\" for good. Upgrade, or" >&2
+    echo "     know that the run proves less than it says." >&2
+  else
+    echo "  1. Answered: the build you would install is $have, which carries" >&2
+    echo "     andashi/home#219 and #224. That half is settled." >&2
+  fi
   echo "  2. Does anything here prove the widget is actually BOUND? Nothing does," >&2
   echo "     and no release will change it: the reload report is a configuration" >&2
   echo "     report, not a capability one, so a refused bind is silent by design." >&2
