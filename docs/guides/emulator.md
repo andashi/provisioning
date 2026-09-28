@@ -102,10 +102,14 @@ Measured on emulator-5560, 2026-09-28, controlled on zone 13: before, the
 foreground window is `app.grapheneos.setupwizard/.WelcomeActivity`; after, it is
 `org.andashi.home/…LauncherActivity`.
 
-**Check the foreground window, not `resolve-activity`.** Reported by the
-optimization session as the verification step, and it is the wrong instrument —
-measured here it still answers `app.grapheneos.setupwizard/.WelcomeActivity`
-while the launcher is demonstrably in front and holds the HOME role. Ask the
+**Check the foreground window, not `resolve-activity`.** It is the wrong
+instrument, and the two measurements together show why better than either alone:
+on a provisioned zone here it answered `app.grapheneos.setupwizard/.WelcomeActivity`
+while the launcher was demonstrably in front and held the HOME role; on a
+never-provisioned zone of `profiles-ready` it answered the launcher. Same
+command, opposite answers, and **neither of them is about what is on the
+screen** — it reports intent resolution, which is a different question that
+happens to agree sometimes. Ask the
 question you mean:
 
 ```bash
