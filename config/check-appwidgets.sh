@@ -38,9 +38,35 @@
 #      keeps a missing permission and an uninstalled favorite's app out of it.
 #      So no release fixes this, and "has it shipped" is the wrong question.
 #      The right one is whether anything here proves a declared widget is on
-#      the screen - and today nothing does. The chain grants the bind
-#      permission per zone (20-permissions.sh, appwidget_bind), so a refusal
-#      would be surprising; it would also be invisible.
+#      the screen. Nothing does YET, but the instrument is known, measured by
+#      the launcher side on 2026-09-28 over seven cases with three instruments
+#      side by side (andashi/home#225):
+#
+#        `dumpsys appwidget` agreed with the screen in every case. Key on the
+#        HOST PACKAGE and the user, never on hostId - that number is a
+#        launcher-internal constant. The chain already parses this dump for
+#        bind_granted in 20-permissions.sh, so the format is familiar ground.
+#        Measured on user 0 only; per-user behaviour is unverified, and every
+#        widget of ours would live on a secondary user.
+#
+#      A SCREENSHOT is the wrong instrument, which is worth writing down
+#      because it is the obvious one: a failed cell renders three different
+#      ways, and at one-row sizes its text and buttons are not in the
+#      accessibility tree at all. A check built that way would look for
+#      something it cannot see.
+#
+#      The report will not grow a capability field, and that is now evidence
+#      rather than taste: binding changes OUTSIDE any reload - uninstall the
+#      provider and the platform drops the binding while the next report stays
+#      clean - so a field written at reload time would be stale by
+#      construction, presenting a stale answer as a checked one.
+#
+#      One more thing to know before adopting a widget, because this chain
+#      INSTALLS apps: on the current launcher a provider that is uninstalled
+#      and reinstalled is never bound again (andashi/home#245, being fixed). A
+#      reinstall during convergence would therefore kill a widget permanently,
+#      and the failure banner is unusable at one-row sizes, so the screen
+#      offers no way back.
 #
 # The honest summary for whoever trips this: a converged run proves the file
 # reached the device and the launcher agreed with it. For a built-in favorites
@@ -100,10 +126,15 @@ if [ -n "$found" ]; then
     echo "  1. Answered: the build you would install is $have, which carries" >&2
     echo "     andashi/home#219 and #224. That half is settled." >&2
   fi
-  echo "  2. Does anything here prove the widget is actually BOUND? Nothing does," >&2
-  echo "     and no release will change it: the reload report is a configuration" >&2
-  echo "     report, not a capability one, so a refused bind is silent by design." >&2
-  echo "     A converged run stops being proof that the screen matches the file." >&2
+  echo "  2. Does anything here prove the widget is actually BOUND? Not yet, and" >&2
+  echo "     the reload report never will - it is a configuration report, and a" >&2
+  echo "     binding changes outside any reload. Build the assertion now:" >&2
+  echo "     dumpsys appwidget agreed with the screen in all seven cases the" >&2
+  echo "     launcher side measured; key on the host PACKAGE and the user, not" >&2
+  echo "     on hostId. Not a screenshot - a failed cell is not in the" >&2
+  echo "     accessibility tree at one-row sizes. And check andashi/home#245" >&2
+  echo "     first: a reinstalled provider is never bound again, and this chain" >&2
+  echo "     installs apps." >&2
   exit 1
 fi
 echo "ok: no AppWidget providers declared (see check-appwidgets.sh)"
