@@ -81,6 +81,58 @@ boot every time (see [below](#rendering-on-the-host-gpu)).
 Each instance costs a few GB of RAM. Two side by side are comfortable on a large
 host, but a cold boot of the second one under load takes minutes, not seconds.
 
+## A zone from a snapshot is not set up
+
+Every secondary user starts in the GrapheneOS setup wizard, and nothing in this
+repository finishes it — `90-manual.sh` says a person walks the wizards, which is
+right for a phone and never happens on an emulator. So a zone switched to after
+loading any snapshot shows **"Welcome to GrapheneOS"**, the launcher never reaches
+the foreground, and anything that needs the home screen measures the wizard
+instead: no grid, no widget bind, no wallpaper applied.
+
+One setting per zone replaces the six screens:
+
+```bash
+adb -s $SERIAL shell settings put global device_provisioned 1          # once per device
+adb -s $SERIAL shell settings put secure --user <uid> user_setup_complete 1
+adb -s $SERIAL shell am switch-user <uid>
+```
+
+Measured on emulator-5560, 2026-09-28, controlled on zone 13: before, the
+foreground window is `app.grapheneos.setupwizard/.WelcomeActivity`; after, it is
+`org.andashi.home/…LauncherActivity`.
+
+**Check the foreground window, not `resolve-activity`.** Reported by the
+optimization session as the verification step, and it is the wrong instrument —
+measured here it still answers `app.grapheneos.setupwizard/.WelcomeActivity`
+while the launcher is demonstrably in front and holds the HOME role. Ask the
+question you mean:
+
+```bash
+adb -s $SERIAL shell dumpsys window | grep -m1 mCurrentFocus
+```
+
+## Not every user can hold the home screen
+
+`cmd user list -v` on a provisioned device:
+
+```
+id=0,  name=Owner,   type=full.SYSTEM
+id=10, name=Work,    type=profile.MANAGED   <- cannot hold HOME
+id=11, name=Cloud,   type=full.SECONDARY
+```
+
+**The first user that is not 0 is the managed Work profile**, and
+`cmd role add-role-holder --user 10 … HOME` answers `Failed` — the case
+`40-theming.sh` skips deliberately, because a managed profile has no home screen
+of its own. A script that picks "the first user above 0" picks the one zone that
+can never host the launcher, and then reports whatever that produces. Pick by
+type: `full.SECONDARY`, matched case-insensitively.
+
+Both traps have the same shape, and it is the one this guide keeps coming back
+to: a probe that does not first establish that the zone is set up and can hold a
+home screen is measuring something else, confidently.
+
 ## The lock
 
 Several sessions work on this repository at once and they all drive emulators. Two
