@@ -149,6 +149,13 @@
                                 "serif",
                                 "monospace"
                             ]
+                        },
+                        "colorSource": {
+                            "type": "string",
+                            "enum": [
+                                "system",
+                                "wallpaper"
+                            ]
                         }
                     },
                     "additionalProperties": false
@@ -193,6 +200,9 @@
                     },
                     "additionalProperties": false
                 },
+                "dimWallpaper": {
+                    "type": "boolean"
+                },
                 "transparency": {
                     "deprecated": true,
                     "description": "Accepted and ignored: replaced by appearance.glass (#24); the file no longer feeds the transparency scheme"
@@ -215,6 +225,17 @@
                         },
                         "fixed": {
                             "type": "boolean"
+                        },
+                        "hidden": {
+                            "type": "boolean"
+                        },
+                        "colors": {
+                            "type": "string",
+                            "enum": [
+                                "auto",
+                                "light",
+                                "dark"
+                            ]
                         }
                     },
                     "additionalProperties": false
@@ -337,6 +358,9 @@
                                                     },
                                                     "themeColors": {
                                                         "type": "boolean"
+                                                    },
+                                                    "mute": {
+                                                        "type": "boolean"
                                                     }
                                                 },
                                                 "required": [
@@ -420,6 +444,9 @@
                                                         "type": "boolean"
                                                     },
                                                     "themeColors": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "mute": {
                                                         "type": "boolean"
                                                     }
                                                 },
@@ -634,6 +661,76 @@
                 "transliterator": {
                     "type": "string",
                     "pattern": "^(?=.{1,64}$)[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*(?:/[A-Za-z0-9_]+)?$"
+                },
+                "defaultFilter": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "apps",
+                            "shortcuts",
+                            "contacts",
+                            "hidden"
+                        ]
+                    },
+                    "uniqueItems": true,
+                    "contains": {
+                        "type": "string",
+                        "enum": [
+                            "apps",
+                            "shortcuts",
+                            "contacts"
+                        ]
+                    }
+                },
+                "filterBarItems": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "apps",
+                            "shortcuts",
+                            "contacts",
+                            "hidden"
+                        ]
+                    },
+                    "uniqueItems": true
+                },
+                "shortcutsExcluded": {
+                    "type": "array",
+                    "items": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                "maxLength": 256
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "packageName": {
+                                        "type": "string",
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$",
+                                        "maxLength": 256
+                                    },
+                                    "profile": {
+                                        "type": "string",
+                                        "enum": [
+                                            "personal",
+                                            "work",
+                                            "private"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "packageName"
+                                ],
+                                "additionalProperties": false
+                            }
+                        ]
+                    },
+                    "maxItems": 512,
+                    "uniqueItems": true
                 }
             },
             "additionalProperties": false

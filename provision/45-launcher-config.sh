@@ -246,9 +246,17 @@ configure_profile() {   # $1=profile-key
   #     below stays the primary one rather than a fallback.
   #
   # And what it does NOT mean: an unchanged `sequence` does not prove no reload
-  # happened. A reload that found nothing new saves nothing. That is correct
-  # here - neither changed anything the file cares about - but this field is not
-  # a reload detector, and reading it as one later would be a quiet mistake.
+  # happened. A grid measurement that finds nothing new saves nothing. That is
+  # correct here - it changed nothing the file cares about - but this field is
+  # not a reload detector, and reading it as one later would be a quiet mistake.
+  #
+  # Measured on 0.11.0, the first release carrying the fields: an ordinary
+  # RELOAD_CONFIG broadcast over an UNCHANGED file does save a report, 3 -> 4.
+  # So this guard fires on any reload we did not cause, not only on an edit -
+  # which is what we want (somebody was here) and more sensitive than the
+  # phrase "a device change" suggests. The remedy is the documented one and it
+  # was measured too: --pull records the new number and the next push goes
+  # through.
   local rec diag_now dev_sha dev_seq dev_store rec_sha rec_seq rec_store
   rec="$(sha_record "$key")"
   if [ "$DRY_RUN" != "1" ] && [ -f "$rec" ]; then
