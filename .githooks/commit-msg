@@ -1,0 +1,23 @@
+#!/bin/sh
+# Rejects AI attribution in commit messages (AGENTS.md, "## Commits").
+#
+# This exists because the rule in AGENTS.md was not enough: Claude Code injects
+# an instruction to add these lines, and 20 commits carrying them reached public
+# main before anyone noticed. A rule that competes with a tool's default needs a
+# gate, not a paragraph.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+
+msg_file="$1"
+
+# Anchored to line start: prose *about* attribution is not attribution.
+if grep -qiE '^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\()|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated with \[|🤖 Generated)' "$msg_file"; then
+  echo "commit-msg: AI attribution is not allowed in commit messages." >&2
+  echo "" >&2
+  echo "Offending line(s):" >&2
+  grep -inE '^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\()|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated with \[|🤖 Generated)' "$msg_file" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "See AGENTS.md, section \"Commits\". A commit message reads exactly like" >&2
+  echo "one a human engineer wrote: subject line + body, nothing else." >&2
+  exit 1
+fi
