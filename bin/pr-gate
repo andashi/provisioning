@@ -40,15 +40,31 @@ data="$(gh api graphql -F owner="$owner" -F name="$name" -F pr="$pr" -f query='
 query($owner:String!, $name:String!, $pr:Int!) {
   repository(owner:$owner, name:$name) { pullRequest(number:$pr) {
     state isDraft baseRefName baseRefOid headRefOid
-    reviewThreads(first:100) { nodes {
-      isResolved resolvedBy { login }
-      comments(first:50) { nodes { author { login } body } } } }
     reviews(last:100) { nodes { author { login } submittedAt lastEditedAt body } }
     comments(orderBy:{field:UPDATED_AT, direction:DESC}, first:50) {
       nodes { author { login } createdAt updatedAt body } } } } }')" \
   || { echo "pr-gate: could not read #$pr" >&2; exit 1; }
 p="$(jq -c '.data.repository.pullRequest' <<<"$data")"
 [ "$p" != "null" ] || { echo "pr-gate: #$pr not found in $REPO" >&2; exit 1; }
+
+# Every review thread, page by page. A thread past the first page is a thread
+# like any other, and a gate that never saw it would call it resolved. If a
+# page cannot be read, the listing is incomplete and the gate refuses.
+threads="[]"; cursor=""
+while :; do
+  page="$(gh api graphql -F owner="$owner" -F name="$name" -F pr="$pr" ${cursor:+-F after="$cursor"} -f query='
+query($owner:String!, $name:String!, $pr:Int!, $after:String) {
+  repository(owner:$owner, name:$name) { pullRequest(number:$pr) {
+    reviewThreads(first:100, after:$after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { isResolved resolvedBy { login }
+              comments(first:1) { nodes { author { login } body } } } } } } }')" \
+    || { echo "pr-gate: could not read all review threads of #$pr - refusing" >&2; exit 1; }
+  threads="$(jq -c --argjson acc "$threads" '$acc + .data.repository.pullRequest.reviewThreads.nodes' <<<"$page")"
+  [ "$(jq -r .data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage <<<"$page")" = true ] || break
+  cursor="$(jq -r .data.repository.pullRequest.reviewThreads.pageInfo.endCursor <<<"$page")"
+done
+p="$(jq -c --argjson t "$threads" '.reviewThreads.nodes = $t' <<<"$p")"
 
 head="$(jq -r .headRefOid <<<"$p")"
 base="$(jq -r .baseRefOid <<<"$p")"
@@ -120,8 +136,20 @@ fi
 # Two messages on purpose: an unfinished run on main means wait, a failed one
 # means fix main first. One message for both invites the wrong action.
 if [ "$base_ref" = "main" ]; then
-  runs="$(gh run list --repo "$REPO" --branch main --limit 20 --json workflowName,status,conclusion,headSha 2>/dev/null || echo '[]')"
   main_sha="$(gh api "repos/$REPO/commits/main" --jq .sha 2>/dev/null || true)"
+  [ -n "$main_sha" ] || { echo "pr-gate: could not read main's head - refusing" >&2; exit 1; }
+  # The review above was of base..head. If main has moved since, the runs
+  # below would be of a different base than the review, and two verdicts about
+  # two trees add up to none: rebase (gh stack rebase), let it be reviewed
+  # again. --match-head-commit protects the head only, not the base.
+  if [ "$main_sha" != "$base" ]; then
+    bad "main is ${main_sha:0:12}, the pull request's base is ${base:0:12} - rebase and get it reviewed against main"
+  fi
+  # Runs of main's head commit only, whatever else ran on main since: the
+  # question is whether THIS commit is green, and a list cut at some length
+  # could end before a red run of it.
+  runs="$(gh run list --repo "$REPO" --commit "$main_sha" --limit 200 --json workflowName,status,conclusion,headSha)" \
+    || { echo "pr-gate: could not list the runs of main's head - refusing" >&2; exit 1; }
   mine="$(jq -c --arg s "$main_sha" '[.[]|select(.headSha==$s)]' <<<"$runs")"
   if [ "$(jq length <<<"$mine")" = "0" ]; then
     bad "no workflow run found for main's head ${main_sha:0:12}"

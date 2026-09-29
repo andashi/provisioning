@@ -24,20 +24,19 @@ jobs:
         run: |
           set -euo pipefail
           bad=0
+          # The hook is the rule; this runs it on every commit rather than
+          # carrying a second copy of its pattern (see .githooks/commit-msg).
+          msg="$(mktemp)"
           for c in $(git rev-list "$BASE..$HEAD"); do
-            # Anchored to line start, so prose about attribution is not attribution.
-            if git log -1 --format='%B' "$c" |
-                 grep -qiE '^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\()|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated with \[|🤖 Generated)'; then
+            git log -1 --format='%B' "$c" > "$msg"
+            if ! out="$(sh .githooks/commit-msg "$msg" 2>&1)"; then
               echo "::error::$(git log -1 --format='%h %s' "$c") carries AI attribution"
-              git log -1 --format='%B' "$c" |
-                grep -inE '^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\()|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated with \[|🤖 Generated)' |
-                sed 's/^/    /'
+              printf '%s\n' "$out" | sed 's/^/    /'
               bad=1
             fi
           done
           if [ "$bad" -ne 0 ]; then
-            echo "See AGENTS.md, section \"Commits\". Enable the hook locally with:" >&2
-            echo "  git config core.hooksPath .githooks" >&2
+            echo "Enable the hook locally with:  git config core.hooksPath .githooks" >&2
             exit 1
           fi
           echo "No AI attribution found."

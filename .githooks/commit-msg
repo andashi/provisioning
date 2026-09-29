@@ -1,23 +1,33 @@
 #!/bin/sh
 # Rejects AI attribution in commit messages (AGENTS.md, "## Commits").
 #
-# This exists because the rule in AGENTS.md was not enough: Claude Code injects
-# an instruction to add these lines, and 20 commits carrying them reached public
-# main before anyone noticed. A rule that competes with a tool's default needs a
-# gate, not a paragraph.
+# Taken over from andashi/home, where the rule in AGENTS.md was not enough:
+# Claude Code injects an instruction to add these lines, and 20 commits carrying
+# them reached public main before anyone noticed. A rule that competes with a
+# tool's default needs a gate, not a paragraph.
+#
+# The ONE place the pattern lives. The commit-hygiene workflow runs this file
+# on every commit of a pull request instead of carrying a copy: two copies of a
+# regex drift, and the copy in CI had already lost the case-insensitive flag
+# on its reporting half. Cases: tests/commit-msg.test.sh.
 #
 # Enable once per clone:  git config core.hooksPath .githooks
 
 msg_file="$1"
 
-# Anchored to line start: prose *about* attribution is not attribution.
-if grep -qiE '^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\()|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated with \[|🤖 Generated)' "$msg_file"; then
+# Anchored to line start: prose *about* attribution is not attribution. A
+# "Generated with" footer counts with a link or with a tool's name; "Generated
+# with care" in a sentence of its own is left alone.
+PATTERN='^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\(|$)|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated (with|by)[[:space:]]+(\[|Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)|🤖 Generated)'
+
+if grep -qiE "$PATTERN" "$msg_file"; then
   echo "commit-msg: AI attribution is not allowed in commit messages." >&2
   echo "" >&2
   echo "Offending line(s):" >&2
-  grep -inE '^[[:space:]]*(Co-Authored-By:[[:space:]]*(Claude|Copilot|Cursor|ChatGPT|Gemini|Codex)([[:space:]]|<|\()|Co-Authored-By:.*<noreply@anthropic\.com>|Claude-Session:|Generated with \[|🤖 Generated)' "$msg_file" | sed 's/^/  /' >&2
+  grep -inE "$PATTERN" "$msg_file" | sed 's/^/  /' >&2
   echo "" >&2
   echo "See AGENTS.md, section \"Commits\". A commit message reads exactly like" >&2
   echo "one a human engineer wrote: subject line + body, nothing else." >&2
   exit 1
 fi
+exit 0
