@@ -178,6 +178,9 @@ configure_profile() {   # $1=profile-key
   if ! user_running_uid "$uid"; then
     if [ "$plan" = "unchanged" ]; then
       skip "$label: unchanged since the last push - not started"
+      # The record proves the zone holds this config, so whatever an earlier
+      # run said it owed is no longer owed - the host went back to it.
+      pending_clear "$key" launcher
       return 0
     fi
     # NO_START=1: starting a zone evicts another one, and which one is
