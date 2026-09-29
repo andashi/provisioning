@@ -128,7 +128,6 @@
       "source": "torproject",
       "upstream": "https://www.torproject.org/download/",
       "profiles": [
-        "home",
         "anon"
       ],
       "net": true,

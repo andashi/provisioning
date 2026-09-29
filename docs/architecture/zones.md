@@ -10,7 +10,7 @@ below is a reading of that file, not a separate plan.
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  Home (Owner, user 0)          trusted LAN        VPN: Tailscale private │
-│  Signal · Immich · HA · Bitwarden · Tor Browser · Cameras · Obtainium    │
+│  Signal · Immich · HA · Bitwarden · Cameras · Obtainium                  │
 │  ── NO Play Services. Hard rule, not negotiable. ──                      │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
 │  │ Work (managed profile, parent = Home)  VPN: RethinkDNS lockdown    │  │
