@@ -25,6 +25,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	  echo "ok: zone browsers"
 	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison (cases)"
 	@lib/report-moved.test.sh > /dev/null && echo "ok: report-moved condition (cases)"
+	@lib/wallpaper-drifted.test.sh > /dev/null && echo "ok: wallpaper-drift condition (cases)"
 	@config/check-schema.test.sh > /dev/null && echo "ok: schema check (cases)"
 	@config/check-contacts.test.sh > /dev/null && echo "ok: contact rule (cases)"
 	@config/check-appwidgets.test.sh > /dev/null && echo "ok: appwidget tripwire (cases)"

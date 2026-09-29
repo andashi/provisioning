@@ -101,6 +101,21 @@ record_write() {   # $1=file $2=sha $3=sequence-or-empty $4=storeId-or-empty
 #
 # Deliberately `-gt` and never a difference of one: the numbers may have gaps,
 # because a save that failed half way leaves one.
+# Did somebody change the wallpaper on the device? The config carries an upload
+# NAME, not a path - one segment, by the contract's own pattern - so the path in
+# theming.json cannot come back through it and `--pull` leaves the wallpaper
+# alone. That is right, and it left one case unnoticed: a name on the device
+# that is not the basename of the path this zone is configured with means
+# somebody changed it there, and the pull would silently keep our value.
+#
+# Both empty-ish cases are "cannot tell", not "fine": no name on the device is
+# the wallpaper-pending-foreground state, and no path in the catalog means the
+# zone never asked for one.
+wallpaper_drifted() {   # $1=name on the device $2=configured path
+  [ -n "$1" ] && [ -n "$2" ] || return 1
+  [ "$1" != "${2##*/}" ]
+}
+
 report_moved() {   # $1=dev_seq $2=dev_store $3=rec_seq $4=rec_store
   [ -n "$1" ] && [ -n "$3" ] && [ -n "$2" ] && [ "$2" = "$4" ] || return 1
   [ "$1" -gt "$3" ]
@@ -484,7 +499,7 @@ pull_all() {
    Point the chain at your own catalog first:  CONFIG_DIR=/path/to/config $0 --pull" ;;
   esac
   require_device
-  local key label uid eff diag_pull dev_sha rec n=0 tmp lay favs glass unres
+  local key label uid eff diag_pull dev_sha rec n=0 tmp lay favs glass unres dev_img want_img
   tmp="$(mktemp)"; cp "$theme" "$tmp"
   log "Pulling what the device has into $theme"
   while read -r key; do
@@ -496,6 +511,13 @@ pull_all() {
     eff="$(query_state config "$uid")" || { warn "$label: /config not served - skipped"; continue; }
     diag_pull="$(query_state diagnostics "$uid" 2>/dev/null || true)"
     dev_sha="$(printf '%s' "$diag_pull" | jq -r '.configSha256 // empty' 2>/dev/null || true)"
+
+    dev_img="$(printf '%s' "$eff" | jq -r '.appearance.wallpaper.image // empty')"
+    want_img="$(jq -r --arg k "$key" '.per_profile[$k].wallpaper // empty' "$tmp")"
+    if wallpaper_drifted "$dev_img" "$want_img"; then
+      warn "$label: the device shows wallpaper '$dev_img', the catalog asks for '${want_img##*/}'"
+      warn "$label: somebody changed it on the device - NOT pulled, decide it in theming.json"
+    fi
 
     lay="$(printf '%s' "$eff" | jq -c '.home.grid.layouts // null')"
 
