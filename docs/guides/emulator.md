@@ -347,6 +347,18 @@ adb -s <serial> emu avd snapshot list           # while running
 A run that starts from a snapshot runs writable, and that is safe: loading resets
 RAM and disks, and nothing is written back unless someone runs `run.sh snapshot`.
 
+**Loading a snapshot does not reset the host.** `.provision-state/` records, per
+serial, what this laptop last agreed with each zone - and after a restore the
+same serial is a different phone. The next run then sees edits nobody made and
+refuses zones with "the config changed on the device since our last run".
+Whoever restores a snapshot to test the chain clears that serial's records with
+it, as `tests/e2e/andashi.sh` does:
+
+```bash
+dev="$(printf %s "$SERIAL" | tr -c 'A-Za-z0-9_.-' _)"
+rm -rf .provision-state/{launcher-sha,applied,pending}/"$dev"
+```
+
 ### Refreshing `profiles-ready`
 
 Whoever changes `config/profiles.json` refreshes `profiles-ready` on every instance

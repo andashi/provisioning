@@ -62,6 +62,7 @@ fi
 # not end up converged and verified must fail the step, not produce one
 # warning in a long log.
 FAILED=()
+PENDING=()
 problem() {   # $1=profile-key $2=reason; in DRY_RUN only a warning
   if [ "$DRY_RUN" = "1" ]; then
     warn "$2"
@@ -71,75 +72,8 @@ problem() {   # $1=profile-key $2=reason; in DRY_RUN only a warning
   fi
 }
 
-# Queries the launcher state provider and prints the served JSON document.
-# 'content query' prints "Row: 0 <col>=<json>" - strip everything up to the
-# first '{' and let jq decide whether what remains is a document.
-# What the device reported the last time we agreed with it, per device and
-# zone. Not a version counter: the launcher writes launcher.json itself once
-# edit mode ships, and a counter would have to be maintained on both sides.
-# The sha the launcher already publishes in its diagnostics is enough for a
-# compare-and-swap on content.
-device_id() { printf '%s' "${ADB_SERIAL:-$(adb get-serialno 2>/dev/null || echo unknown)}" | tr -c 'A-Za-z0-9_.-' '_'; }
-sha_record() { printf '%s/launcher-sha/%s/%s' "$STATE_DIR" "$(device_id)" "$1"; }
-
-# What we last agreed with a zone about. It used to be a bare sha; since
-# andashi/home#226 the launcher also reports `sequence` and `storeId`, so the
-# record carries all three as JSON. A file from before that is a bare sha and
-# is read as one - rewriting the format must not invent agreement we never had.
-record_write() {   # $1=file $2=sha $3=sequence-or-empty $4=storeId-or-empty
-  mkdir -p "$(dirname "$1")"
-  jq -n --arg sha "$2" --arg seq "$3" --arg store "$4" \
-    '{sha: $sha, sequence: (if $seq == "" then null else ($seq|tonumber) end),
-      storeId: (if $store == "" then null else $store end)}' > "$1"
-}
-# Has the launcher saved a report since the one we agreed on? True only when
-# all four values allow the question to be asked: both sides know their number,
-# both name the SAME store, and the device's is higher. Anything else is "we
-# cannot tell", which must not read as "nothing happened" - the fields are null
-# on every build before andashi/home#226, and a different storeId is a new
-# store rather than a number that went backwards.
-#
-# Deliberately `-gt` and never a difference of one: the numbers may have gaps,
-# because a save that failed half way leaves one.
-# Did somebody change the wallpaper on the device? The config carries an upload
-# NAME, not a path - one segment, by the contract's own pattern - so the path in
-# theming.json cannot come back through it and `--pull` leaves the wallpaper
-# alone. That is right, and it left one case unnoticed: a name on the device
-# that is not the basename of the path this zone is configured with means
-# somebody changed it there, and the pull would silently keep our value.
-#
-# Both empty-ish cases are "cannot tell", not "fine": no name on the device is
-# the wallpaper-pending-foreground state, and no path in the catalog means the
-# zone never asked for one.
-wallpaper_drifted() {   # $1=name on the device $2=configured path
-  [ -n "$1" ] && [ -n "$2" ] || return 1
-  [ "$1" != "${2##*/}" ]
-}
-
-report_moved() {   # $1=dev_seq $2=dev_store $3=rec_seq $4=rec_store
-  [ -n "$1" ] && [ -n "$3" ] && [ -n "$2" ] && [ "$2" = "$4" ] || return 1
-  [ "$1" -gt "$3" ]
-}
-
-record_field() {   # $1=file $2=sha|sequence|storeId
-  [ -f "$1" ] || return 1
-  if jq -e . "$1" >/dev/null 2>&1; then
-    jq -r --arg f "$2" '.[$f] // empty' "$1"
-  elif [ "$2" = "sha" ]; then
-    tr -d '[:space:]' < "$1"
-  fi
-}
-
-query_state() {   # $1=path (config|diagnostics) $2=uid
-  local out json
-  out="$(ash_ro content query --uri "content://$PKG.state/$1" --user "$2" 2>/dev/null | tr -d '\r')" || return 1
-  case "$out" in
-    *\{*) json="{${out#*\{}";;
-    *)    return 1;;
-  esac
-  printf '%s' "$json" | jq -e . >/dev/null 2>&1 || return 1
-  printf '%s' "$json"
-}
+# Records, decisions and the state provider: lib/launcher-state.sh.
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/launcher-state.sh"
 
 # content write into an ingest URI, with a bounded retry for the moment right
 # after `am start-user -w`: the user is already UNLOCKED, but its external
@@ -190,7 +124,7 @@ ingest_write() {   # $1=uri $2=file $3=uid
 }
 
 configure_profile() {   # $1=profile-key
-  local key="$1" label uid cfgfile ingest_uri want_sha wp wpf wpname
+  local key="$1" label uid cfgfile ingest_uri want_sha wp wpf wpname wp_sha plan rec
   label="$(profile_label "$key")"
   cfgfile="$LAUNCHER_CFG_DIR/$key.json"
   [ -f "$cfgfile" ] || { problem "$key" "$label: $cfgfile missing - run config/gen-launcher.sh"; return 1; }
@@ -201,9 +135,61 @@ configure_profile() {   # $1=profile-key
   printf '\n'
   log "Profile $label (user $uid)"
 
+  ingest_uri="content://$PKG.config-ingest/launcher.json"
+  want_sha="$(sha256sum "$cfgfile" | awk '{print $1}')"
+  rec="$(sha_record "$key")"
+
+  # ---- The wallpaper this zone should hold -----------------------------------
+  # The generated config names the image (basename of the theming.json path);
+  # the file itself is uploaded under that name before the config, so the
+  # reload finds it. {aspect} resolves against the device like in
+  # 40-theming.sh. No wallpaper in theming.json means nothing to upload.
+  # Resolved before anything is started, because whether the zone needs
+  # anything at all depends on these bytes too.
+  wp="$(theme_field "$key" wallpaper)"
+  if [ "$(jq -r --arg k "$LKEY" '.launchers[$k].wallpaper // false' "$THEME_FILE")" != "true" ]; then
+    wp=""   # launcher entry without wallpaper support: nothing to upload, config has no key either
+  fi
+  wp_sha="none"
+  if [ -n "$wp" ]; then
+    case "$wp" in *'{aspect}'*) wp="${wp//\{aspect\}/$(device_aspect_class)}";; esac
+    wpf="$REPO_ROOT/$wp"
+    wpname="$(basename "$wp")"
+    [ -f "$wpf" ] || { problem "$key" "$label: wallpaper file missing: $wp"; return 1; }
+    wp_sha="$(sha256sum "$wpf" | awk '{print $1}')"
+  fi
+
+  # ---- Only what changed (ONLY_CHANGED=1, set by `andashi apply`) ------------
+  # A full provisioning run pushes every zone every time, and that is deliberate:
+  # a fresh reload is a fresh report, and the report is how an app uninstalled
+  # since, or a widget unbound, becomes visible. The edit-and-look loop wants
+  # the opposite - touch what changed and nothing else - because every zone it
+  # starts evicts another (measured 2026-09-30: this step took 48 s on a
+  # device where nothing had changed). So the loop asks, and the full run
+  # does not.
+  plan="changed"
+  if [ "${ONLY_CHANGED:-0}" = "1" ]; then
+    plan="$(launcher_plan "$want_sha" "$(record_field "$rec" sha 2>/dev/null || true)" \
+                          "$wp_sha" "$(record_field "$rec" wallpaper 2>/dev/null || true)")"
+  fi
+
   # Start evicted users ourselves - a stopped user has no provider to write
   # to or query. Background start only, never a foreground switch.
   if ! user_running_uid "$uid"; then
+    if [ "$plan" = "unchanged" ]; then
+      skip "$label: unchanged since the last push - not started"
+      return 0
+    fi
+    # NO_START=1: starting a zone evicts another one, and which one is
+    # Android's choice (it tends to be Cloud, the zone that must keep running).
+    # So the change waits on the host, and `andashi status` names it, until
+    # the zone runs or somebody asks for --all.
+    if [ "${NO_START:-0}" = "1" ]; then
+      PENDING+=("$key|$label")
+      pending_add "$key" launcher
+      warn "$label: stopped - the change stays pending here until $label runs (or apply --all)"
+      return 0
+    fi
     ash am start-user -w "$uid" >/dev/null \
       && ok "$label started (had been evicted)" \
       || { problem "$key" "$label could not be started"; return 1; }
@@ -219,13 +205,28 @@ configure_profile() {   # $1=profile-key
   pkg_installed_for_user "$PKG" "$uid" \
     || { problem "$key" "$label: $PKG not installed (user $uid) - run 10-apps.sh first"; return 1; }
 
-  ingest_uri="content://$PKG.config-ingest/launcher.json"
-  want_sha="$(sha256sum "$cfgfile" | awk '{print $1}')"
+  # The host has nothing new - does the device still hold what we sent? The
+  # same three fields the guard below reads: the hash of the file it loaded,
+  # the report number and the store. A device that loaded our file, succeeded,
+  # and saved no report since has nothing for us to do. Anything else falls
+  # through to the guard and the push, which know what to make of it.
+  if [ "$plan" = "unchanged" ] && [ "$DRY_RUN" != "1" ]; then
+    local d_now d_sha d_ok d_seq d_store
+    d_now="$(query_state diagnostics "$uid" 2>/dev/null || true)"
+    d_sha="$(printf '%s' "$d_now" | jq -r '.configSha256 // empty' 2>/dev/null || true)"
+    d_ok="$(printf '%s' "$d_now" | jq -r '.success // empty' 2>/dev/null || true)"
+    d_seq="$(printf '%s' "$d_now" | jq -r '.sequence // empty' 2>/dev/null || true)"
+    d_store="$(printf '%s' "$d_now" | jq -r '.storeId // empty' 2>/dev/null || true)"
+    if [ -n "$d_sha" ] && [ "$d_sha" = "$want_sha" ] && [ "$d_ok" = "true" ] \
+       && [ "$d_store" = "$(record_field "$rec" storeId 2>/dev/null || true)" ] \
+       && ! report_moved "$d_seq" "$d_store" "$(record_field "$rec" sequence 2>/dev/null || true)" "$d_store"; then
+      skip "$label: unchanged, and the device still reports what we pushed"
+      pending_clear "$key" launcher
+      return 0
+    fi
+    log "$label: nothing new on the host, but the device moved - pushing"
+  fi
 
-  # ---- Wallpaper upload ----------------------------------------------------
-  # The generated config names the image (basename of the theming.json path);
-  # the file itself is uploaded here, under that name, before the config, so
-  # the reload finds it. {aspect} resolves against the device like in
   # ---- Pull before push -------------------------------------------------
   # Once edit mode ships, the launcher writes launcher.json itself: a push can
   # overwrite an arrangement somebody made by hand. So compare what the device
@@ -272,8 +273,7 @@ configure_profile() {   # $1=profile-key
   # phrase "a device change" suggests. The remedy is the documented one and it
   # was measured too: --pull records the new number and the next push goes
   # through.
-  local rec diag_now diag_before dev_sha dev_seq dev_store rec_sha rec_seq rec_store
-  rec="$(sha_record "$key")"
+  local diag_now diag_before dev_sha dev_seq dev_store rec_sha rec_seq rec_store
   if [ "$DRY_RUN" != "1" ] && [ -f "$rec" ]; then
     diag_now="$(query_state diagnostics "$uid" 2>/dev/null || true)"
     dev_sha="$(printf '%s' "$diag_now" | jq -r '.configSha256 // empty' 2>/dev/null || true)"
@@ -321,16 +321,21 @@ configure_profile() {   # $1=profile-key
     fi
   fi
 
-  # 40-theming.sh. No wallpaper in theming.json means nothing to upload.
-  wp="$(theme_field "$key" wallpaper)"
-  if [ "$(jq -r --arg k "$LKEY" '.launchers[$k].wallpaper // false' "$THEME_FILE")" != "true" ]; then
-    wp=""   # launcher entry without wallpaper support: nothing to upload, config has no key either
+  # ---- Wallpaper upload ------------------------------------------------------
+  # Skipped in the loop when these bytes are what the zone already holds - only
+  # while the launcher's store is the one we recorded: a cleared app has a new
+  # store and an empty wallpapers directory, whatever our record says.
+  local wp_skip=0
+  if [ -n "$wp" ] && [ "${ONLY_CHANGED:-0}" = "1" ] && [ "$DRY_RUN" != "1" ] \
+     && [ "$wp_sha" = "$(record_field "$rec" wallpaper 2>/dev/null || true)" ]; then
+    local s_now s_rec
+    s_now="$(query_state diagnostics "$uid" 2>/dev/null | jq -r '.storeId // empty' 2>/dev/null || true)"
+    s_rec="$(record_field "$rec" storeId 2>/dev/null || true)"
+    [ -n "$s_now" ] && [ "$s_now" = "$s_rec" ] && wp_skip=1
   fi
-  if [ -n "$wp" ]; then
-    case "$wp" in *'{aspect}'*) wp="${wp//\{aspect\}/$(device_aspect_class)}";; esac
-    wpf="$REPO_ROOT/$wp"
-    wpname="$(basename "$wp")"
-    [ -f "$wpf" ] || { problem "$key" "$label: wallpaper file missing: $wp"; return 1; }
+  if [ -n "$wp" ] && [ "$wp_skip" = "1" ]; then
+    skip "wallpaper unchanged ($wpname)"
+  elif [ -n "$wp" ]; then
     if [ "$DRY_RUN" = "1" ]; then
       printf '   [dry-run] content write --user %s --uri content://%s.config-ingest/wallpapers/%s < %s\n' "$uid" "$PKG" "$wpname" "$wp"
     else
@@ -421,7 +426,8 @@ configure_profile() {   # $1=profile-key
           # into the catalog.
           record_write "$rec" "$want_sha" \
             "$(printf '%s' "$diag" | jq -r '.sequence // empty')" \
-            "$(printf '%s' "$diag" | jq -r '.storeId // empty')"
+            "$(printf '%s' "$diag" | jq -r '.storeId // empty')" \
+            "$wp_sha"
           # success=true does not mean the launcher had nothing to say. Warning
           # diagnostics ride the same channel as errors: today `unknown-key`,
           # and from andashi/home#47 on also `inert-key` - "accepted, but this
@@ -516,6 +522,7 @@ configure_profile() {   # $1=profile-key
   fi
   if [ -z "$mism" ]; then
     ok "$label: effective config verified"
+    pending_clear "$key" launcher
     return 0
   fi
   warn "$label: effective config differs in: $mism"
@@ -642,5 +649,15 @@ if [ "${#FAILED[@]}" -gt 0 ]; then
   die "launcher config failed for ${#FAILED[@]} profile(s) - fix and run again"
 fi
 
+# Pending is not failed and not converged. Printed last, where a person
+# reading the run looks, and counted in the final line, so "all converged"
+# is never said of a zone that still waits.
+if [ "${#PENDING[@]}" -gt 0 ]; then
+  printf '\n'
+  warn "${#PENDING[@]} zone(s) stopped with a change waiting on this host:"
+  for entry in "${PENDING[@]}"; do printf '     %s\n' "${entry#*|}" >&2; done
+  [ "$DRY_RUN" = "1" ] || ok "The running zones converged and verified ($PKG); ${#PENDING[@]} pending"
+  exit 0
+fi
 [ "$DRY_RUN" = "1" ] || ok "All profiles converged and verified ($PKG)"
 exit 0

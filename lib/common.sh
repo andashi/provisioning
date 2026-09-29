@@ -121,6 +121,29 @@ user_running_uid() {
   printf '%s' "$out" | grep -q "UserInfo{$1:.*} running"
 }
 
+# ---------- The host's record of a device ----------
+# One directory per device under .provision-state, keyed by serial: a laptop
+# that provisions two phones must not mix up what it agreed with each.
+device_id() { printf '%s' "${ADB_SERIAL:-$(adb get-serialno 2>/dev/null || echo unknown)}" | tr -c 'A-Za-z0-9_.-' '_'; }
+
+# Changes a step could not deliver because the zone was stopped and NO_START
+# asked it not to start one. One line per zone and section, removed by the
+# step that finally delivers it. `andashi status` reads this; without it a
+# skipped zone would be indistinguishable from a converged one.
+pending_file() { printf '%s/pending/%s' "$STATE_DIR" "$(device_id)"; }
+pending_add() {   # $1=zone $2=section
+  [ "$DRY_RUN" = "1" ] && return 0
+  local f; f="$(pending_file)"; mkdir -p "$(dirname "$f")"
+  grep -qxF "$1 $2" "$f" 2>/dev/null || printf '%s %s\n' "$1" "$2" >> "$f"
+}
+pending_clear() {   # $1=zone $2=section
+  [ "$DRY_RUN" = "1" ] && return 0
+  local f; f="$(pending_file)"
+  [ -f "$f" ] || return 0
+  grep -vxF "$1 $2" "$f" > "$f.tmp" || true
+  mv "$f.tmp" "$f"
+}
+
 # ---------- Catalog ----------
 apps_for_profile() {   # $1 = profile key -> JSON lines
   jq -c --arg p "$1" '.apps[] | select(.profiles | index($p))' "$CONFIG_DIR/apps.json"
@@ -136,8 +159,53 @@ profile_keys() {
   while read -r _k; do
     _feat="$(profile_field "$_k" feature)"
     feature_enabled "$_feat" || continue
+    zone_selected "$_k" || continue
     printf '%s\n' "$_k"
   done < <(jq -r '.profiles[].key' "$CONFIG_DIR/profiles.json")
+}
+
+# ---------- Zone selection ----------
+# ZONES narrows every step to some zones: `ZONES="lab home"`, commas work too.
+# Unset means all of them, which is what provisioning has always done. It is
+# the difference between a run that costs two minutes and one that costs two
+# seconds, because a step that walks all six zones also STARTS all six, and
+# Android runs three: each start evicts somebody, and the next step starts them
+# again (measured 2026-09-30 on the Fold emulator: 106 s for a run in which
+# nothing had changed, most of it starting evicted zones).
+#
+# `current` is the zone in the foreground - the only one whose screen you can
+# see, which is why the edit-and-look loop defaults to it.
+#
+# An unknown name is an error, not an empty selection: a typo would otherwise
+# select nothing, every step would do nothing, and the run would end green.
+ZONES_RESOLVED=""
+zones_resolve() {
+  [ -n "$ZONES_RESOLVED" ] && return 0
+  local z all out="" cur uid k
+  all=" $(jq -r '.profiles[].key' "$CONFIG_DIR/profiles.json" | tr '\n' ' ')"
+  for z in ${ZONES//,/ }; do
+    if [ "$z" = "current" ]; then
+      cur="$(ash_ro am get-current-user 2>/dev/null | tr -d '\r' || true)"
+      [ -n "$cur" ] || die "ZONES=current: could not ask the device which user is in the foreground"
+      z=""
+      for k in $all; do
+        # A managed profile shares its parent's screen and is never "current".
+        [ "$(profile_field "$k" type)" = "managed" ] && continue
+        uid="$(resolve_uid "$k")"
+        [ "$uid" = "$cur" ] && { z="$k"; break; }
+      done
+      [ -n "$z" ] || die "ZONES=current: user $cur in the foreground is not a zone of $CONFIG_DIR/profiles.json"
+    fi
+    case "$all " in *" $z "*) ;; *) die "ZONES: '$z' is not a zone (known:$all)";; esac
+    out="$out $z"
+  done
+  [ -n "$out" ] || die "ZONES is set but names no zone"
+  ZONES_RESOLVED="$out "
+}
+zone_selected() {   # $1 = profile key
+  [ -z "${ZONES:-}" ] && return 0
+  [ -n "$ZONES_RESOLVED" ] || die "zone_selected: ZONES was never resolved"
+  case "$ZONES_RESOLVED" in *" $1 "*) return 0;; *) return 1;; esac
 }
 
 # Screen aspect class, same idea as device_abi: ask the device instead of
@@ -313,3 +381,11 @@ pkg_installed_anywhere() {   # $1=pkg
   done < <(all_user_ids)
   return 1
 }
+
+# Resolved here, while the script is still in its own shell. Every step reads
+# profile_keys through a process substitution, and a `die` in there ends only
+# that subshell: the loop would see no zones, do nothing and report success -
+# exactly the empty selection the check exists to refuse. Resolving `current`
+# asks the device, so a script sourcing this with ZONES set needs one.
+if [ -n "${ZONES:-}" ]; then zones_resolve; fi
+

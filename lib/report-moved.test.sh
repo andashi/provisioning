@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Cases for report_moved() in provision/45-launcher-config.sh: the condition
+# Cases for report_moved() in lib/launcher-state.sh: the condition
 # that decides whether the launcher saved something since we last agreed with
 # a zone. Every device we run today answers null for both fields, so the
 # interesting half of this function cannot be reached on a device yet - which
 # is exactly why it has cases.
 set -uo pipefail
-eval "$(sed -n '/^report_moved()/,/^}/p' "$(dirname "${BASH_SOURCE[0]}")/../provision/45-launcher-config.sh")"
+eval "$(sed -n '/^report_moved()/,/^}/p' "$(dirname "${BASH_SOURCE[0]}")/launcher-state.sh")"
 pass=0; fail=0
 t() {   # $1=name $2..$5=dev_seq dev_store rec_seq rec_store $6=yes|no
   local want="$6" got=no
