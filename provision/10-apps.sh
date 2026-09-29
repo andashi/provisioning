@@ -23,6 +23,11 @@ fi
 # somebody installed by hand never is, because it is not. Before this list
 # existed the chain only ever added: Tor Browser taken out of Home stayed in
 # Home on every device provisioned before (8c44e45).
+# Removals that did not happen. Every zone is still attempted; the step fails
+# at the end, because a removal the catalog asked for and the phone refused
+# is not done, and a run that says it is would be the proxy success this
+# repository exists to avoid.
+REMOVE_FAILED=()
 installed_record() { printf '%s/installed/%s/%s' "$STATE_DIR" "$(device_id)" "$1"; }
 
 # An APK is installed ONCE for the whole device - every user shares that code
@@ -163,7 +168,7 @@ while read -r key; do
       else
         ash pm uninstall --user "$uid" "$p" >/dev/null \
           && ok "$p removed - no longer in the catalog for $label" \
-          || warn "$p: could not be removed from $label"
+          || { warn "$p: could not be removed from $label"; REMOVE_FAILED+=("$label: $p"); }
       fi
     done < "$rec"
   fi
@@ -178,7 +183,7 @@ while read -r key; do
     if [ "${PRUNE_UNDECLARED:-0}" = "1" ]; then
       ash pm uninstall --user "$uid" "$p" >/dev/null \
         && ok "$p removed - not in the catalog for $label (--prune-undeclared)" \
-        || warn "$p: could not be removed from $label"
+        || { warn "$p: could not be removed from $label"; REMOVE_FAILED+=("$label: $p"); }
     else
       warn "$p is installed in $label but not in the catalog - kept (andashi app add, or apply --prune-undeclared)"
     fi
@@ -232,4 +237,11 @@ if [ "$_drift" = 0 ]; then
   ok "$_match app(s) match the APK inventory on the host"
 else
   warn "$_drift app(s) differ from the host inventory - 'make update' brings them forward"
+fi
+
+if [ "${#REMOVE_FAILED[@]}" -gt 0 ]; then
+  printf '\n'
+  warn "${#REMOVE_FAILED[@]} removal(s) the catalog asked for did not happen:"
+  for e in "${REMOVE_FAILED[@]}"; do printf '     %s\n' "$e" >&2; done
+  die "apps: removals failed - see above"
 fi
