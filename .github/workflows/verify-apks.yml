@@ -45,6 +45,17 @@ jobs:
         run: |
           jq -r '.apps[]|select(.pkg_status=="unverified")|"TODO check package name: \(.label) -> \(.pkg)"' config/apps.json
 
+  # The same gate a person runs before committing. The jobs above predate it
+  # and check a subset; this one is the whole of it - generated files in sync,
+  # the schema, and every case file - so a pull request cannot be green here
+  # while `make check` is red on the laptop.
+  make-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: make check
+        run: make check
+
   shell:
     runs-on: ubuntu-latest
     steps:

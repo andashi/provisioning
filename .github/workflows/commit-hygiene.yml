@@ -1,0 +1,42 @@
+name: Commit hygiene
+
+# AGENTS.md forbids AI attribution in commit messages. The local hook in
+# .githooks/commit-msg enforces it before the commit exists, but a hook only
+# helps in a clone that enabled it. Taken over from andashi/home, where 20
+# commits carrying these lines reached public main; one reached this
+# repository's main before the gate existed. This is the gate that does not
+# depend on anyone's setup.
+
+on:
+  pull_request:
+
+jobs:
+  no-ai-attribution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject AI attribution in commit messages
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          bad=0
+          # The hook is the rule; this runs it on every commit rather than
+          # carrying a second copy of its pattern (see .githooks/commit-msg).
+          msg="$(mktemp)"
+          for c in $(git rev-list "$BASE..$HEAD"); do
+            git log -1 --format='%B' "$c" > "$msg"
+            if ! out="$(sh .githooks/commit-msg "$msg" 2>&1)"; then
+              echo "::error::$(git log -1 --format='%h %s' "$c") carries AI attribution"
+              printf '%s\n' "$out" | sed 's/^/    /'
+              bad=1
+            fi
+          done
+          if [ "$bad" -ne 0 ]; then
+            echo "Enable the hook locally with:  git config core.hooksPath .githooks" >&2
+            exit 1
+          fi
+          echo "No AI attribution found."

@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+# The merge conditions of AGENTS.md as a condition, not as a printout.
+#
+#   bin/pr-gate <pr>            check, print every verdict, exit 0 only if all hold
+#   bin/pr-gate <pr> --merge    the same, and merge exactly the head it checked
+#
+# Taken over from andashi/home, where every rule below cost a pull request
+# first: a recount printed BESIDE a merge stopped nothing (#194), a bot that
+# resolved its own thread read as "addressed" (#212), an incremental review
+# left the heart of a pull request read by nothing (#170). So the checks gate
+# the merge, the merge is pinned to the head that was checked, and anything
+# the script cannot decide is a refusal with a reason, never a pass.
+#
+# Stacked pull requests: only the bottom of a stack merges, the one whose base
+# is main. GitHub retargets the next one, which then gets its own full review
+# against main before it may follow. A pull request whose base is another
+# branch is refused here with that explanation.
+set -euo pipefail
+
+REPO="${PR_GATE_REPO:-andashi/provisioning}"
+pr="${1:?usage: bin/pr-gate <pr> [--merge] [--ack-bot-resolved]}"
+shift
+MERGE=0; ACK_BOT=0
+for a in "$@"; do
+  case "$a" in
+    --merge) MERGE=1;;
+    # A thread CodeRabbit resolved on its own has not been shown to be fixed;
+    # a person reads it and then says so here. Never pass this blind.
+    --ack-bot-resolved) ACK_BOT=1;;
+    *) echo "pr-gate: unknown argument $a" >&2; exit 2;;
+  esac
+done
+
+owner="${REPO%/*}"; name="${REPO#*/}"
+fail=0
+bad()  { printf '  x %s\n' "$*"; fail=1; }
+good() { printf '  + %s\n' "$*"; }
+
+data="$(gh api graphql -F owner="$owner" -F name="$name" -F pr="$pr" -f query='
+query($owner:String!, $name:String!, $pr:Int!) {
+  repository(owner:$owner, name:$name) { pullRequest(number:$pr) {
+    state isDraft baseRefName baseRefOid headRefOid
+    reviews(last:100) { nodes { author { login } submittedAt lastEditedAt body } }
+    comments(orderBy:{field:UPDATED_AT, direction:DESC}, first:50) {
+      nodes { author { login } createdAt updatedAt body } } } } }')" \
+  || { echo "pr-gate: could not read #$pr" >&2; exit 1; }
+p="$(jq -c '.data.repository.pullRequest' <<<"$data")"
+[ "$p" != "null" ] || { echo "pr-gate: #$pr not found in $REPO" >&2; exit 1; }
+
+# Every review thread, page by page. A thread past the first page is a thread
+# like any other, and a gate that never saw it would call it resolved. If a
+# page cannot be read, the listing is incomplete and the gate refuses.
+threads="[]"; cursor=""
+while :; do
+  page="$(gh api graphql -F owner="$owner" -F name="$name" -F pr="$pr" ${cursor:+-F after="$cursor"} -f query='
+query($owner:String!, $name:String!, $pr:Int!, $after:String) {
+  repository(owner:$owner, name:$name) { pullRequest(number:$pr) {
+    reviewThreads(first:100, after:$after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { isResolved resolvedBy { login }
+              comments(first:1) { nodes { author { login } body } } } } } } }')" \
+    || { echo "pr-gate: could not read all review threads of #$pr - refusing" >&2; exit 1; }
+  threads="$(jq -c --argjson acc "$threads" '$acc + .data.repository.pullRequest.reviewThreads.nodes' <<<"$page")"
+  [ "$(jq -r .data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage <<<"$page")" = true ] || break
+  cursor="$(jq -r .data.repository.pullRequest.reviewThreads.pageInfo.endCursor <<<"$page")"
+done
+p="$(jq -c --argjson t "$threads" '.reviewThreads.nodes = $t' <<<"$p")"
+
+head="$(jq -r .headRefOid <<<"$p")"
+base="$(jq -r .baseRefOid <<<"$p")"
+base_ref="$(jq -r .baseRefName <<<"$p")"
+echo "#$pr  head ${head:0:12}  base $base_ref ${base:0:12}"
+
+[ "$(jq -r .state <<<"$p")" = "OPEN" ] && good "open" || bad "not open"
+[ "$(jq -r .isDraft <<<"$p")" = "false" ] && good "not a draft" || bad "draft"
+[ "$base_ref" = "main" ] && good "base is main" \
+  || bad "base is $base_ref, not main - merge the pull request below it first; GitHub retargets this one"
+
+# ---- checks on the head -----------------------------------------------------
+checks="$(gh pr checks "$pr" --repo "$REPO" --json name,state,bucket 2>/dev/null || true)"
+if [ -z "$checks" ] || [ "$(jq length <<<"$checks")" = "0" ]; then
+  bad "no checks reported for the head - an absent check is not a green one"
+else
+  # Green means passed. A skipped check proves nothing about this head, so it
+  # is named and refused like the others rather than counted as green.
+  pending="$(jq -r '[.[]|select(.bucket=="pending")|.name]|join(", ")' <<<"$checks")"
+  notpass="$(jq -r '[.[]|select(.bucket!="pass" and .bucket!="pending")|"\(.name) (\(.bucket))"]|join(", ")' <<<"$checks")"
+  [ -z "$pending" ] || bad "checks still running: $pending"
+  [ -z "$notpass" ] || bad "checks that did not pass: $notpass"
+  [ -z "$pending$notpass" ] && good "all $(jq length <<<"$checks") checks passed"
+fi
+
+# ---- review threads ---------------------------------------------------------
+# The bot answers to two names in one response (`coderabbitai[bot]` as the
+# resolver, `coderabbitai` as the author). Compared raw, the resolver never
+# matches and "no bot-resolved threads" is what a broken check prints.
+open_threads="$(jq '[.reviewThreads.nodes[]|select(.isResolved|not)]|length' <<<"$p")"
+[ "$open_threads" = "0" ] && good "no unresolved review threads" || bad "$open_threads unresolved review thread(s)"
+bot_resolved="$(jq -r '
+  [ .reviewThreads.nodes[]
+    | select(.isResolved and ((.resolvedBy.login // "") | sub("\\[bot\\]$"; "")) == "coderabbitai")
+    | .comments.nodes[0].body | ([split("\n")[] | select(test("^\\*\\*"))][0] // split("\n")[0]) | .[0:110] ] | .[]' <<<"$p")"
+if [ -n "$bot_resolved" ]; then
+  if [ "$ACK_BOT" = "1" ]; then
+    good "bot-resolved threads read and acknowledged:"
+  else
+    bad "threads CodeRabbit resolved itself - read them, then pass --ack-bot-resolved:"
+  fi
+  printf '%s\n' "$bot_resolved" | sed 's/^/      /'
+fi
+
+# ---- a FULL review of the current head -------------------------------------
+# CodeRabbit keeps one summary and edits it in place; the range line in it says
+# whether the last run read the whole pull request (from = base) or only a
+# tail. Anything but base..head is a refusal: request `@coderabbitai full
+# review` and wait for it.
+range="$(jq -r '
+  [ (.reviews.nodes[]  | select((.author.login|sub("\\[bot\\]$";""))=="coderabbitai")
+     | {at:(.lastEditedAt // .submittedAt), body}),
+    (.comments.nodes[] | select((.author.login|sub("\\[bot\\]$";""))=="coderabbitai")
+     | {at:(.updatedAt // .createdAt), body}) ]
+  | map(select(.body | test("Reviewing files that changed")))
+  | sort_by(.at) | last
+  | if . == null then "" else (.body | capture("between (?<a>[0-9a-f]+) and (?<b>[0-9a-f]+)") | "\(.a) \(.b)") end' <<<"$p")"
+if [ -z "$range" ]; then
+  bad "no CodeRabbit review range found - it has not reviewed, or the quota is spent"
+else
+  from="${range% *}"; to="${range#* }"
+  case "$base" in "$from"*) fr=1;; *) fr=0;; esac
+  case "$head" in "$to"*)   tr=1;; *) tr=0;; esac
+  if [ "$fr" = 1 ] && [ "$tr" = 1 ]; then good "full CodeRabbit review of base..head"
+  elif [ "$tr" = 1 ]; then bad "the last review was incremental (from ${from:0:12}) - request @coderabbitai full review"
+  else bad "the last review covers ${to:0:12}, the head is ${head:0:12} - wait for the review of the head"
+  fi
+fi
+
+# ---- what the merge goes into ----------------------------------------------
+# Two messages on purpose: an unfinished run on main means wait, a failed one
+# means fix main first. One message for both invites the wrong action.
+if [ "$base_ref" = "main" ]; then
+  main_sha="$(gh api "repos/$REPO/commits/main" --jq .sha 2>/dev/null || true)"
+  [ -n "$main_sha" ] || { echo "pr-gate: could not read main's head - refusing" >&2; exit 1; }
+  # The review above was of base..head. If main has moved since, the runs
+  # below would be of a different base than the review, and two verdicts about
+  # two trees add up to none: rebase (gh stack rebase), let it be reviewed
+  # again. --match-head-commit protects the head only, not the base.
+  if [ "$main_sha" != "$base" ]; then
+    bad "main is ${main_sha:0:12}, the pull request's base is ${base:0:12} - rebase and get it reviewed against main"
+  fi
+  # Runs of main's head commit only, whatever else ran on main since: the
+  # question is whether THIS commit is green, and a list cut at some length
+  # could end before a red run of it.
+  runs="$(gh run list --repo "$REPO" --commit "$main_sha" --limit 200 --json workflowName,status,conclusion,headSha)" \
+    || { echo "pr-gate: could not list the runs of main's head - refusing" >&2; exit 1; }
+  mine="$(jq -c --arg s "$main_sha" '[.[]|select(.headSha==$s)]' <<<"$runs")"
+  if [ "$(jq length <<<"$mine")" = "0" ]; then
+    bad "no workflow run found for main's head ${main_sha:0:12}"
+  elif [ -n "$(jq -r '.[]|select(.status!="completed")|.workflowName' <<<"$mine")" ]; then
+    bad "main's own run has not finished - wait"
+  elif [ -n "$(jq -r '.[]|select(.conclusion!="success" and .conclusion!="skipped")|.workflowName' <<<"$mine")" ]; then
+    bad "main is red ($(jq -r '[.[]|select(.conclusion!="success" and .conclusion!="skipped")|.workflowName]|join(", ")' <<<"$mine")) - fix main before merging anything onto it"
+  else
+    good "main ${main_sha:0:12} is green"
+  fi
+fi
+
+if [ "$fail" != 0 ]; then
+  echo "NOT mergeable"
+  exit 1
+fi
+echo "mergeable"
+[ "$MERGE" = 1 ] || exit 0
+
+# --match-head-commit: a push between the checks above and this line makes
+# GitHub refuse, instead of merging a head nobody checked.
+gh pr merge "$pr" --repo "$REPO" --squash --match-head-commit "$head"
+state="$(gh pr view "$pr" --repo "$REPO" --json state -q .state)"
+[ "$state" = "MERGED" ] || { echo "pr-gate: merge reported, state is $state" >&2; exit 1; }
+echo "merged #$pr at ${head:0:12}"

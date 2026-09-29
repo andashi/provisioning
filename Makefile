@@ -23,6 +23,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	   | "  \($$z.label): browser \($$z.browser) is not placed in this zone"'); \
 	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
 	  echo "ok: zone browsers"
+	@tests/commit-msg.test.sh > /dev/null && echo "ok: commit-msg hook (cases)"
 	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison (cases)"
 	@lib/report-moved.test.sh > /dev/null && echo "ok: report-moved condition (cases)"
 	@lib/wallpaper-drifted.test.sh > /dev/null && echo "ok: wallpaper-drift condition (cases)"

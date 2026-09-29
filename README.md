@@ -28,6 +28,7 @@ before it writes.
 | [docs/explorations/runtime-configuration.md](docs/explorations/runtime-configuration.md) | a possible path, not a decision: the phone as dotfiles at runtime |
 | [docs/guides/emulator.md](docs/guides/emulator.md) | build, run, snapshots, and the lock between parallel sessions |
 | [docs/guides/hardware.md](docs/guides/hardware.md) | what changes on the real device |
+| [AGENTS.md](AGENTS.md) | how changes reach `main`: pull requests, review, the merge gate, tests |
 
 ## Layout
 
