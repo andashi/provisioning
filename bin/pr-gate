@@ -81,11 +81,13 @@ checks="$(gh pr checks "$pr" --repo "$REPO" --json name,state,bucket 2>/dev/null
 if [ -z "$checks" ] || [ "$(jq length <<<"$checks")" = "0" ]; then
   bad "no checks reported for the head - an absent check is not a green one"
 else
+  # Green means passed. A skipped check proves nothing about this head, so it
+  # is named and refused like the others rather than counted as green.
   pending="$(jq -r '[.[]|select(.bucket=="pending")|.name]|join(", ")' <<<"$checks")"
-  failed="$(jq -r '[.[]|select(.bucket=="fail" or .bucket=="cancel")|.name]|join(", ")' <<<"$checks")"
+  notpass="$(jq -r '[.[]|select(.bucket!="pass" and .bucket!="pending")|"\(.name) (\(.bucket))"]|join(", ")' <<<"$checks")"
   [ -z "$pending" ] || bad "checks still running: $pending"
-  [ -z "$failed" ]  || bad "checks failed: $failed"
-  [ -z "$pending$failed" ] && good "all $(jq length <<<"$checks") checks green"
+  [ -z "$notpass" ] || bad "checks that did not pass: $notpass"
+  [ -z "$pending$notpass" ] && good "all $(jq length <<<"$checks") checks passed"
 fi
 
 # ---- review threads ---------------------------------------------------------
