@@ -84,7 +84,17 @@ andashi diff                     # what apply would do; exit 1 when there is any
 andashi apply --zone current     # the zone on the screen - edit, apply, look, again
 andashi apply                    # everything that changed, in every running zone
 andashi apply --zone ops --all   # a stopped zone gets started for its pending change
+andashi watch                    # apply to the zone in front on every save
+
+andashi app add signal --zone lab            # edit the catalog, no phone needed
+andashi app rm opencamera --zone home        # the next apply removes it there
+andashi theme set glass.tint 0.3 --zone lab  # without --zone: every zone
 ```
+
+The catalog commands run the same checks as `make check` and take a change
+back when one refuses it. They are what `.claude/skills/andashi` tells an agent
+to use: edit, check, commit - never `adb`, never `apply`; the door to the phone
+stays with the person.
 
 Measured on the Fold emulator: a glass change to the zone in front takes about
 9 seconds, where a full run takes a minute and a half. What makes that safe is
@@ -100,6 +110,13 @@ the same record the full run keeps, per device and zone, in `.provision-state/`:
 - **A stopped zone is not started.** Android runs three profiles, and every
   start evicts one - usually Cloud, the one that must keep running. The change
   waits on the host and `andashi status` names it.
+- **Only what the chain installed is taken away.** An app the catalog stops
+  naming for a zone is removed there on the next run; an app somebody installed
+  by hand is named by `andashi diff` and kept, unless `--prune-undeclared` says
+  otherwise. A work profile's owner and sandboxed Play are never either.
+- **The catalog cannot break its own rules.** `config/check-invariants.sh`:
+  no sandboxed-Play app in a Play-free zone, one always-on zone besides Home,
+  no `net: false` app granted `INTERNET`.
 
 ## What stays manual
 

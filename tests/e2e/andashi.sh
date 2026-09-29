@@ -33,6 +33,10 @@ rm -rf "$WORK"; mkdir -p "$WORK"
 export CONFIG_DIR="$WORK/config"
 cp -r "$ROOT/config" "$CONFIG_DIR"
 rm -f "$CONFIG_DIR/launcher/.generated.sha256"
+# The template carries one open invariant violation (Azure, a Play app, in
+# Play-free Ops); the catalog commands refuse any edit while it stands. The
+# copy leaves it out so the cases are about the commands.
+jq --indent 2 '(.apps[] | select(.id == "azure") | .profiles) -= ["ops"]' "$ROOT/config/apps.json" > "$CONFIG_DIR/apps.json"
 LOG="$WORK/log"; mkdir -p "$LOG"
 andashi() { "$ROOT/bin/andashi" "$@"; }
 run() {   # $1=name, rest=command; output to $LOG/<name>, exit code in $RC, seconds in $SECS
@@ -67,7 +71,7 @@ sleep 5
 # exactly that). So they go with the restore.
 dev="$(printf %s "$SERIAL" | tr -c 'A-Za-z0-9_.-' _)"
 rm -rf "$ROOT/.provision-state/launcher-sha/$dev" "$ROOT/.provision-state/applied/$dev" \
-       "$ROOT/.provision-state/pending/$dev"
+       "$ROOT/.provision-state/pending/$dev" "$ROOT/.provision-state/installed/$dev"
 foreground_home
 check "home is the current user" '[ "$(A shell am get-current-user | tr -d "\r")" = 0 ]'
 check "launcher 0.12.0 or later installed" \
@@ -77,6 +81,7 @@ check "launcher 0.12.0 or later installed" \
 # applied record per zone. One full run from the provisioned snapshot writes
 # both, through the same code a person's run uses.
 run full-run "$ROOT/provision/run.sh"
+check "a full run records what it installed, per zone" '[ -s "$ROOT/.provision-state/installed/$dev/home" ]'
 check "a full run records what it applied, per zone" \
   '[ $RC = 0 ] && [ "$(ls "$ROOT/.provision-state/applied/$dev/" | wc -l)" -ge 6 ]'
 FULL_SECS="$SECS"
@@ -133,7 +138,7 @@ ops_uid="$(A shell pm list users | tr -d '\r' | sed -n 's/.*UserInfo{\([0-9]*\):
 A shell am stop-user -w -f "$ops_uid" >/dev/null 2>&1
 tj ops '.per_profile[$z].glass = ((.per_profile[$z].glass // {}) + {tint: 0.25})'
 run apply-ops andashi apply
-check "apply without --all does not start Ops" '[ $RC = 0 ] && ! A shell pm list users | tr -d "\r" | grep -q "{$ops_uid:Ops:.*running"'
+check "apply without --all does not start Ops" '[ $RC = 0 ] && users="$(A shell pm list users | tr -d "\r")" && ! grep -q "{$ops_uid:Ops:.*running" <<<"$users"'
 check "... and says the change waits" 'grep -q "Ops: stopped - the change stays pending" "$LOG/apply-ops"'
 run status-ops andashi status
 check "status names what Ops owes" 'grep -E "^ops " "$LOG/status-ops" | grep -q "pending: .*launcher"'
@@ -180,6 +185,68 @@ check "... names what differs" 'grep -q "home: they differ in:" "$LOG/apply-conf
 check "... and no step touches home" '! grep -qE "===== [0-9]+-[a-z-]+ \\([^)]*home" "$LOG/apply-conflict"'
 check "... leaves the phone's value in home" 'num "$(eff 0 .appearance.glass.blur)" 8'
 check "... and still applies cloud" 'grep -q "Cloud: effective config verified" "$LOG/apply-conflict" && num "$(eff "$cloud_uid" .appearance.glass.tint)" 0.2'
+
+section "favourites rearranged on the phone survive apply and regeneration"
+# The conflict above left home disagreeing on blur. Take the phone's side the
+# way that message says, and apply, so this case starts from agreement and
+# the adoption below is apply's doing, not pull's.
+tj home '.per_profile[$z].glass |= del(.blur)'
+run pull-home andashi pull --zone home
+run agree-home andashi apply --zone home
+check "home agrees again after the conflict" '[ $RC = 0 ] && num "$(eff 0 .appearance.glass.blur)" 8'
+eff 0 . | jq '.home.favorites |= reverse' > "$WORK/device-favs.json"
+check "the simulated reorder is a real document" '[ "$(jq -r ".home.favorites[0].packageName" "$WORK/device-favs.json")" = app.vanadium.browser ]'
+A shell "content write --user 0 --uri content://$PKG.config-ingest/launcher.json" < "$WORK/device-favs.json"
+A shell am broadcast -a "$PKG.action.RELOAD_CONFIG" -n "$PKG/de.mm20.launcher2.config.service.ReloadConfigReceiver" --user 0 >/dev/null
+sleep 4
+run apply-favs andashi apply --zone home
+check "apply adopts the order into the catalog" '[ $RC = 0 ] && [ "$(jq -r ".per_profile.home.favorites[0]" "$CONFIG_DIR/theming.json")" = Vanadium ]'
+OUT_DIR="$CONFIG_DIR/launcher" "$ROOT/config/gen-launcher.sh" >/dev/null 2>&1
+check "... and a regeneration keeps it" '[ "$(jq -r ".home.favorites[0].packageName // .home.favorites[0]" "$CONFIG_DIR/launcher/home.json")" = app.vanadium.browser ]'
+check "... and the phone still shows it" '[ "$(eff 0 ".home.favorites[0].packageName")" = app.vanadium.browser ]'
+
+section "apps: added, taken out, and somebody's own"
+lab_uid="$(A shell pm list users | tr -d '\r' | sed -n 's/.*UserInfo{\([0-9]*\):Lab:.*/\1/p')"
+# Collect, then match. `grep -q` in a pipeline under pipefail exits at the
+# first match, adb dies of SIGPIPE, and the match reads as a miss - which
+# turns every "is not installed" check here into a pass (lib/common.sh).
+has_pkg() { local out; out="$(A shell pm list packages --user "$1" | tr -d '\r')"
+            case $'\n'"$out"$'\n' in *$'\n'"package:$2"$'\n'*) return 0;; *) return 1;; esac; }
+inlab()  { has_pkg "$lab_uid" "$1"; }
+inhome() { has_pkg 0 "$1"; }
+run app-add andashi app add tubular --zone lab
+check "app add edits the catalog, no phone involved" '[ $RC = 0 ] && jq -e ".apps[] | select(.id == \"tubular\") | .profiles | index(\"lab\")" "$CONFIG_DIR/apps.json" >/dev/null'
+run diff-add andashi diff --zone lab
+check "diff names it" '[ $RC = 1 ] && grep -q "inputs changed: .*apps" "$LOG/diff-add"'
+run apply-add andashi apply --zone lab
+check "apply installs it in Lab" '[ $RC = 0 ] && inlab org.polymorphicshade.tubular'
+run app-rm andashi app rm opencamera --zone home
+run diff-rm andashi diff --zone home
+check "diff says it will be removed" 'grep -q "apps to remove (no longer in the catalog): net.sourceforge.opencamera" "$LOG/diff-rm" || grep -q "inputs changed: .*apps" "$LOG/diff-rm"'
+run apply-rm andashi apply --zone home
+check "apply removes it from Home" '[ $RC = 0 ] && ! inhome net.sourceforge.opencamera && grep -q "net.sourceforge.opencamera removed - no longer in the catalog for Home" "$LOG/apply-rm"'
+A shell pm install-existing --user "$lab_uid" im.molly.app >/dev/null 2>&1
+check "an app installed by hand in Lab" 'inlab im.molly.app'
+run diff-foreign andashi diff --zone lab
+check "diff names it as not in the catalog" 'grep -q "not in the catalog, kept: .*im.molly.app" "$LOG/diff-foreign"'
+check "... without calling that a to-do" '[ $RC = 0 ]'
+run apply-foreign andashi apply --zone lab --only apps
+check "apply keeps it" '[ $RC = 0 ] && inlab im.molly.app'
+run apply-prune andashi apply --zone lab --prune-undeclared
+check "--prune-undeclared removes it, and says so" '[ $RC = 0 ] && ! inlab im.molly.app && grep -q "im.molly.app removed - not in the catalog for Lab" "$LOG/apply-prune"'
+
+section "watch: save, and the zone in front follows"
+foreground_home
+"$ROOT/bin/andashi" watch > "$LOG/watch" 2>&1 &
+wpid=$!
+sleep 4
+tj home '.per_profile[$z].glass.tint = 0.45'
+# Wait for the apply that watch started to finish, not for the phone to show
+# the value: the value arrives before the read-back that proves it.
+for _ in $(seq 1 60); do grep -qE "applied in|apply finished" "$LOG/watch" && break; sleep 1; done
+check "a saved change reaches the phone without an apply" 'num "$(eff 0 .appearance.glass.tint)" 0.45'
+kill "$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+check "... through apply --zone current" 'grep -q "Home: effective config verified" "$LOG/watch"'
 
 section "the template cannot adopt"
 run template-pull env CONFIG_DIR="$ROOT/config" "$ROOT/bin/andashi" pull

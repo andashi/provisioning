@@ -5,7 +5,25 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 require_device
 
 MANUAL_QUEUE="$STATE_DIR/manual-installs.tsv"
-: > "$MANUAL_QUEUE"
+# The queue is rebuilt for the zones this run covers and kept for the others.
+# Truncating it whole was right while every run covered every zone; with ZONES
+# a run for Lab alone would have left MANUAL.md knowing about Lab only.
+if [ -n "${ZONES:-}" ] && [ -f "$MANUAL_QUEUE" ]; then
+  _keep=" "
+  while read -r _k; do _keep="$_keep$(profile_label "$_k") "; done < <(profile_keys)
+  awk -F'\t' -v keep="$_keep" 'index(keep, " " $1 " ") == 0' "$MANUAL_QUEUE" > "$MANUAL_QUEUE.tmp"
+  mv "$MANUAL_QUEUE.tmp" "$MANUAL_QUEUE"
+else
+  : > "$MANUAL_QUEUE"
+fi
+
+# What this chain installed into a zone, per device - the one list it may
+# take things away from. A package the catalog stops naming for a zone is
+# uninstalled there on the next run, because it is on this list; a package
+# somebody installed by hand never is, because it is not. Before this list
+# existed the chain only ever added: Tor Browser taken out of Home stayed in
+# Home on every device provisioned before (8c44e45).
+installed_record() { printf '%s/installed/%s/%s' "$STATE_DIR" "$(device_id)" "$1"; }
 
 # An APK is installed ONCE for the whole device - every user shares that code
 # path - so the pinned version is enforced once per package, not once per
@@ -64,6 +82,7 @@ while read -r key; do
 
   printf '\n'
   log "Profile $label (user $uid)"
+  DECLARED=" "
 
   # Android only lets a limited number of users run at the same time (measured
   # on emu64x: 3, owner included). Every start evicts the oldest one - so the
@@ -85,13 +104,16 @@ while read -r key; do
     opt="$(jq -r 'if has("optional") then .optional else false end' <<<"$app")"
     st="$(jq -r '.pkg_status' <<<"$app")"
 
-    [ "${SKIP_OPTIONAL:-0}" = "1" ] && [ "$opt" = "true" ] && { skip "$lbl (optional, skipped)"; continue; }
-
     # Feature gate: catalog entries with "feature" only if it's turned on.
     feat="$(jq -r 'if has("feature") then .feature else "" end' <<<"$app")"
     if [ -n "$feat" ] && ! feature_enabled "$feat"; then
       skip "$lbl (feature '$feat' is off)"; continue
     fi
+    # Declared for this zone from here on - an optional app skipped for this
+    # run is still declared, and must not be taken away for being skipped.
+    DECLARED="$DECLARED$pkg "
+
+    [ "${SKIP_OPTIONAL:-0}" = "1" ] && [ "$opt" = "true" ] && { skip "$lbl (optional, skipped)"; continue; }
 
     if [ "$st" = "unverified" ]; then
       warn "$lbl: package name '$pkg' is UNVERIFIED - use 05-verify-catalog.sh"
@@ -125,6 +147,50 @@ while read -r key; do
     skip "$lbl -> MANUAL.md (source: $src)"
     printf '%s\t%s\t%s\t%s\n' "$label" "$lbl" "$pkg" "$src" >> "$MANUAL_QUEUE"
   done < <(apps_for_profile "$key")
+
+  # ---- Take away what the catalog stopped naming ----------------------------
+  # Only from the list of what this chain put here. `pm uninstall --user`
+  # removes the app and its data from this zone and nowhere else. PRUNE=0
+  # keeps them, for a run that should only add.
+  rec="$(installed_record "$key")"
+  if [ -f "$rec" ]; then
+    while read -r p; do
+      [ -n "$p" ] || continue
+      case "$DECLARED" in *" $p "*) continue;; esac
+      pkg_installed_for_user "$p" "$uid" || continue
+      if [ "${PRUNE:-1}" = "0" ]; then
+        warn "$p: no longer in the catalog for $label - kept (PRUNE=0)"
+      else
+        ash pm uninstall --user "$uid" "$p" >/dev/null \
+          && ok "$p removed - no longer in the catalog for $label" \
+          || warn "$p: could not be removed from $label"
+      fi
+    done < "$rec"
+  fi
+
+  # Somebody's own apps are theirs: named, never removed - unless a person asks
+  # with PRUNE_UNDECLARED=1 (andashi apply --prune-undeclared), after `andashi
+  # diff` has shown them.
+  third="$(ash_ro pm list packages -3 --user "$uid" 2>/dev/null | tr -d '\r' | sed -n 's/^package://p')" || third=""
+  for p in $third; do
+    case "$DECLARED$(zone_system_pkgs "$key")" in *" $p "*) continue;; esac
+    grep -qxF "$p" "$rec" 2>/dev/null && continue    # handled above
+    if [ "${PRUNE_UNDECLARED:-0}" = "1" ]; then
+      ash pm uninstall --user "$uid" "$p" >/dev/null \
+        && ok "$p removed - not in the catalog for $label (--prune-undeclared)" \
+        || warn "$p: could not be removed from $label"
+    else
+      warn "$p is installed in $label but not in the catalog - kept (andashi app add, or apply --prune-undeclared)"
+    fi
+  done
+
+  # The record is what the catalog declares AND the zone now holds.
+  if [ "$DRY_RUN" != "1" ]; then
+    mkdir -p "$(dirname "$rec")"
+    : > "$rec.tmp"
+    for p in $DECLARED; do pkg_installed_for_user "$p" "$uid" && printf '%s\n' "$p" >> "$rec.tmp"; done
+    mv "$rec.tmp" "$rec"
+  fi
 done < <(profile_keys)
 
 printf '\n'

@@ -33,9 +33,12 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@config/check-schema.test.sh > /dev/null && echo "ok: schema check (cases)"
 	@config/check-contacts.test.sh > /dev/null && echo "ok: contact rule (cases)"
 	@config/check-appwidgets.test.sh > /dev/null && echo "ok: appwidget tripwire (cases)"
+	@config/check-invariants.test.sh > /dev/null && echo "ok: catalog invariants (cases)"
+	@tests/andashi-catalog.test.sh > /dev/null && echo "ok: andashi catalog commands (cases)"
 	@config/check-schema.sh
 	@config/check-contacts.sh
 	@config/check-appwidgets.sh
+	@config/check-invariants.sh
 	@t=$$(mktemp); OUT=$$t config/gen-obtainium.sh >/dev/null; \
 	  if diff -q <(jq -S . $$t) <(jq -S . config/obtainium.json) >/dev/null; then \
 	    echo "ok: obtainium.json in sync"; else \

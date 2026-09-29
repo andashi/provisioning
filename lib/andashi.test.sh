@@ -42,5 +42,18 @@ t "both changed to the same thing"    "$(reconcile_plan b a b)" none
 t "no record: nothing to protect"     "$(reconcile_plan b "" c)" first
 t "device silent is not agreement"    "$(reconcile_plan a a "")" unknown
 
+echo "apps drift"
+d() { apps_drift "$1" "$2" "$3" "$4" "$5" | tr '\n' ';'; }
+t "in sync"                                "$(d "a b" "a b" "a b x" "a b" "a b")" "missing=;remove=;foreign=;"
+t "an installable app not installed"       "$(d "a b" "a b" "a" "a" "a")" "missing=b;remove=;foreign=;"
+t "a Play app not installed is not missing" "$(d "a p" "a" "a" "a" "a")" "missing=;remove=;foreign=;"
+t "taken out of the catalog: remove"       "$(d "a" "a" "a t" "a t" "a t")" "missing=;remove=t;foreign=;"
+t "... unless it is already gone"          "$(d "a" "a" "a" "a" "a t")" "missing=;remove=;foreign=;"
+t "installed by hand: foreign, not remove" "$(d "a" "a" "a h" "a h" "a")" "missing=;remove=;foreign=h;"
+t "sandboxed Play itself is not foreign"   "$(apps_drift "a" "a" "a com.google.android.gms com.android.vending" "a com.google.android.gms com.android.vending" "a" " com.google.android.gms com.android.vending " | tr '\n' ';')" "missing=;remove=;foreign=;"
+t "a work profile's owner is not foreign"  "$(apps_drift "a" "a" "a net.typeblog.shelter" "a net.typeblog.shelter" "a" " net.typeblog.shelter " | tr '\n' ';')" "missing=;remove=;foreign=;"
+t "... but without that list it would be"  "$(d "a" "a" "a net.typeblog.shelter" "a net.typeblog.shelter" "a")" "missing=;remove=;foreign=net.typeblog.shelter;"
+t "no record: nothing is ever removed"     "$(d "a" "a" "a t" "a t" "")" "missing=;remove=;foreign=t;"
+
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]
