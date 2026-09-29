@@ -287,10 +287,37 @@ configure_profile() {   # $1=profile-key
       problem "$key" "$label: the config changed on the device since our last run - pull it first ($0 --pull), then push"
       return 1
     fi
+    # A moved number says LOOK, not REFUSE. Measured on 0.11.0 with a config
+    # that carries no waiting code at all: an unrelated package event moves
+    # nothing, and a launcher RESTART moves it by two. Restarts are ordinary -
+    # every upgrade of the launcher is one, and so is the process being killed
+    # under memory pressure - so refusing on the number alone would refuse the
+    # next run after every update, for ever, until somebody pulled by hand.
+    # On a device whose config names something absent it is worse: the
+    # launcher re-reads on every package signal (andashi/home, ConfigWatcher),
+    # so the number climbs all night.
+    #
+    # So the number decides whether to look, and the effective config decides
+    # whether to refuse - the same comparison the push uses afterwards, which
+    # is the only thing that can tell "somebody rearranged this zone" from "the
+    # launcher restarted". A guard that fires on ordinary events gets removed,
+    # and then the case it exists for arrives unnoticed.
     if report_moved "$dev_seq" "$dev_store" "$rec_seq" "$rec_store"; then
-      warn "$label: same config, but the launcher saved report $dev_seq since our $rec_seq"
-      problem "$key" "$label: something was saved on the device since our last run - a reload, or a device change kept out of the file - pull it first ($0 --pull), then push"
-      return 1
+      local eff_now mism_now
+      eff_now="$(query_state config "$uid" 2>/dev/null || true)"
+      if [ -z "$eff_now" ]; then
+        warn "$label: report $dev_seq since our $rec_seq, and /config did not answer"
+        problem "$key" "$label: something was saved on the device and we cannot see what - pull it first ($0 --pull), then push"
+        return 1
+      fi
+      mism_now="$(jq -r -n --argjson eff "$eff_now" --slurpfile want "$cfgfile" \
+        -f "$(dirname "${BASH_SOURCE[0]}")/../lib/readback-compare.jq" 2>/dev/null || true)"
+      if [ -n "$mism_now" ]; then
+        warn "$label: report $dev_seq since our $rec_seq, and the device differs in: $mism_now"
+        problem "$key" "$label: the device was changed since our last run - pull it first ($0 --pull), then push"
+        return 1
+      fi
+      log "$label: report $dev_seq since our $rec_seq, but the device still matches our file - continuing"
     fi
   fi
 
