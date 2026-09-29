@@ -272,7 +272,7 @@ configure_profile() {   # $1=profile-key
   # phrase "a device change" suggests. The remedy is the documented one and it
   # was measured too: --pull records the new number and the next push goes
   # through.
-  local rec diag_now dev_sha dev_seq dev_store rec_sha rec_seq rec_store
+  local rec diag_now diag_before dev_sha dev_seq dev_store rec_sha rec_seq rec_store
   rec="$(sha_record "$key")"
   if [ "$DRY_RUN" != "1" ] && [ -f "$rec" ]; then
     diag_now="$(query_state diagnostics "$uid" 2>/dev/null || true)"
@@ -346,6 +346,7 @@ configure_profile() {   # $1=profile-key
   if [ "$DRY_RUN" = "1" ]; then
     printf '   [dry-run] content write --user %s --uri %s < %s\n' "$uid" "$ingest_uri" "$cfgfile"
   else
+    diag_before="$(query_state diagnostics "$uid" 2>/dev/null || true)"
     if ! ingest_write "$ingest_uri" "$cfgfile" "$uid"; then
       printf '%s\n' "$WRITE_OUT" >&2
       problem "$key" "$label: content write into $ingest_uri failed (user $uid)${INGEST_HINT:+ - $INGEST_HINT}"
@@ -376,12 +377,32 @@ configure_profile() {   # $1=profile-key
   # The launcher records the sha256 of the file it last loaded plus success /
   # error details. A matching sha with success=false is a failure with an
   # explanation from the launcher itself - surface it, don't retry it away.
-  local attempt=0 diag got_sha success n_diag fatal_diag seq_now
+  # What the device had reported BEFORE our push. The poll below waits for a
+  # report newer than this one, not merely for one carrying our hash - because
+  # a push of bytes the last report already describes (every run that pushes an
+  # unchanged file) satisfies a hash-only wait instantly, on the PREVIOUS
+  # report. Its `success` would usually be right, since the bytes are the same,
+  # and its diagnostics would be stale: an app uninstalled since, a permission
+  # withdrawn, a widget unbound. Measured on 0.11.0 the new report was already
+  # there and we read it - so the race did not bite on an idle emulator, which
+  # is exactly the kind of evidence that should not be trusted for a phone.
+  #
+  # Reported by the launcher side from a code reading (andashi/home#260).
+  local pre_seq pre_store
+  pre_seq="$(printf '%s' "${diag_before:-}" | jq -r '.sequence // empty' 2>/dev/null || true)"
+  pre_store="$(printf '%s' "${diag_before:-}" | jq -r '.storeId // empty' 2>/dev/null || true)"
+  local attempt=0 diag got_sha success n_diag fatal_diag seq_now dev_seq_now dev_store_now
   while [ $attempt -lt 30 ]; do
     if diag="$(query_state diagnostics "$uid")"; then
       got_sha="$(printf '%s' "$diag" | jq -r '.configSha256 // empty')"
       success="$(printf '%s' "$diag" | jq -r '.success // empty')"
-      if [ "$got_sha" = "$want_sha" ]; then
+      dev_seq_now="$(printf '%s' "$diag" | jq -r '.sequence // empty')"
+      dev_store_now="$(printf '%s' "$diag" | jq -r '.storeId // empty')"
+      # A build before 0.11.0 reports no sequence at all, and then the hash is
+      # all there is - which is what this did until today.
+      if [ "$got_sha" = "$want_sha" ] \
+         && { [ -z "$pre_seq" ] || [ -z "$dev_seq_now" ] || [ "$dev_store_now" != "$pre_store" ] \
+              || [ "$dev_seq_now" -gt "$pre_seq" ]; }; then
         if [ "$success" = "true" ]; then
           # The report number is printed, not just recorded: our runs show
           # `.diagnostics[]` and no top-level fields, so a counter nobody can
