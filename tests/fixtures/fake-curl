@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# A stand-in for curl in case files: serves FAKE_CURL_DIR/<last path segment of
+# the URL>, or fails like an unreachable host. Only the options from-lock.sh
+# uses are understood; anything else is a broken case and says so.
+out=""; url=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o) out="$2"; shift 2;;
+    --retry|--max-time) shift 2;;
+    -f|-s|-S|-L|-fsSL) shift;;
+    http*) url="$1"; shift;;
+    *) echo "fake-curl: unexpected: $1" >&2; exit 97;;
+  esac
+done
+src="$FAKE_CURL_DIR/${url##*/}"
+[ -f "$src" ] || exit 22
+if [ -n "$out" ]; then cp "$src" "$out"; else cat "$src"; fi

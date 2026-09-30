@@ -14,6 +14,10 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@lib/zones.test.sh > /dev/null && echo "ok: zone selection (cases)"
 	@lib/launcher-plan.test.sh > /dev/null && echo "ok: launcher push decision (cases)"
 	@lib/andashi.test.sh > /dev/null && echo "ok: andashi decisions (cases)"
+	@lib/apk-version-lock.test.sh > /dev/null && echo "ok: versionCode without aapt2 (cases)"
+	@tests/from-lock.test.sh > /dev/null && echo "ok: downloads from the lock (cases)"
+	@apks/check-lock.test.sh > /dev/null && echo "ok: lock consistency (cases)"
+	@apks/check-lock.sh
 	@config/check-schema.test.sh > /dev/null && echo "ok: schema check (cases)"
 	@config/check-contacts.test.sh > /dev/null && echo "ok: contact rule (cases)"
 	@config/check-appwidgets.test.sh > /dev/null && echo "ok: appwidget tripwire (cases)"
@@ -69,10 +73,16 @@ update: ## Fetch newer APKs, verify them, bring every zone to them
 apks: ## Verify APK hashes + signer certs (offline)
 	@apks/verify.sh
 
+lock: ## Maintainer: write apks/lock.json from the verified inventory (after fetch + apks)
+	@apks/lock.sh
+
+from-lock: ## Get the APKs from apks/lock.json - curl, sha256sum, jq, nothing else
+	@apks/from-lock.sh
+
 provenance: ## Re-audit where each pinned signer comes from (needs network)
 	@apks/provenance.sh
 
 emulator: ## Check emulator prerequisites
 	@emulator/build.sh prereqs
 
-.PHONY: help check todo obtainium launcher-config manual update apks provenance emulator
+.PHONY: help check todo obtainium launcher-config manual update apks lock from-lock provenance emulator

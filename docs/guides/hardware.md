@@ -33,6 +33,11 @@ of the emulator are comments and the `ADB_SERIAL` hint.
 
 ## Fetch arm64 binaries
 
+`make from-lock` asks the connected phone for its ABI and downloads the
+universal builds plus that ABI's, checking each against `apks/lock.json`. Without
+a phone attached it assumes `arm64-v8a`; `APK_ABI=x86_64` is the emulator.
+The rest of this section is about `fetch.sh`, the maintainer's side.
+
 `fetch.sh` prefers universal APKs and otherwise follows `APK_ABI`, default
 `arm64-v8a` — so call it without an environment variable for the phone. Anyone who
 fetched with `APK_ABI=x86_64` for the emulator has x86 binaries that will not

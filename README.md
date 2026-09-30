@@ -61,9 +61,18 @@ APKs, and `--fix` writes corrections back into the catalog.
 
 ```bash
 make check      # JSON, bash syntax, catalog, and that generated files are in sync
-make apks       # APK hashes and pinned signer certificates
+make from-lock  # the APKs from apks/lock.json: curl, sha256sum, jq - nothing else
+make apks       # APK hashes and pinned signer certificates (maintainer)
+make lock       # write apks/lock.json from the verified inventory (maintainer)
 make update     # fetch newer APKs, verify them, bring every zone to them
 ```
+
+**To set up a phone you need `make from-lock`, not `fetch.sh`.** The lock names
+every APK, where to download it, and what it must hash to; the package names
+and signers were checked when it was written. No JDK, no Android build tools,
+no gpg ([0013](docs/decisions/0013-a-lock-for-the-first-install.md)).
+`fetch.sh` is the maintainer's side: after it, `make apks` and `make lock`,
+and `make check` fails until the lock is renewed.
 
 `make update` matters more than it looks: four zones carry no app store, so for
 everything this repository fetches, the chain is the update mechanism. Each run
