@@ -173,7 +173,8 @@ fi
 # scheduled refresh proposes a new lock only when there is a new lock, not
 # every morning because the clock moved.
 sorted="$(jq -c 'sort_by(.pkg, .abi)' <<<"$entries")"
-if [ -f "$OUT" ] && [ "$(jq -cS '.entries' "$OUT" 2>/dev/null)" = "$(jq -cS . <<<"$sorted")" ]; then
+if [ -f "$OUT" ] && [ "$(jq -r '.lockVersion' "$OUT" 2>/dev/null)" = 1 ] \
+   && [ "$(jq -cS '.entries' "$OUT" 2>/dev/null)" = "$(jq -cS . <<<"$sorted")" ]; then
   log "$(jq length <<<"$sorted") file(s) - the lock in $OUT already says exactly this, left as it is"
   exit 0
 fi

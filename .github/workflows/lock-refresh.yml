@@ -76,13 +76,25 @@ jobs:
           git config user.email "lock-refresh@users.noreply.github.com"
           git switch -c "$branch"
           git add apks/lock.json apks/SHA256SUMS apks/certs
-          git commit -q -F - <<MSG
-          Lock refresh $(date -u +%Y-%m-%d)
-
-          $(cat "$RUNNER_TEMP/summary.md")
-          MSG
+          {
+            echo "Lock refresh $(date -u +%Y-%m-%d)"
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+          } > "$RUNNER_TEMP/message"
+          # The attribution rule, applied here: commit-hygiene.yml runs on
+          # pull_request, which a GITHUB_TOKEN pull request never triggers.
+          sh .githooks/commit-msg "$RUNNER_TEMP/message"
+          git commit -q -F "$RUNNER_TEMP/message"
+          # A second run on the same day meets its own branch: fetch it, so
+          # the lease has something to compare against, and replace it.
+          git fetch -q origin "$branch" 2>/dev/null || true
           git push -q --force-with-lease origin "$branch"
-          if ! gh pr view "$branch" >/dev/null 2>&1; then
+          # Only an OPEN pull request counts; one closed or merged earlier
+          # today must not stop a new one.
+          open="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$open" ]; then
+            gh pr edit "$open" --body-file "$RUNNER_TEMP/summary.md"
+          else
             gh pr create --base main --head "$branch" \
               --title "Lock refresh $(date -u +%Y-%m-%d)" --body-file "$RUNNER_TEMP/summary.md"
           fi
