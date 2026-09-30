@@ -139,6 +139,11 @@ while read -r row; do
     found=1
     sha="$(awk -v f="$f" '$2 == f { print $1 }' SHA256SUMS)"
     [ -n "$sha" ] || { bad "$label: $f is not in SHA256SUMS - run fetch.sh/verify.sh"; missing+=("$f"); continue; }
+    # The bytes on disk, not only the line about them: a file replaced after
+    # verify.sh would have its URLs checked against the old hash and its
+    # versionCode read from the new bytes.
+    [ "$(sha256sum < "$f" | cut -d' ' -f1)" = "$sha" ] \
+      || { bad "$label: $f does not hash to its SHA256SUMS line - run verify.sh"; missing+=("$f"); continue; }
     mapfile -t urls < <(resolve_urls "$f" "$sha" "$row")
     if [ "${#urls[@]}" = 0 ] || [ -z "${urls[0]}" ]; then
       bad "$label: no URL serves $f with its hash - not locked"; missing+=("$f"); continue

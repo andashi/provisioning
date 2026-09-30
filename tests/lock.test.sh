@@ -90,6 +90,9 @@ api repos/o/dig/releases/tags/v1.0 '{"assets": [{"name": "a.apk", "size": 99, "d
 run
 t "a digest that does not match: not locked"        '[ $? != 0 ] && grep -q "Dig: no URL serves" "$tmp/out" && kept'
 
+setup; printf 'vc=11\nreplaced after verify\n' > "$tmp/inv/universal/a.dig-1.0.apk"; run
+t "a file whose bytes are not its SHA256SUMS line: refused, kept" '[ $? != 0 ] && grep -q "does not hash to its SHA256SUMS line" "$tmp/out" && kept'
+
 setup; printf '{ broken' > "$tmp/apps.json"; run
 t "a broken catalog: refused, the old lock kept"    '[ $? != 0 ] && grep -q "could not read the catalog" "$tmp/out" && kept'
 setup; echo '{"apps": []}' > "$tmp/apps.json"; run
