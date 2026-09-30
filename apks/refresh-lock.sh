@@ -19,6 +19,14 @@ here="$(cd "$(dirname "$0")" && pwd)"
 # The inventory, and the three tools, can be pointed elsewhere - which is what
 # tests/refresh-lock.test.sh does with fakes. By default: this directory and
 # the scripts beside it.
+# fetch.sh and verify.sh always work in their own directory, so another
+# inventory with the real tools would be fetched and verified in one place and
+# locked in the other. That combination is refused rather than half-honoured.
+if [ -n "${APKS_DIR:-}" ] && [ "$(cd "$APKS_DIR" 2>/dev/null && pwd)" != "$here" ] \
+   && { [ -z "${FETCH:-}" ] || [ -z "${VERIFY:-}" ]; }; then
+  echo "refresh-lock: APKS_DIR points elsewhere, but fetch.sh and verify.sh only work in $here - refusing" >&2
+  exit 2
+fi
 cd "${APKS_DIR:-$here}"
 FETCH="${FETCH:-$here/fetch.sh}"; VERIFY="${VERIFY:-$here/verify.sh}"; LOCKER="${LOCKER:-$here/lock.sh}"
 

@@ -65,6 +65,9 @@ t "an entry that left the lock is a row"          'grep -qF "| app.gone | univer
 { e app.a 1.0 aa; } | lockof | run env
 t "nothing changed: says so"                      '[ $? = 0 ] && grep -q "The lock did not change." "$tmp/summary.md"'
 
+APKS_DIR="$tmp/inv" "$root/apks/refresh-lock.sh" > "$tmp/out" 2>&1
+t "another inventory with the real fetch and verify is refused" '[ $? = 2 ] && grep -q "only work in" "$tmp/out"'
+
 "$root/apks/refresh-lock.sh" --nonsense > "$tmp/out" 2>&1
 t "an unknown argument is refused, exit 2"        '[ $? = 2 ] && grep -q "unknown argument" "$tmp/out"'
 
