@@ -124,7 +124,7 @@ user_running_uid() {
 # ---------- The host's record of a device ----------
 # One directory per device under .provision-state, keyed by serial: a laptop
 # that provisions two phones must not mix up what it agreed with each.
-device_id() { printf '%s' "${ADB_SERIAL:-$(adb get-serialno 2>/dev/null || echo unknown)}" | tr -c 'A-Za-z0-9_.-' '_'; }
+device_id() { printf '%s' "${ADB_SERIAL:-$("$ADB" get-serialno 2>/dev/null || echo unknown)}" | tr -c 'A-Za-z0-9_.-' '_'; }
 
 # Changes a step could not deliver because the zone was stopped and NO_START
 # asked it not to start one. One line per zone and section, removed by the

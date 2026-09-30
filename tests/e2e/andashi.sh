@@ -103,6 +103,18 @@ TINT_SECS="$SECS"
 run diff-after-tint andashi diff
 check "diff afterwards: nothing to do" '[ $RC = 0 ]'
 
+section "--only applies part of a change, and the rest stays outstanding"
+tj home '.per_profile[$z].glass.tint = 0.35 | .per_profile[$z].style = "TONAL_SPOT"'
+run apply-only andashi apply --zone home --only launcher
+check "--only launcher runs only the launcher step" '[ $RC = 0 ] && ! grep -q "===== 40-theming" "$LOG/apply-only"'
+run diff-after-only andashi diff --zone home
+check "... and the theme is still reported as changed" '[ $RC = 1 ] && grep -q "inputs changed: .*theme" "$LOG/diff-after-only"'
+tj home '.per_profile[$z] |= del(.style)'
+run apply-rest andashi apply --zone home
+check "a plain apply afterwards settles it" '[ $RC = 0 ]'
+run diff-settled andashi diff --zone home
+check "... and nothing is outstanding" '[ $RC = 0 ]'
+
 section "new bytes under the same wallpaper name"
 mkdir -p "$ROOT/.provision-state/e2e-andashi/wp/tall" "$ROOT/.provision-state/e2e-andashi/wp/square"
 for a in tall square; do cp "$ROOT/themes/synthwave/$a/lab.jpg" "$ROOT/.provision-state/e2e-andashi/wp/$a/home.jpg"; done
@@ -141,10 +153,13 @@ A shell am broadcast -a "$PKG.action.RELOAD_CONFIG" -n "$PKG/de.mm20.launcher2.c
 sleep 4
 run diff-edit andashi diff
 check "diff says home was edited on the phone" 'grep -A3 "^home" "$LOG/diff-edit" | grep -q "edited on the phone"'
+cp "$CONFIG_DIR/theming.json" "$WORK/theming.before-dry"
+run apply-edit-dry andashi apply --zone home --dry-run
+check "a dry run does not adopt it" 'diff -q "$WORK/theming.before-dry" "$CONFIG_DIR/theming.json" >/dev/null && grep -q "would adopt" "$LOG/apply-edit-dry"'
 run apply-edit andashi apply --zone home
 check "apply notices it with nothing changed on the host" 'grep -q "^:: home: launcher" "$LOG/apply-edit"'
 check "apply adopts it into the catalog" '[ $RC = 0 ] && num "$(jq -r .per_profile.home.glass.radius "$CONFIG_DIR/theming.json")" 12'
-check "... keeps the host's own earlier change" 'num "$(jq -r .per_profile.home.glass.tint "$CONFIG_DIR/theming.json")" 0.3'
+check "... keeps the host's own earlier change" 'num "$(jq -r .per_profile.home.glass.tint "$CONFIG_DIR/theming.json")" 0.35'
 check "... and the phone still has it" 'num "$(eff 0 .appearance.glass.radius)" 12'
 
 section "both sides changed: that zone stops, the others go on"
@@ -159,9 +174,10 @@ cloud_uid="$(A shell pm list users | tr -d '\r' | sed -n 's/.*UserInfo{\([0-9]*\
 # and the --all start of Ops above may have evicted Cloud.
 A shell am start-user -w "$cloud_uid" >/dev/null 2>&1
 tj cloud '.per_profile[$z].glass = ((.per_profile[$z].glass // {}) + {tint: 0.2})'
-run apply-conflict andashi apply --only launcher --zone home,cloud
+run apply-conflict andashi apply --zone home,cloud
 check "apply exits 1 and names the conflict" '[ $RC = 1 ] && grep -q "home: changed on the phone AND here" "$LOG/apply-conflict"'
 check "... names what differs" 'grep -q "home: they differ in:" "$LOG/apply-conflict"'
+check "... and no step touches home" '! grep -qE "===== [0-9]+-[a-z-]+ \\([^)]*home" "$LOG/apply-conflict"'
 check "... leaves the phone's value in home" 'num "$(eff 0 .appearance.glass.blur)" 8'
 check "... and still applies cloud" 'grep -q "Cloud: effective config verified" "$LOG/apply-conflict" && num "$(eff "$cloud_uid" .appearance.glass.tint)" 0.2'
 

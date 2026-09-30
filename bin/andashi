@@ -239,7 +239,10 @@ cmd_apply() {
         conflict) conflict+=("$z");;
       esac
     done
-    if [ "${#adopt[@]}" -gt 0 ]; then
+    if [ "${#adopt[@]}" -gt 0 ] && [ "${DRY_RUN:-0}" = 1 ]; then
+      # Adopting writes the catalog; a dry run changes nothing, there either.
+      log "[dry-run] would adopt what was edited on the phone: ${adopt[*]}"
+    elif [ "${#adopt[@]}" -gt 0 ]; then
       if private_catalog; then
         log "edited on the phone, adopting before pushing: ${adopt[*]}"
         ZONES="${adopt[*]}" "$ROOT/provision/45-launcher-config.sh" --pull
@@ -248,10 +251,12 @@ cmd_apply() {
         warn "edited on the phone: ${adopt[*]} - the template cannot adopt it; point CONFIG_DIR at your own catalog"
       fi
     fi
-    # A zone in conflict is left out of the push - both sides are named below,
-    # a person decides - and every other zone goes ahead.
+    # A zone in conflict is left alone - by EVERY step, not only the launcher
+    # one: a settings or theme change applied to it while its launcher waits
+    # for a person would be half an apply to a zone we said we left alone.
+    # Both sides are named below; every other zone goes ahead.
     for z in ${conflict[@]+"${conflict[@]}"}; do
-      ZSTEPS[$z]="${ZSTEPS[$z]/ 45-launcher-config / }"
+      unset "ZSTEPS[$z]"
     done
   fi
 
@@ -271,7 +276,12 @@ cmd_apply() {
   # Recorded only after a run that went through: a zone recorded as applied
   # after a failed step would never be retried. What a stopped zone still owes
   # is in the pending file, not here; a zone in conflict is not recorded.
-  if [ "$step_fail" = 0 ]; then
+  # --only ran some sections, and the record is of whole zones: writing it
+  # would mark the sections that did NOT run as applied, and they would never
+  # be delivered. So a partial apply leaves the record alone; the next apply
+  # runs what is still outstanding (the parts already applied converge as
+  # no-ops).
+  if [ "$step_fail" = 0 ] && [ -z "$ONLY" ]; then
     for z in "${!ZSTEPS[@]}"; do
       case " ${conflict[*]:-} " in *" $z "*) continue;; esac
       record_applied "$z"
