@@ -151,13 +151,16 @@ if [ "$base_ref" = "main" ]; then
   # Runs of main's head commit only, whatever else ran on main since: the
   # question is whether THIS commit is green, and a list cut at some length
   # could end before a red run of it.
-  runs="$(gh run list --repo "$REPO" --commit "$main_sha" --limit 200 --json workflowName,status,conclusion,headSha)" \
+  runs="$(gh run list --repo "$REPO" --commit "$main_sha" --limit 200 --json workflowName,status,conclusion,headSha,createdAt)" \
     || { echo "pr-gate: could not list the runs of main's head - refusing" >&2; exit 1; }
   # Only the runs that judge the code. The scheduled lock refresh also runs on
   # main's head, and it fails for reasons outside any pull request - a signer
   # that changed upstream - which must not block the merge that answers it.
   # It is named below instead.
-  refresh="$(jq -r --arg s "$main_sha" '[.[]|select(.headSha==$s and .workflowName=="lock refresh")|.conclusion // .status]|last // empty' <<<"$runs")"
+  # The newest refresh by its creation time - the listing promises no order.
+  # An empty conclusion means the run is still going; status says how far.
+  refresh="$(jq -r --arg s "$main_sha" '[.[]|select(.headSha==$s and .workflowName=="lock refresh")]
+    | sort_by(.createdAt) | last // empty | if .conclusion != "" and .conclusion != null then .conclusion else "status " + .status end' <<<"$runs")"
   mine="$(jq -c --arg s "$main_sha" '[.[]|select(.headSha==$s and .workflowName!="lock refresh")]' <<<"$runs")"
   if [ "$(jq length <<<"$mine")" = "0" ]; then
     bad "no workflow run found for main's head ${main_sha:0:12}"
@@ -170,6 +173,7 @@ if [ "$base_ref" = "main" ]; then
   fi
   case "$refresh" in
     ""|success|skipped) ;;
+    "status "*) printf '  ! the lock refresh on main is still running (%s) - not a merge condition\n' "${refresh#status }";;
     *) printf '  ! the lock refresh on main ended "%s" - not a merge condition, but look at it\n' "$refresh";;
   esac
 fi
