@@ -9,12 +9,12 @@
 # when `pm set-installer` failed with "Unknown calling UID: 0". The identity
 # is part of the result, so it is set and asserted, never assumed.
 as_shell() {   # uses $SERIAL; exits the test if adbd will not run as shell
-  local id i
+  local id _
   id="$(adb -s "$SERIAL" shell id -u 2>/dev/null | tr -d '\r')"
   if [ "$id" != 2000 ]; then
     adb -s "$SERIAL" unroot >/dev/null 2>&1 || true
-    for i in $(seq 1 30); do
-      sleep 1
+    for _ in $(seq 1 "${IDENTITY_WAIT:-30}"); do
+      sleep "${IDENTITY_POLL:-1}"
       id="$(adb -s "$SERIAL" shell id -u 2>/dev/null | tr -d '\r')"
       [ "$id" = 2000 ] && break
     done

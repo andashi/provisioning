@@ -8,6 +8,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@for f in config/*.json; do jq -e . $$f >/dev/null && echo "ok: $$f"; done
 	@for f in $$(find . -name '*.sh'); do bash -n $$f || exit 1; done; echo "ok: bash -n"
 	@tests/commit-msg.test.sh > /dev/null && echo "ok: commit-msg hook (cases)"
+	@tests/identity.test.sh > /dev/null && echo "ok: e2e shell identity (cases)"
 	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison (cases)"
 	@lib/report-moved.test.sh > /dev/null && echo "ok: report-moved condition (cases)"
 	@lib/wallpaper-drifted.test.sh > /dev/null && echo "ok: wallpaper-drift condition (cases)"
