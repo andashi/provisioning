@@ -22,3 +22,4 @@ so.
 | [0010](0010-no-custom-build.md) | No custom OS build to lift the three-profile limit | accepted |
 | [0011](0011-catalog-is-a-template.md) | The catalog is a template, the real one lives outside | accepted |
 | [0012](0012-every-zone-updates-itself.md) | Every zone updates itself, and the launcher is not pinned | accepted |
+| [0013](0013-a-lock-for-the-first-install.md) | A lock for the first install | accepted |

@@ -1,0 +1,412 @@
+{
+  "lockVersion": 1,
+  "generated": "2026-09-30T05:24:47Z",
+  "entries": [
+    {
+      "pkg": "app.accrescent.client",
+      "label": "Accrescent",
+      "version": "0.28.1",
+      "versionCode": 55,
+      "abi": "universal",
+      "file": "universal/app.accrescent.client-0.28.1.apk",
+      "sha256": "40f97ac3ee659d8b1f91dba8b84449fe3c14e05c1e82754375252d8746e6b1f5",
+      "size": 6954309,
+      "signer": "067a40c4193aad51ac87f9ddfdebb15e24a1850babfa4821c28c5c25c3fdc071",
+      "urls": [
+        "https://github.com/accrescent/accrescent/releases/download/0.28.1/accrescent-0.28.1.apk"
+      ]
+    },
+    {
+      "pkg": "app.alextran.immich",
+      "label": "Immich",
+      "version": "3.2.1",
+      "versionCode": 3022199,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/app.alextran.immich-3.2.1.apk",
+      "sha256": "4173ec141346a7eca24b0ca2cf0edcbb5483c98669552d1d26186d246ae82f2a",
+      "size": 68997685,
+      "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
+      "urls": [
+        "https://github.com/immich-app/immich/releases/download/v3.2.1/app-arm64-v8a-release.apk"
+      ]
+    },
+    {
+      "pkg": "app.alextran.immich",
+      "label": "Immich",
+      "version": "3.2.1",
+      "versionCode": 3024199,
+      "abi": "x86_64",
+      "file": "x86_64/app.alextran.immich-3.2.1.apk",
+      "sha256": "d82ea2fbf88ffaa3e673147d8b8192ea4fb5b8f494a7f38de79c2c40aa3e06c9",
+      "size": 71717631,
+      "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
+      "urls": [
+        "https://github.com/immich-app/immich/releases/download/v3.2.1/app-x86_64-release.apk"
+      ]
+    },
+    {
+      "pkg": "app.comaps",
+      "label": "CoMaps",
+      "version": "2026.08.31-14",
+      "versionCode": 26083114,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/app.comaps-2026.08.31-14.apk",
+      "sha256": "6fa705e67b464ef4c3daa7781c53ae6e5061858687e4c46b7836b4a99bab4ed3",
+      "size": 61716469,
+      "signer": "4894e8e6963627ef660031d8593fe77297f835acb4e23810003e926135023b4c",
+      "urls": [
+        "https://codeberg.org/comaps/comaps/releases/download/v2026.08.31-14/CoMaps-26083114-main-release.apk"
+      ]
+    },
+    {
+      "pkg": "app.lawnchair.lawnicons",
+      "label": "Lawnicons",
+      "version": "2.18.0",
+      "versionCode": 26,
+      "abi": "universal",
+      "file": "universal/app.lawnchair.lawnicons-2.18.0.apk",
+      "sha256": "e830b37e1cd7cd66487492f4a1084ba086254b2b09541d729da0ec2169a73bfe",
+      "size": 17091744,
+      "signer": "747c3645b357258b2e23e851e53c96747fe0add007e5ba2cd97e8c85572e4dc5",
+      "urls": [
+        "https://github.com/LawnchairLauncher/lawnicons/releases/download/v2.18.0/Lawnicons.2.18.0.apk"
+      ]
+    },
+    {
+      "pkg": "at.bitfire.davdroid",
+      "label": "DAVx5",
+      "version": "4.5.19-ose",
+      "versionCode": 405190003,
+      "abi": "universal",
+      "file": "universal/at.bitfire.davdroid-4.5.19-ose.apk",
+      "sha256": "4e8f1cd0d2f47f95a1003365340a30c99cb27173476c367d90ba9e14f97a3e10",
+      "size": 18487607,
+      "signer": "b39e7b77ec853483646b21b4a3e3ca540ba094ef8daa18e87e0be1fa4638d321",
+      "urls": [
+        "https://github.com/bitfireAT/davx5-ose/releases/download/v4.5.19-ose/davx5-405190003-4.5.19-ose-release.apk"
+      ]
+    },
+    {
+      "pkg": "com.Vali98.ChatterUI",
+      "label": "ChatterUI",
+      "version": "0.9.0",
+      "versionCode": 1,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/com.Vali98.ChatterUI-0.9.0.apk",
+      "sha256": "000db515b62787e0205544773f26f26643daa041cd3c0ac88c146d796b9c5b74",
+      "size": 57328011,
+      "signer": "1b4b4ac99a24cb9569bdbc37cfbde916a4f538de55c1f802fa19bc99e33b7e3b",
+      "urls": [
+        "https://github.com/Vali-98/ChatterUI/releases/download/v0.9.0/ChatterUI_v0.9.0.apk"
+      ]
+    },
+    {
+      "pkg": "com.celzero.bravedns",
+      "label": "RethinkDNS",
+      "version": "0.5.6",
+      "versionCode": 30000067,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/com.celzero.bravedns-0.5.6.apk",
+      "sha256": "d68c7e3e57c3fd46e6928d2f9e4308bffc72104fbb930b85b0d082aa1207b143",
+      "size": 34635226,
+      "signer": "1f32d432e81a1dc5c00aafeb0c6636cd7819965d174420e59db9675dff7a88e9",
+      "urls": [
+        "https://github.com/celzero/rethink-app/releases/download/v0.5.6/rethink-67-arm64-v8a.apk"
+      ]
+    },
+    {
+      "pkg": "com.celzero.bravedns",
+      "label": "RethinkDNS",
+      "version": "0.5.6",
+      "versionCode": 90000067,
+      "abi": "x86_64",
+      "file": "x86_64/com.celzero.bravedns-0.5.6.apk",
+      "sha256": "dba27069f93a30aecc885d1bd421e70b6b679c38fb6b7cf383d4ebd0f0b9976a",
+      "size": 35904727,
+      "signer": "1f32d432e81a1dc5c00aafeb0c6636cd7819965d174420e59db9675dff7a88e9",
+      "urls": [
+        "https://github.com/celzero/rethink-app/releases/download/v0.5.6/rethink-67-x86_64.apk"
+      ]
+    },
+    {
+      "pkg": "com.governikus.ausweisapp2",
+      "label": "AusweisApp",
+      "version": "2.5.5",
+      "versionCode": 339,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/com.governikus.ausweisapp2-2.5.5.apk",
+      "sha256": "66c2db3108fdf0556bfa295b042ddbbbe13e469780c95a0c65859076142bff67",
+      "size": 52282803,
+      "signer": "b02ac76b50a497ae810aeac22598187b3d4290277d0851a7fa8e1aea5a979870",
+      "urls": [
+        "https://github.com/Governikus/AusweisApp/releases/download/2.5.5/AusweisApp-2.5.5-arm64-v8a.apk"
+      ]
+    },
+    {
+      "pkg": "com.governikus.ausweisapp2",
+      "label": "AusweisApp",
+      "version": "2.5.5",
+      "versionCode": 340,
+      "abi": "x86_64",
+      "file": "x86_64/com.governikus.ausweisapp2-2.5.5.apk",
+      "sha256": "1a51c72feff0f9290471240bd9a24db9232531c9277551f4c566999dfe503b71",
+      "size": 52122798,
+      "signer": "b02ac76b50a497ae810aeac22598187b3d4290277d0851a7fa8e1aea5a979870",
+      "urls": [
+        "https://github.com/Governikus/AusweisApp/releases/download/2.5.5/AusweisApp-2.5.5-x86_64.apk"
+      ]
+    },
+    {
+      "pkg": "com.pocketpalai",
+      "label": "PocketPal AI",
+      "version": "1.17.3",
+      "versionCode": 147,
+      "abi": "universal",
+      "file": "universal/com.pocketpalai-1.17.3.apk",
+      "sha256": "3cf9589b293ffff84eab2ecfd9adb692ca2c9038653fa6ce66619980cd99ffb5",
+      "size": 240160569,
+      "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614",
+      "urls": [
+        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.17.3/app-prod-release.apk"
+      ]
+    },
+    {
+      "pkg": "com.tailscale.ipn",
+      "label": "Tailscale",
+      "version": "1.102.4-t3caf7d9e7-g8fbef364a",
+      "versionCode": 298177930,
+      "abi": "universal",
+      "file": "universal/com.tailscale.ipn-1.102.4-t3caf7d9e7-g8fbef364a.apk",
+      "sha256": "7ecfb863e08f5fbd1ecd70235d8c34ba135a4124bdd8e166b9d6fb962782e0b5",
+      "size": 105440859,
+      "signer": "5cdb295551bfe1a087fed6acda07141c6c929fa7c29bd273a7092813acc434bf",
+      "urls": [
+        "https://github.com/tailscale/tailscale-android/releases/download/1.102.4-t3caf7d9e7-g8fbef364a/tailscale-android-universal-1.102.4.apk"
+      ]
+    },
+    {
+      "pkg": "com.x8bit.bitwarden",
+      "label": "Bitwarden",
+      "version": "2026.8.1-bwpm",
+      "versionCode": 21856,
+      "abi": "universal",
+      "file": "universal/com.x8bit.bitwarden-2026.8.1-bwpm.apk",
+      "sha256": "e8bfeaa97103bc21ca1b4628c1f6af3cefc59492d27c76d7c61ad06de1f29c1d",
+      "size": 89420530,
+      "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90",
+      "urls": [
+        "https://github.com/bitwarden/android/releases/download/v2026.8.1-bwpm/com.x8bit.bitwarden-fdroid.apk"
+      ]
+    },
+    {
+      "pkg": "dev.imranr.obtainium",
+      "label": "Obtainium",
+      "version": "1.6.17",
+      "versionCode": 23563,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/dev.imranr.obtainium-1.6.17.apk",
+      "sha256": "ce1aa65430af809289f4045994838b1b072a2021bd82fceab1a6f4a90d0108d4",
+      "size": 26154026,
+      "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
+      "urls": [
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.6.17/app-arm64-v8a-release.apk"
+      ]
+    },
+    {
+      "pkg": "dev.imranr.obtainium",
+      "label": "Obtainium",
+      "version": "1.6.17",
+      "versionCode": 23561,
+      "abi": "x86_64",
+      "file": "x86_64/dev.imranr.obtainium-1.6.17.apk",
+      "sha256": "ebdaaa34b464286e3bbed8cfe311bdd74dc04673609740da8aa6a1523602119e",
+      "size": 27702302,
+      "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
+      "urls": [
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.6.17/app-x86_64-release.apk"
+      ]
+    },
+    {
+      "pkg": "digital.ventral.ips",
+      "label": "Inter Profile Sharing",
+      "version": "1.2",
+      "versionCode": 3,
+      "abi": "universal",
+      "file": "universal/digital.ventral.ips-1.2.apk",
+      "sha256": "22dd0227762c663de3b3483ab5a1f6e449e92ccfb71d2f3ca0f25bd8d30ee9f8",
+      "size": 23682895,
+      "signer": "03243d0c0d44b6e0b41e3cb245b1dc269be4c3ffe177f843fc005bc4ea0c7426",
+      "urls": [
+        "https://github.com/VentralDigital/InterProfileSharing/releases/download/v1.2/ips-1.2.apk"
+      ]
+    },
+    {
+      "pkg": "helium314.keyboard",
+      "label": "HeliBoard",
+      "version": "4.1",
+      "versionCode": 4101,
+      "abi": "universal",
+      "file": "universal/helium314.keyboard-4.1.apk",
+      "sha256": "eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075",
+      "size": 22413693,
+      "signer": "5ec0a5313aa43558ee75b20b58ccd8194cdbf066df94a43ba288d933d60b86ce",
+      "urls": [
+        "https://github.com/HeliBorg/HeliBoard/releases/download/v4.1/HeliBoard_4.1-release.apk"
+      ]
+    },
+    {
+      "pkg": "im.molly.app",
+      "label": "Molly",
+      "version": "8.19.2-4",
+      "versionCode": 171904,
+      "abi": "universal",
+      "file": "universal/im.molly.app-8.19.2-4.apk",
+      "sha256": "f1c6fd929f9047809a7a9bb4e663d1ec1ec4d9f33d9794799c8e2f8e1663ec11",
+      "size": 96755948,
+      "signer": "6aa80fdf4a8cc13737cfb434fc0cde486f09cf8fcda21a67bea5ee1ca2700886",
+      "urls": [
+        "https://github.com/mollyim/mollyim-android/releases/download/v8.19.2-4/Molly-v8.19.2-4.apk"
+      ]
+    },
+    {
+      "pkg": "io.homeassistant.companion.android",
+      "label": "Home Assistant",
+      "version": "2026.6.5",
+      "versionCode": 22884,
+      "abi": "universal",
+      "file": "universal/io.homeassistant.companion.android-2026.6.5.apk",
+      "sha256": "c14a0a15ea6e4ff4f37993f6d621f99cac8614d59312866e7c95fd8f65af4c04",
+      "size": 40131192,
+      "signer": "11194ba809b42ddf0e1a7dec6842a59c7ff1119c5482e95febffd5c6014daa5a",
+      "urls": [
+        "https://github.com/home-assistant/android/releases/download/2026.6.5/app-full-release.apk"
+      ]
+    },
+    {
+      "pkg": "moe.shizuku.privileged.api",
+      "label": "Shizuku",
+      "version": "13.6.0",
+      "versionCode": 1086,
+      "abi": "universal",
+      "file": "universal/moe.shizuku.privileged.api-13.6.0.apk",
+      "sha256": "6e273ab0e991c4e79bc8b1bbb9b9dd739ccac1a8712a541a214078886b7b790f",
+      "size": 2571773,
+      "signer": "268b5590e868fb08bae7e0ac413564cd1ff88f5ccff74af9dbd0dc918e30db30",
+      "urls": [
+        "https://github.com/RikkaApps/Shizuku/releases/download/v13.6.0/shizuku-v13.6.0.r1086.2650830c-release.apk"
+      ]
+    },
+    {
+      "pkg": "net.sourceforge.opencamera",
+      "label": "Open Camera",
+      "version": "1.56.2",
+      "versionCode": 96,
+      "abi": "universal",
+      "file": "universal/net.sourceforge.opencamera-1.56.2.apk",
+      "sha256": "ca5672ca8c7174554ca0b07b5b26e505817a05142f571cf2abe67e790c30249c",
+      "size": 4973923,
+      "signer": "438991c968e8d308ca34078d37511c90c502d596baf9f0d0c5fbd1c9bf67df6d",
+      "urls": [
+        "https://f-droid.org/repo/net.sourceforge.opencamera_96.apk"
+      ]
+    },
+    {
+      "pkg": "net.typeblog.shelter",
+      "label": "Shelter",
+      "version": "1.9.1",
+      "versionCode": 445,
+      "abi": "universal",
+      "file": "universal/net.typeblog.shelter-1.9.1.apk",
+      "sha256": "d6d67b22f066d40f8771d8d7c0e0efe9315b37224d5b7e724f4c0e9b0eecca07",
+      "size": 2756345,
+      "signer": "2d4837134f3519a11d104630ed42a4a795f4ab2327e1c9899cbebfbf89aba483",
+      "urls": [
+        "https://f-droid.org/repo/net.typeblog.shelter_445.apk"
+      ]
+    },
+    {
+      "pkg": "org.andashi.home",
+      "label": "Andashi Home",
+      "version": "0.12.0",
+      "versionCode": 2026092916,
+      "abi": "universal",
+      "file": "universal/org.andashi.home-0.12.0.apk",
+      "sha256": "542ac1d9211fd710ccb9226de4c01a7cb3e4d9b5ab322e48ffa6d45b59bdffdd",
+      "size": 17146612,
+      "signer": "e42da3c2cf9e682d67b96f3655b2adf1bb22488a064b6ff833520b3c43f2a5ee",
+      "urls": [
+        "https://github.com/andashi/home/releases/download/v0.12.0/org.andashi.home-0.12.0.apk"
+      ]
+    },
+    {
+      "pkg": "org.polymorphicshade.tubular",
+      "label": "Tubular",
+      "version": "0.28.4",
+      "versionCode": 1009,
+      "abi": "universal",
+      "file": "universal/org.polymorphicshade.tubular-0.28.4.apk",
+      "sha256": "b362605d9a7a3383262622d016a069221726a60a1288be1b8fade4b563e499f1",
+      "size": 10989082,
+      "signer": "8ad7025a8c911454e2a7b4515e360c52ca63ec0410a042ff46e9ad05b509e187",
+      "urls": [
+        "https://github.com/polymorphicshade/Tubular/releases/download/v0.28.4/tubular_v0.28.4.apk"
+      ]
+    },
+    {
+      "pkg": "org.thoughtcrime.securesms",
+      "label": "Signal",
+      "version": "8.26.4",
+      "versionCode": 174801,
+      "abi": "universal",
+      "file": "universal/org.thoughtcrime.securesms-8.26.4.apk",
+      "sha256": "a4b320bc39d266dcc47824f0a69da75a12134c5a59684d762512391f95578450",
+      "size": 122419334,
+      "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8",
+      "urls": [
+        "https://github.com/signalapp/Signal-Android/releases/download/v8.26.4/Signal-Android-github-prod-universal-release-8.26.4.apk"
+      ]
+    },
+    {
+      "pkg": "org.torproject.android",
+      "label": "Orbot",
+      "version": "17.9.5-RC-4-tor-0.4.9.11",
+      "versionCode": 1795300400,
+      "abi": "universal",
+      "file": "universal/org.torproject.android-17.9.5-RC-4-tor-0.4.9.11.apk",
+      "sha256": "6b79cb30d59278fd66b2740223e0592a1f8363274ac8498960491b0201b9b4f2",
+      "size": 82803884,
+      "signer": "a454b87a1847a89ed7f5e70fba6bba96f3ef29c26e0981204fe347bf231dfd5b",
+      "urls": [
+        "https://github.com/guardianproject/orbot-android/releases/download/17.9.5-RC-4-tor-0.4.9.11/Orbot-17.9.5-RC-4-tor-0.4.9.11-fullperm-universal-release.apk"
+      ]
+    },
+    {
+      "pkg": "org.torproject.torbrowser",
+      "label": "Tor Browser",
+      "version": "15.0.23",
+      "versionCode": 2016184530,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/org.torproject.torbrowser-15.0.23.apk",
+      "sha256": "f5eb307d3007b34fa3ecde53a6eb68c7dae2a40266d334ee4c0050f033317f09",
+      "size": 111076729,
+      "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
+      "urls": [
+        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-browser-android-aarch64-15.0.23.apk"
+      ]
+    },
+    {
+      "pkg": "org.torproject.torbrowser",
+      "label": "Tor Browser",
+      "version": "15.0.23",
+      "versionCode": 2016184534,
+      "abi": "x86_64",
+      "file": "x86_64/org.torproject.torbrowser-15.0.23.apk",
+      "sha256": "ec0ef1743cfa93a0be2272ef8bda10841f641da45e05543d7301bc7b81e9c2c8",
+      "size": 112473302,
+      "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
+      "urls": [
+        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-browser-android-x86_64-15.0.23.apk"
+      ]
+    }
+  ]
+}

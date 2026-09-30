@@ -370,9 +370,22 @@ installed_version_code() {   # $1=pkg
 }
 
 # versionCode an APK file declares. Same parsing rule as above.
+#
+# Without aapt2 - a machine that got its APKs from apks/lock.json and has no
+# Android build tools - the lock answers instead, for a file whose bytes are
+# the locked ones: the maintainer's aapt2 read it when the lock was written.
+# The hash decides, not the name, so a file that merely shares a locked name
+# gets no answer.
+LOCK_FILE="${LOCK_FILE:-$REPO_ROOT/apks/lock.json}"
 apk_version_code() {   # $1=apk
-  local out line
-  command -v aapt2 >/dev/null || return 1
+  local out line sha
+  if ! command -v aapt2 >/dev/null; then
+    [ -f "$LOCK_FILE" ] || return 1
+    sha="$(sha256sum "$1" 2>/dev/null | cut -d' ' -f1)" || return 1
+    out="$(jq -r --arg s "$sha" '[.entries[] | select(.sha256 == $s) | .versionCode][0] // empty' "$LOCK_FILE" 2>/dev/null)"
+    [ -n "$out" ] && { printf '%s' "$out"; return 0; }
+    return 1
+  fi
   out="$(aapt2 dump badging "$1" 2>/dev/null)" || return 1
   while IFS= read -r line; do
     case "$line" in
