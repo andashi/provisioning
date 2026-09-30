@@ -56,8 +56,10 @@ sel="$(jq -r --arg abi "$APK_ABI" '
   || { bad "could not read the entries of $LOCK - nothing fetched"; exit 1; }
 [ -n "$sel" ] || { bad "$LOCK names nothing for $APK_ABI - nothing fetched"; exit 1; }
 
-stage="$APKS_DIR/.from-lock.staging"
-rm -rf "$stage"; mkdir -p "$stage"
+# One staging directory per run: two runs on the same inventory must not
+# delete each other's downloads.
+mkdir -p "$APKS_DIR"
+stage="$(mktemp -d "$APKS_DIR/.from-lock.XXXXXX")" || { bad "cannot create a staging directory in $APKS_DIR"; exit 1; }
 trap 'rm -rf "$stage"' EXIT
 fail=0; got=0; had=0; keep=" "; wrong=()
 while IFS=$'\t' read -r label file sha urls; do
@@ -86,9 +88,12 @@ done <<<"$sel"
 # bytes are not the locked ones. Left there, provisioning would install it as
 # if it were the locked build. It goes to stale/ whatever else happens.
 for file in ${wrong[@]+"${wrong[@]}"}; do
-  mkdir -p "$APKS_DIR/stale/$(dirname "$file")"
-  mv -f "$APKS_DIR/$file" "$APKS_DIR/stale/$file" \
-    && bad "$file had other bytes than the lock names - moved to stale/"
+  if mkdir -p "$APKS_DIR/stale/$(dirname "$file")" && mv -f "$APKS_DIR/$file" "$APKS_DIR/stale/$file"; then
+    bad "$file had other bytes than the lock names - moved to stale/"
+  else
+    bad "$file has other bytes than the lock names and could NOT be moved away - do not provision from $APKS_DIR"
+    exit 1
+  fi
 done
 
 if [ "$fail" != 0 ]; then
@@ -110,8 +115,11 @@ for dir in universal "$APK_ABI"; do
   for f in "$APKS_DIR/$dir"/*.apk; do
     [ -e "$f" ] || continue
     case "$keep" in *" $dir/$(basename "$f") "*) continue;; esac
-    mkdir -p "$APKS_DIR/stale/$dir"
-    mv -f "$f" "$APKS_DIR/stale/$dir/" && moved=$((moved+1))
+    # A move that fails leaves a file apk_for_pkg would prefer: that is a
+    # failed run, however many downloads went through.
+    mkdir -p "$APKS_DIR/stale/$dir" && mv -f "$f" "$APKS_DIR/stale/$dir/" \
+      || { bad "could not set $dir/$(basename "$f") aside - it would be installed instead of the locked build"; exit 1; }
+    moved=$((moved+1))
   done
 done
 [ "$moved" = 0 ] || log "$moved APK(s) the lock does not name moved to $APKS_DIR/stale/"

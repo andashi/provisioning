@@ -38,7 +38,7 @@ printf '\n== the APKs, from the lock only\n'
 PATH="$LEAN" APK_ABI=x86_64 APKS_DIR="$APKS" "$ROOT/apks/from-lock.sh" > "$WORK/from-lock.log" 2>&1
 check "from-lock.sh gets every file" '[ $? = 0 ] && grep -q ", 0 failed" "$WORK/from-lock.log"'
 want="$(jq '[.entries[] | select(.abi == "universal" or .abi == "x86_64")] | length' "$ROOT/apks/lock.json")"
-check "... exactly the $want the lock names for x86_64" '[ "$(find "$APKS" -name "*.apk" | wc -l)" = "$want" ]'
+check "... exactly the $want the lock names for x86_64" '[ "$(find "$APKS" -name "*.apk" -not -path "*/stale/*" | wc -l)" = "$want" ]'
 
 printf '\n== the full chain from clean\n'
 "$ROOT/emulator/run.sh" restore clean >/dev/null 2>&1 || { echo "could not restore clean"; exit 1; }

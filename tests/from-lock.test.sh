@@ -57,7 +57,7 @@ t "universal and the phone's ABI, not the other one" '[ -f "$tmp/apks/universal/
 { entry g universal universal/g-1.apk "$good" https://x/good.apk
   entry n universal universal/n-1.apk "$good" https://x/gone.apk; } | lock
 rm -rf "$tmp/apks"; mkdir -p "$tmp/apks"; fl
-t "one entry fails: the others are not promoted either" '[ $? != 0 ] && [ ! -e "$tmp/apks/universal/g-1.apk" ] && [ ! -e "$tmp/apks/.from-lock.staging" ]'
+t "one entry fails: the others are not promoted either" '[ $? != 0 ] && [ ! -e "$tmp/apks/universal/g-1.apk" ] && [ -z "$(find "$tmp/apks" -maxdepth 1 -name ".from-lock.*")" ]'
 
 # A newer build lying in the inventory would win in apk_for_pkg.
 entry g universal universal/g-1.apk "$good" https://x/good.apk | lock
@@ -72,6 +72,15 @@ t "a directory where the file belongs is refused" '[ $? != 0 ] && grep -q "is a 
 entry m universal universal/m-1.apk "$good" https://x/good.apk | jq '.urls = null' | lock
 rm -rf "$tmp/apks"; mkdir -p "$tmp/apks"; fl
 t "a malformed entry stops everything before any download" '[ $? != 0 ] && grep -q "could not read the entries" "$tmp/out" && [ -z "$(find "$tmp/apks" -type f)" ]'
+
+entry g universal universal/g-1.apk "$good" https://x/good.apk | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks/universal" "$tmp/apks/stale/universal"; printf 'newer' > "$tmp/apks/universal/g-2.apk"
+chmod a-w "$tmp/apks/stale/universal"; fl
+# rc is read by the check string, which runs through eval.
+# shellcheck disable=SC2034
+rc=$?
+chmod u+w "$tmp/apks/stale/universal"
+t "an APK that cannot be set aside fails the run" '[ $rc != 0 ] && grep -q "could not set universal/g-2.apk aside" "$tmp/out"'
 
 printf '{"entries": []}' > "$tmp/lock.json"; fl
 t "a file that is not a lock is refused"  '[ $? != 0 ] && grep -q "not a lock" "$tmp/out"'
