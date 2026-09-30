@@ -469,6 +469,10 @@ cmd_theme() {
 # every change, so switching zones on the phone moves the watch with you.
 cmd_watch() {
   local fixed="${ZONES:-}" last="" now
+  # `--zone current` means "whatever is in front", every time - not the zone
+  # that happened to be in front when watch started. It was resolved to a key
+  # above like every selection, so it is recognised from the arguments here.
+  [ "${ZONE_ARGS[*]:-}" = current ] && fixed=""
   fixed="${fixed// /,}"
   # What watch was started with, every apply gets: --all, --only and
   # --prune-undeclared belong to the loop, not to its first round.
