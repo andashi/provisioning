@@ -41,7 +41,7 @@ t "a dead mirror and a bad one, then the right one" '[ $? = 0 ] && [ "$(sha256su
 
 entry stale universal universal/a-1.apk "$good" https://x/gone.apk | lock
 rm -rf "$tmp/apks"; mkdir -p "$tmp/apks/universal"; printf 'old' > "$tmp/apks/universal/a-1.apk"; fl
-t "a file already there with the wrong bytes, nothing serves the right ones: removed" '[ $? != 0 ] && [ ! -e "$tmp/apks/universal/a-1.apk" ]'
+t "a file already there with the wrong bytes, nothing serves the right ones: set aside" '[ $? != 0 ] && [ ! -e "$tmp/apks/universal/a-1.apk" ] && [ -f "$tmp/apks/stale/universal/a-1.apk" ]'
 
 entry http universal universal/a-1.apk "$good" http://x/good.apk | lock
 rm -rf "$tmp/apks"; mkdir -p "$tmp/apks"; fl
@@ -52,6 +52,26 @@ t "a non-https URL is refused"            '[ $? != 0 ] && grep -q "non-https" "$
   entry a arm64-v8a arm64-v8a/a-1.apk "$good" https://x/good.apk; } | lock
 rm -rf "$tmp/apks"; mkdir -p "$tmp/apks"; fl
 t "universal and the phone's ABI, not the other one" '[ -f "$tmp/apks/universal/u-1.apk" ] && [ -f "$tmp/apks/x86_64/x-1.apk" ] && [ ! -e "$tmp/apks/arm64-v8a/a-1.apk" ]'
+
+# All or nothing: one entry that cannot be had leaves the other one out too.
+{ entry g universal universal/g-1.apk "$good" https://x/good.apk
+  entry n universal universal/n-1.apk "$good" https://x/gone.apk; } | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks"; fl
+t "one entry fails: the others are not promoted either" '[ $? != 0 ] && [ ! -e "$tmp/apks/universal/g-1.apk" ] && [ ! -e "$tmp/apks/.from-lock.staging" ]'
+
+# A newer build lying in the inventory would win in apk_for_pkg.
+entry g universal universal/g-1.apk "$good" https://x/good.apk | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks/universal"; printf 'newer' > "$tmp/apks/universal/g-2.apk"; fl
+t "an APK the lock does not name is set aside"   '[ $? = 0 ] && [ ! -e "$tmp/apks/universal/g-2.apk" ] && [ -f "$tmp/apks/stale/universal/g-2.apk" ]'
+t "... and the locked one is in place"           '[ -f "$tmp/apks/universal/g-1.apk" ]'
+
+entry d universal universal/d-1.apk "$good" https://x/good.apk | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks/universal/d-1.apk"; fl
+t "a directory where the file belongs is refused" '[ $? != 0 ] && grep -q "is a directory" "$tmp/out"'
+
+entry m universal universal/m-1.apk "$good" https://x/good.apk | jq '.urls = null' | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks"; fl
+t "a malformed entry stops everything before any download" '[ $? != 0 ] && grep -q "could not read the entries" "$tmp/out" && [ -z "$(find "$tmp/apks" -type f)" ]'
 
 printf '{"entries": []}' > "$tmp/lock.json"; fl
 t "a file that is not a lock is refused"  '[ $? != 0 ] && grep -q "not a lock" "$tmp/out"'

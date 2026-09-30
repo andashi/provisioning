@@ -30,8 +30,10 @@
 # the latest few, moving the rest to f-droid.org/archive. So those entries
 # carry the archive URL too, and from-lock.sh tries them in order.
 set -euo pipefail
-cd "$(dirname "$0")"
-: "${CAT:=../config/apps.json}"
+here="$(cd "$(dirname "$0")" && pwd)"
+# The inventory to lock: this directory, or APKS_DIR (which the case file uses).
+cd "${APKS_DIR:-$here}"
+: "${CAT:=$here/../config/apps.json}"
 OUT="${OUT:-lock.json}"
 
 c(){ [ -t 1 ] && printf '\033[%sm%s\033[0m\n' "$1" "$2" || printf '%s\n' "$2"; }
@@ -47,7 +49,15 @@ gh_api() {
   else curl -fsSL "https://api.github.com/$1"; fi
 }
 version_code() { aapt2 dump badging "$1" 2>/dev/null | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1; }
-url_hash() { curl -fsSL --max-time 600 "$1" | sha256sum | cut -d' ' -f1; }
+# The hash of what a URL serves, or nothing when it serves nothing - never the
+# hash of an empty download.
+url_hash() {
+  local t; t="$(mktemp)"
+  if curl -fsSL --max-time 600 -o "$t" "$1" 2>/dev/null; then sha256sum < "$t" | cut -d' ' -f1; fi
+  rm -f "$t"
+}
+# Of the given URLs, those that serve $sha (from the caller), in order.
+proven() { local u; for u in "$@"; do [ "$(url_hash "$u")" = "$sha" ] && printf '%s\n' "$u"; done; return 0; }
 
 # The file apk_for_pkg would pick in one directory, or nothing.
 chosen() {   # $1=dir $2=pkg $3=release_tag-version-or-empty
@@ -67,16 +77,15 @@ resolve_urls() {   # $1=file $2=sha256 $3=catalog row
   case "$src" in
     torproject)
       case "$file" in arm64-v8a/*) tabi=aarch64;; x86_64/*) tabi=x86_64;; *) return 0;; esac
-      local a="https://archive.torproject.org/tor-package-archive/torbrowser/$ver/tor-browser-android-$tabi-$ver.apk"
-      local d="https://dist.torproject.org/torbrowser/$ver/tor-browser-android-$tabi-$ver.apk"
-      # The archive is the one that keeps it; proven by its bytes.
-      [ "$(url_hash "$a")" = "$sha" ] || return 0
-      printf '%s\n%s\n' "$a" "$d"; return 0;;
+      # The archive first: it is the one that keeps old builds. Each URL goes
+      # into the lock only if it serves these bytes today - an unproven
+      # mirror in the lock would be a URL nobody checked.
+      proven "https://archive.torproject.org/tor-package-archive/torbrowser/$ver/tor-browser-android-$tabi-$ver.apk" \
+             "https://dist.torproject.org/torbrowser/$ver/tor-browser-android-$tabi-$ver.apk"
+      return 0;;
     fdroid)
       code="$(version_code "$file")"; [ -n "$code" ] || return 0
-      local r="https://f-droid.org/repo/${pkg}_${code}.apk" a="https://f-droid.org/archive/${pkg}_${code}.apk"
-      if [ "$(url_hash "$r" 2>/dev/null || true)" = "$sha" ]; then printf '%s\n%s\n' "$r" "$a"; return 0; fi
-      if [ "$(url_hash "$a" 2>/dev/null || true)" = "$sha" ]; then printf '%s\n%s\n' "$a" "$r"; return 0; fi
+      proven "https://f-droid.org/repo/${pkg}_${code}.apk" "https://f-droid.org/archive/${pkg}_${code}.apk"
       return 0;;
   esac
 
@@ -111,6 +120,13 @@ resolve_urls() {   # $1=file $2=sha256 $3=catalog row
   return 0
 }
 
+# The catalog is read before anything else, with its status checked. Read
+# through a process substitution, a missing or broken catalog yielded no rows,
+# and the lock was replaced by a valid-looking empty one.
+rows="$(jq -c '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject")' "$CAT")" \
+  || { bad "could not read the catalog $CAT - lock.json left as it was"; exit 1; }
+[ -n "$rows" ] || { bad "the catalog $CAT names no app to lock - lock.json left as it was"; exit 1; }
+
 entries="[]"; missing=()
 while read -r row; do
   pkg="$(jq -r .pkg <<<"$row")"; label="$(jq -r .label <<<"$row")"
@@ -141,8 +157,9 @@ while read -r row; do
     ok "$label $v ($dir) <- ${urls[0]}"
   done
   [ "$found" = 1 ] || { bad "$label: pinned but no APK in the inventory"; missing+=("$pkg"); }
-done < <(jq -c '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject")' "$CAT")
+done <<<"$rows"
 
+[ "$(jq length <<<"$entries")" -gt 0 ] || { bad "nothing could be locked - lock.json left as it was"; exit 1; }
 if [ "${#missing[@]}" -gt 0 ]; then
   bad "${#missing[@]} file(s) could not be locked - lock.json NOT written"
   exit 1

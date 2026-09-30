@@ -20,6 +20,22 @@ cd "$(dirname "$0")"
 jq -e '.lockVersion == 1 and (.entries | type) == "array"' "$LOCK" >/dev/null \
   || { echo "check-lock: $LOCK is not a version-1 lock" >&2; exit 1; }
 
+# Read with its status checked, and every field's type with it: through a
+# process substitution, an entry whose urls was not an array stopped jq, the
+# entries after it were never looked at, and the check could still pass.
+rows="$(jq -r '.entries[]
+  | if (.pkg | type) != "string" or (.file | type) != "string" or (.sha256 | type) != "string"
+       or (.signer | type) != "string" or (.urls | type) != "array"
+    then error("malformed entry: \(.file // .pkg // "?")") else . end
+  | [.pkg, .file, .sha256, .signer, (.urls | length),
+     (all(.urls[]; type == "string" and startswith("https://"))), (.versionCode // "" | tostring)] | @tsv' "$LOCK")" \
+  || { echo "check-lock: $LOCK has a malformed entry - see above" >&2; exit 1; }
+cat_pkgs="$(jq -r '.apps[] | "\(.pkg) \((.release_tag // "") | ltrimstr("v"))"' "$CAT")" \
+  || { echo "check-lock: could not read the catalog $CAT" >&2; exit 1; }
+fetched="$(jq -r '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject")
+                  | "\(.pkg) \((.release_tag // "") | ltrimstr("v"))"' "$CAT")" \
+  || { echo "check-lock: could not read the catalog $CAT" >&2; exit 1; }
+
 bad=""
 while IFS=$'\t' read -r pkg file sha signer nurls allhttps vc; do
   want="$(awk -v f="$file" '$2 == f { print $1 }' "$SUMS")"
@@ -30,9 +46,8 @@ while IFS=$'\t' read -r pkg file sha signer nurls allhttps vc; do
   [ "$nurls" -gt 0 ] || bad="$bad  $file: no URL"$'\n'
   [ "$allhttps" = true ] || bad="$bad  $file: a URL that is not https"$'\n'
   [[ "$vc" =~ ^[0-9]+$ ]] || bad="$bad  $file: no versionCode"$'\n'
-  jq -e --arg p "$pkg" '.apps[] | select(.pkg == $p)' "$CAT" >/dev/null || bad="$bad  $file: $pkg is not in the catalog"$'\n'
-done < <(jq -r '.entries[] | [.pkg, .file, .sha256, .signer, (.urls | length),
-                  (all(.urls[]; startswith("https://"))), (.versionCode // "" | tostring)] | @tsv' "$LOCK")
+  grep -q "^$pkg " <<<"$cat_pkgs" || bad="$bad  $file: $pkg is not in the catalog"$'\n'
+done <<<"$rows"
 
 # The file provisioning would install, from the paths SHA256SUMS lists.
 while read -r pkg tag; do
@@ -48,8 +63,7 @@ while read -r pkg tag; do
     n=$((n+1))
   done
   [ "$n" -gt 0 ] || bad="$bad  $pkg: pinned in $CERTS but no file in $SUMS"$'\n'
-done < <(jq -r '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject")
-                | "\(.pkg) \((.release_tag // "") | ltrimstr("v"))"' "$CAT")
+done <<<"$fetched"
 
 if [ -n "$bad" ]; then
   printf 'apks/lock.json does not describe the inventory:\n%s  after fetch.sh: apks/lock.sh\n' "$bad" >&2

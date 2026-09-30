@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# A stand-in for curl in case files: serves FAKE_CURL_DIR/<last path segment of
-# the URL>, or fails like an unreachable host. Only the options from-lock.sh
-# uses are understood; anything else is a broken case and says so.
+# A stand-in for curl in case files: serves FAKE_CURL_DIR/<the whole URL with
+# every / and : turned into _>, else FAKE_CURL_DIR/<its last path segment>, or
+# fails like an unreachable host. The whole-URL form is for API answers, whose
+# last segment (a tag) says too little. Only the options apks/*.sh use are
+# understood; anything else is a broken case and says so.
 out=""; url=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -12,6 +14,7 @@ while [ $# -gt 0 ]; do
     *) echo "fake-curl: unexpected: $1" >&2; exit 97;;
   esac
 done
-src="$FAKE_CURL_DIR/${url##*/}"
+src="$FAKE_CURL_DIR/$(printf '%s' "$url" | tr '/:' '__')"
+[ -f "$src" ] || src="$FAKE_CURL_DIR/${url##*/}"
 [ -f "$src" ] || exit 22
 if [ -n "$out" ]; then cp "$src" "$out"; else cat "$src"; fi

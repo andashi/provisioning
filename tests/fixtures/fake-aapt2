@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# A stand-in for aapt2 in case files: `dump badging <apk>` answers with the
+# versionCode written in the file's first line ("vc=<n>").
+[ "$1 $2" = "dump badging" ] || { echo "fake-aapt2: unexpected: $*" >&2; exit 97; }
+vc="$(sed -n '1s/^vc=//p' "$3")"
+[ -n "$vc" ] || exit 1
+printf "package: name='x' versionCode='%s' versionName='x'\n" "$vc"

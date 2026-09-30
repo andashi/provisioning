@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-09-30T04:58:31Z",
+  "generated": "2026-09-30T05:24:47Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -307,8 +307,7 @@
       "size": 4973923,
       "signer": "438991c968e8d308ca34078d37511c90c502d596baf9f0d0c5fbd1c9bf67df6d",
       "urls": [
-        "https://f-droid.org/repo/net.sourceforge.opencamera_96.apk",
-        "https://f-droid.org/archive/net.sourceforge.opencamera_96.apk"
+        "https://f-droid.org/repo/net.sourceforge.opencamera_96.apk"
       ]
     },
     {
@@ -322,8 +321,7 @@
       "size": 2756345,
       "signer": "2d4837134f3519a11d104630ed42a4a795f4ab2327e1c9899cbebfbf89aba483",
       "urls": [
-        "https://f-droid.org/repo/net.typeblog.shelter_445.apk",
-        "https://f-droid.org/archive/net.typeblog.shelter_445.apk"
+        "https://f-droid.org/repo/net.typeblog.shelter_445.apk"
       ]
     },
     {
@@ -393,8 +391,7 @@
       "size": 111076729,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-browser-android-aarch64-15.0.23.apk",
-        "https://dist.torproject.org/torbrowser/15.0.23/tor-browser-android-aarch64-15.0.23.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-browser-android-aarch64-15.0.23.apk"
       ]
     },
     {
@@ -408,8 +405,7 @@
       "size": 112473302,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-browser-android-x86_64-15.0.23.apk",
-        "https://dist.torproject.org/torbrowser/15.0.23/tor-browser-android-x86_64-15.0.23.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-browser-android-x86_64-15.0.23.apk"
       ]
     }
   ]

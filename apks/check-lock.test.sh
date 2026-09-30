@@ -37,5 +37,10 @@ t "an entry for a package the catalog dropped" "org.andashi.home is not in the c
 fresh; lk "(.entries[] | $H) |= del(.versionCode)"
 t "an entry without a versionCode" "no versionCode"
 
+fresh; lk "(.entries[0].urls) = null"
+t "an entry whose urls is not a list stops the check" "malformed entry"
+fresh; lk "(.entries[0].urls) = [42]"
+t "a URL that is not a string" "a URL that is not https"
+
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]
