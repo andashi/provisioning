@@ -46,9 +46,11 @@ t "... and regenerates lab's launcher file"   '[ "$(jq -c .appearance.glass.tint
 t "... and leaves home's alone"               'diff -q "$ROOT/config/launcher/home.json" "$tmp/config/launcher/home.json" >/dev/null'
 a theme set glass.contrast high
 t "without --zone it sets all_profiles, strings stay strings" '[ "$(jq -c .all_profiles.glass.contrast "$tmp/config/theming.json")" = "\"high\"" ]'
+a theme set glass.searchWallpaperBlur false --zone lab
+t "false stays a boolean, not the string \"false\"" '[ $? = 0 ] && [ "$(jq -c .per_profile.lab.glass.searchWallpaperBlur "$tmp/config/theming.json")" = false ]'
 a theme set glass.nosuchkey 1 --zone lab
 t "a glass key that does not exist is refused" '[ $? != 0 ] && ! grep -q "catalog checks pass" "$tmp/out"'
-t "... and theming.json is as it was before it" '[ "$(jq -c .per_profile.lab.glass "$tmp/config/theming.json")" = "{\"tint\":0.3}" ]'
+t "... and theming.json is as it was before it" '[ "$(jq -c .per_profile.lab.glass "$tmp/config/theming.json")" = "{\"tint\":0.3,\"searchWallpaperBlur\":false}" ]'
 
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]

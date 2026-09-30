@@ -232,8 +232,18 @@ check "diff names it as not in the catalog" 'grep -q "not in the catalog, kept: 
 check "... without calling that a to-do" '[ $RC = 0 ]'
 run apply-foreign andashi apply --zone lab --only apps
 check "apply keeps it" '[ $RC = 0 ] && inlab im.molly.app'
+run diff-prune andashi diff --zone lab --prune-undeclared
+check "diff --prune-undeclared previews the removal, exit 1" '[ $RC = 1 ] && grep -q "apps to remove (--prune-undeclared): .*im.molly.app" "$LOG/diff-prune"'
 run apply-prune andashi apply --zone lab --prune-undeclared
 check "--prune-undeclared removes it, and says so" '[ $RC = 0 ] && ! inlab im.molly.app && grep -q "im.molly.app removed - not in the catalog for Lab" "$LOG/apply-prune"'
+
+section "an unreadable catalog removes nothing"
+cp "$CONFIG_DIR/apps.json" "$WORK/apps.good"
+printf '{ broken' > "$CONFIG_DIR/apps.json"
+run apps-broken env ZONES=lab "$ROOT/provision/10-apps.sh"
+check "the apps step stops" '[ $RC != 0 ] && grep -q "could not read" "$LOG/apps-broken"'
+check "... and Lab still has everything the chain put there" 'inlab org.polymorphicshade.tubular && inlab helium314.keyboard'
+cp "$WORK/apps.good" "$CONFIG_DIR/apps.json"
 
 section "watch: save, and the zone in front follows"
 foreground_home

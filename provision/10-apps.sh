@@ -88,6 +88,7 @@ while read -r key; do
   printf '\n'
   log "Profile $label (user $uid)"
   DECLARED=" "
+  OWED=" "   # recorded packages the catalog dropped but that are still here
 
   # Android only lets a limited number of users run at the same time (measured
   # on emu64x: 3, owner included). Every start evicts the oldest one - so the
@@ -99,7 +100,15 @@ while read -r key; do
       || warn "$label could not be started - installs may fail"
   fi
 
+  # Read the zone's apps with the reader's status checked. Through a process
+  # substitution a failed jq would leave the list empty, DECLARED would name
+  # nothing, and the removal below would uninstall everything this chain ever
+  # put into the zone. An unreadable catalog stops the step instead.
+  zone_apps="$(apps_for_profile "$key")" \
+    || die "$label: could not read $CONFIG_DIR/apps.json - nothing installed or removed"
+
   while read -r app; do
+    [ -n "$app" ] || continue
     id="$(jq -r '.id'     <<<"$app")"
     pkg="$(jq -r '.pkg'   <<<"$app")"
     src="$(jq -r '.source'<<<"$app")"
@@ -151,7 +160,7 @@ while read -r key; do
     # No APK available: Play/store apps are manual by design.
     skip "$lbl -> MANUAL.md (source: $src)"
     printf '%s\t%s\t%s\t%s\n' "$label" "$lbl" "$pkg" "$src" >> "$MANUAL_QUEUE"
-  done < <(apps_for_profile "$key")
+  done <<<"$zone_apps"
 
   # ---- Take away what the catalog stopped naming ----------------------------
   # Only from the list of what this chain put here. `pm uninstall --user`
@@ -165,10 +174,11 @@ while read -r key; do
       pkg_installed_for_user "$p" "$uid" || continue
       if [ "${PRUNE:-1}" = "0" ]; then
         warn "$p: no longer in the catalog for $label - kept (PRUNE=0)"
+        OWED="$OWED$p "
       else
         ash pm uninstall --user "$uid" "$p" >/dev/null \
           && ok "$p removed - no longer in the catalog for $label" \
-          || { warn "$p: could not be removed from $label"; REMOVE_FAILED+=("$label: $p"); }
+          || { warn "$p: could not be removed from $label"; REMOVE_FAILED+=("$label: $p"); OWED="$OWED$p "; }
       fi
     done < "$rec"
   fi
@@ -194,6 +204,11 @@ while read -r key; do
     mkdir -p "$(dirname "$rec")"
     : > "$rec.tmp"
     for p in $DECLARED; do pkg_installed_for_user "$p" "$uid" && printf '%s\n' "$p" >> "$rec.tmp"; done
+    # A removal that failed, or was held back with PRUNE=0, stays on the
+    # record: it is still owed. Dropped from it, the next run would take the
+    # package for somebody's own and keep it - the catalog's removal quietly
+    # turned into a "kept" warning.
+    for p in $OWED; do printf '%s\n' "$p" >> "$rec.tmp"; done
     mv "$rec.tmp" "$rec"
   fi
 done < <(profile_keys)

@@ -191,12 +191,18 @@ report() {   # $1=status|diff
       case "$line" in "in sync"|"unchanged here"*|"(home screen"*) ;; *) out="$out  launcher: $line"$'\n';; esac
       [ -n "$A_missing" ] && out="$out  apps to install: $A_missing"$'\n'
       [ -n "$A_remove" ]  && out="$out  apps to remove (no longer in the catalog): $A_remove"$'\n'
-      # Named, but not a reason to exit 1 on its own: they are somebody's.
-      [ -n "$A_foreign" ] && out="$out  not in the catalog, kept: $A_foreign"$'\n'
+      # Named, but not a reason to exit 1 on its own: they are somebody's -
+      # unless this diff previews an apply that was told to remove them.
+      if [ "$PRUNE_UNDECLARED" = 1 ]; then
+        [ -n "$A_foreign" ] && out="$out  apps to remove (--prune-undeclared): $A_foreign"$'\n'
+      else
+        [ -n "$A_foreign" ] && out="$out  not in the catalog, kept: $A_foreign"$'\n'
+      fi
       [ -n "$out" ] && printf '%s\n%s' "$z" "$out"
       # Everything above is said; only what apply would act on makes it a
       # diff. Foreign apps are somebody's, so naming them is not a to-do.
       [ -n "$sections$pend$A_missing$A_remove" ] && todo=1
+      [ "$PRUNE_UNDECLARED" = 1 ] && [ -n "$A_foreign" ] && todo=1
       case "$line" in "in sync"|"unchanged here"*|"(home screen"*) ;; *) todo=1;; esac
     fi
   done < <(selected_zones)
@@ -419,7 +425,9 @@ cmd_theme() {
   [ "$verb" = set ] && [ -n "$key" ] && [ "${#POS[@]}" -ge 3 ] \
     || die "usage: andashi theme set <key> <value> [--zone Z]   e.g. glass.tint 0.3"
   # A value that parses as JSON is JSON (0.3, true, "x"); anything else is a string.
-  jq -en --argjson v "$val" '$v' >/dev/null 2>&1 || val="$(jq -cn --arg v "$val" '$v')"
+  # Whether it parses, not whether it is truthy: `jq -e` would call a valid
+  # `false` a failure and store the string "false".
+  jq -n --argjson v "$val" 'true' >/dev/null 2>&1 || val="$(jq -cn --arg v "$val" '$v')"
   path="$(jq -cn --arg k "$key" '$k | split(".")')"
   catalog_keep
   if [ -z "${ZONES:-}" ]; then
@@ -441,21 +449,27 @@ cmd_theme() {
 # one zone's inputs costs a few milliseconds. The zone is asked for again on
 # every change, so switching zones on the phone moves the watch with you.
 cmd_watch() {
-  local fixed="${ZONES:-}" z last="" now
+  local fixed="${ZONES:-}" last="" now
+  snap() {   # the inputs of the watched zones, as one hash
+    local z zs="$fixed"
+    [ -n "$zs" ] || zs="$(ZONES=current bash -c 'source "$0/lib/common.sh"; printf %s "$ZONES_RESOLVED"' "$ROOT" 2>/dev/null)"
+    for z in $zs; do zone_snapshot "$z"; done | sha256sum
+  }
   log "watching $CONFIG_DIR${fixed:+ for $fixed} - Ctrl-C to stop"
+  last="$(snap)"
   while :; do
-    now="$(for z in ${fixed:-$(ZONES=current bash -c 'source "$0/lib/common.sh"; printf %s "$ZONES_RESOLVED"' "$ROOT" 2>/dev/null)}; do
-             zone_snapshot "$z"; done | sha256sum)"
-    if [ -n "$last" ] && [ "$now" != "$last" ]; then
-      sleep 0.3   # an editor writing in two steps
-      if [ -n "$fixed" ]; then "$0" apply --zone "${fixed// /,}" || true
-      else "$0" apply --zone current || true; fi
-      now="$(for z in ${fixed:-$(ZONES=current bash -c 'source "$0/lib/common.sh"; printf %s "$ZONES_RESOLVED"' "$ROOT" 2>/dev/null)}; do
-               zone_snapshot "$z"; done | sha256sum)"
-      log "watching again"
-    fi
-    last="$now"
     sleep 1
+    now="$(snap)"
+    [ "$now" != "$last" ] || continue
+    sleep 0.3   # an editor writing in two steps
+    now="$(snap)"
+    # What this apply is FOR is the state before it starts. A save that
+    # lands while it runs is not in it, so it is not acknowledged here: the
+    # next poll sees it differ from $last and applies again.
+    last="$now"
+    if [ -n "$fixed" ]; then "$0" apply --zone "${fixed// /,}" || true
+    else "$0" apply --zone current || true; fi
+    log "watching again"
   done
 }
 
