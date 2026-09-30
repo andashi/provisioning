@@ -10,9 +10,6 @@ pass=0; fail=0
 t() { if eval "$2"; then printf '  ok    %s\n' "$1"; pass=$((pass+1)); else printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); fi; }
 fresh() {
   rm -rf "$tmp/config"; cp -r "$ROOT/config" "$tmp/config"; rm -f "$tmp/config/launcher/.generated.sha256"
-  # The template's one open invariant violation (Azure in Play-free Ops) is
-  # taken out, so each case is about the command, not about that decision.
-  jq --indent 2 '(.apps[] | select(.id == "azure") | .profiles) -= ["ops"]' "$ROOT/config/apps.json" > "$tmp/config/apps.json"
   cp "$tmp/config/apps.json" "$tmp/apps.before"; cp "$tmp/config/theming.json" "$tmp/theming.before"
 }
 a() { CONFIG_DIR="$tmp/config" ADB=/bin/false "$ROOT/bin/andashi" "$@" > "$tmp/out" 2>&1; }

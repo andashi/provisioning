@@ -33,10 +33,6 @@ rm -rf "$WORK"; mkdir -p "$WORK"
 export CONFIG_DIR="$WORK/config"
 cp -r "$ROOT/config" "$CONFIG_DIR"
 rm -f "$CONFIG_DIR/launcher/.generated.sha256"
-# The template carries one open invariant violation (Azure, a Play app, in
-# Play-free Ops); the catalog commands refuse any edit while it stands. The
-# copy leaves it out so the cases are about the commands.
-jq --indent 2 '(.apps[] | select(.id == "azure") | .profiles) -= ["ops"]' "$ROOT/config/apps.json" > "$CONFIG_DIR/apps.json"
 LOG="$WORK/log"; mkdir -p "$LOG"
 andashi() { "$ROOT/bin/andashi" "$@"; }
 run() {   # $1=name, rest=command; output to $LOG/<name>, exit code in $RC, seconds in $SECS

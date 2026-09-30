@@ -6,11 +6,7 @@ set -uo pipefail
 cd "$(dirname "$0")" || exit 1
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 pass=0; fail=0
-# The cases start from the template with Azure taken out of Ops: the template
-# itself breaks rule 1 there (a sandboxed-Play app in a zone declared
-# play: none), which is a catalog decision still open, and each case here
-# must test exactly one rule.
-fresh() { cp profiles.json "$tmp/"; jq '(.apps[] | select(.id == "azure") | .profiles) -= ["ops"]' apps.json > "$tmp/apps.json"; }
+fresh() { cp profiles.json apps.json "$tmp/"; }
 t() {   # $1=name $2=expected fragment ("" = must pass)
   local out rc
   out="$(CONFIG_DIR="$tmp" ./check-invariants.sh 2>&1)"; rc=$?
@@ -22,7 +18,7 @@ t() {   # $1=name $2=expected fragment ("" = must pass)
 }
 edit() { jq "$2" "$tmp/$1" > "$tmp/$1.new" && mv "$tmp/$1.new" "$tmp/$1"; }
 
-fresh; t "the template, without its one open violation, passes" ""
+fresh; t "the real catalog passes" ""
 
 fresh; edit apps.json '(.apps[] | select(.source == "play-sandboxed") | .profiles) |= . + ["anon"]'
 t "a Play app placed in Anon" "which has no Play"

@@ -352,18 +352,6 @@
       "feature": "microsoft_365"
     },
     {
-      "id": "azure",
-      "label": "Azure (Portal)",
-      "pkg": "com.microsoft.azure",
-      "pkg_status": "verified",
-      "source": "play-sandboxed",
-      "profiles": [
-        "ops"
-      ],
-      "net": true,
-      "notes": "Taken OUT of the MAM scope -> Ops stays broker-free."
-    },
-    {
       "id": "gmaps",
       "label": "Google Maps",
       "pkg": "com.google.android.apps.maps",
