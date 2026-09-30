@@ -71,7 +71,11 @@ jobs:
             exit 0
           fi
           make check
-          branch="lock-refresh/$(date -u +%Y-%m-%d)"
+          # No slash: a branch named lock-refresh would make every
+          # lock-refresh/<date> unpushable ("directory file conflict") - which
+          # is how the first run on GitHub failed, against the branch of the
+          # pull request that introduced this workflow.
+          branch="lock-refresh-$(date -u +%Y-%m-%d)"
           git config user.name "andashi lock refresh"
           git config user.email "lock-refresh@users.noreply.github.com"
           git switch -c "$branch"
