@@ -2,7 +2,15 @@
 # Brings apks/lock.json up to what the upstreams publish today: fetch both
 # ABIs, verify hashes and signers, write the lock, and say what changed.
 #
-#   apks/refresh-lock.sh [--summary FILE]
+#   apks/refresh-lock.sh [--summary FILE] [--verdict FILE]
+#
+# The verdict file gets one word, and the scheduled workflow acts on it
+# without a person:
+#   unchanged  the lock already says this - nothing to do
+#   safe       new versions under signers already pinned, nothing else -
+#              the workflow commits the lock to main by itself
+#   review     a signer pinned for the first time, or a version whose bytes
+#              or URLs changed - main is left alone and an issue is opened
 #
 # The maintainer's whole routine in one command, and what the scheduled
 # workflow runs (.github/workflows/lock-refresh.yml). It changes files in
@@ -30,10 +38,11 @@ fi
 cd "${APKS_DIR:-$here}"
 FETCH="${FETCH:-$here/fetch.sh}"; VERIFY="${VERIFY:-$here/verify.sh}"; LOCKER="${LOCKER:-$here/lock.sh}"
 
-summary=""
+summary=""; verdict_file=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --summary) summary="${2:?--summary needs a file}"; shift 2;;
+    --verdict) verdict_file="${2:?--verdict needs a file}"; shift 2;;
     *) echo "refresh-lock: unknown argument $1" >&2; exit 2;;
   esac
 done
@@ -103,3 +112,20 @@ report() {
 }
 if [ -n "$summary" ]; then report > "$summary"; fi
 report
+
+# "safe" is defined by what it is, not by what it is not: the same packages
+# and ABIs as before, every changed entry a new version, no signer pinned for
+# the first time. Everything else - an app added or removed, a same-version
+# rebuild, a new signer even with an unchanged lock - is "review". A rule
+# defined as "not suspicious" lets through whatever nobody thought of.
+same_keys="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
+  ([$o[0].entries[] | "\(.pkg) \(.abi)"] | sort) == ([$n[0].entries[] | "\(.pkg) \(.abi)"] | sort)')"
+only_versions="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
+  ($o[0].entries | map({key: "\(.pkg) \(.abi)", value: .}) | from_entries) as $ov
+  | all($n[0].entries[]; ($ov["\(.pkg) \(.abi)"]) as $w | $w == null or $w == . or $w.version != .version)')"
+if [ -n "$new_certs" ]; then verdict=review
+elif cmp -s "$old" lock.json; then verdict=unchanged
+elif [ "$same_keys" = true ] && [ "$only_versions" = true ] && [ -z "$rebuilt$gone" ]; then verdict=safe
+else verdict=review; fi
+[ -z "$verdict_file" ] || printf '%s\n' "$verdict" > "$verdict_file"
+echo "verdict: $verdict"
