@@ -67,6 +67,12 @@ t "no digest: the one asset of this size, by its bytes" '[ "$(urls b.old)" = "ht
 t "Tor: the archive, and not the mirror that serves nothing" '[ "$(urls org.torproject.torbrowser)" = "https://archive.torproject.org/tor-package-archive/torbrowser/15.0/tor-browser-android-aarch64-15.0.apk" ]'
 t "each entry carries the versionCode aapt2 read"   '[ "$(jq -r ".entries[] | select(.pkg == \"a.dig\") | .versionCode" "$tmp/inv/lock.json")" = 10 ]'
 
+run
+t "the same inventory again: the file is left alone, date included" '[ $? = 0 ] && [ "$(jq -r .generated "$tmp/inv/lock.json")" != before ] && g1="$(jq -r .generated "$tmp/inv/lock.json")" && sleep 1 && run && [ "$(jq -r .generated "$tmp/inv/lock.json")" = "$g1" ] && grep -q "left as it is" "$tmp/out"'
+
+jq '.lockVersion = 0' "$tmp/inv/lock.json" > "$tmp/l0" && mv "$tmp/l0" "$tmp/inv/lock.json"; run
+t "same entries but lockVersion 0: rewritten, not left alone" '[ $? = 0 ] && [ "$(jq -r .lockVersion "$tmp/inv/lock.json")" = 1 ]'
+
 setup
 serve https://dist.torproject.org/torbrowser/15.0/tor-browser-android-aarch64-15.0.apk "$tmp/inv/arm64-v8a/org.torproject.torbrowser-15.0.apk"
 run

@@ -382,13 +382,14 @@
       "pkg_status": "verified",
       "source": "obtainium",
       "upstream": "https://github.com/celzero/rethink-app",
+      "asset_exclude": "izzy",
       "profiles": [
         "cloud",
         "gadgets",
         "work"
       ],
       "net": true,
-      "notes": "Occupies the VPN slot. Cloud=monitor, Gadgets=aggressive."
+      "notes": "Occupies the VPN slot. Cloud=monitor, Gadgets=aggressive. Since 0.5.7 every release also carries rethink-*-izzy-* builds for IzzyOnDroid, signed with a different key; fetch.sh took the izzy universal build and the signer pin rejected it (2026-09-30). The regular builds are still signed with the pinned Celzero key, so the izzy ones are excluded."
     },
     {
       "id": "speediance",

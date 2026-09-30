@@ -1,0 +1,103 @@
+name: lock refresh
+
+# Keeps apks/lock.json current, so a first install is days old at most rather
+# than as old as the last time somebody remembered (decision 0013, and the
+# measurement behind this: 10 of ~20 checkable apps were behind upstream on
+# 2026-09-30, among them Signal, Bitwarden, Orbot and Tor Browser).
+#
+# It does on a runner what the maintainer did by hand - fetch.sh, verify.sh,
+# lock.sh, all of it in apks/refresh-lock.sh - and proposes the result as a
+# pull request. It never merges: the new lock goes through review and
+# bin/pr-gate like any change. A signer that changed fails the fetch, and the
+# job with it; a signer seen for the first time is named in the pull request.
+#
+# Checks on that pull request: a pull request opened with GITHUB_TOKEN starts
+# no workflows (GitHub's rule against recursion). With a secret
+# LOCK_REFRESH_TOKEN - a fine-grained token with contents and pull-requests
+# write on this repository - it is opened under that token and every check
+# runs as for any other. Without one, this job dispatches `verify` on the
+# branch itself, which GitHub does allow.
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: lock-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.LOCK_REFRESH_TOKEN || github.token }}
+
+      - name: Android build tools on PATH
+        # The runner image ships the Android SDK; the newest build-tools
+        # carry aapt2 and apksigner. Their versions go into the log, so a
+        # lock can always be traced to the tools that checked it.
+        run: |
+          set -euo pipefail
+          bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          echo "$bt" >> "$GITHUB_PATH"
+          "$bt/aapt2" version
+          "$bt/apksigner" --version
+          gpg --version | head -1
+
+      - name: Fetch, verify, lock
+        env:
+          # Authenticated release queries: 5000 an hour instead of the 60 an
+          # unauthenticated runner address shares with everybody else.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: apks/refresh-lock.sh --summary "$RUNNER_TEMP/summary.md"
+
+      - name: Propose the new lock
+        env:
+          GH_TOKEN: ${{ secrets.LOCK_REFRESH_TOKEN || github.token }}
+          HAS_PAT: ${{ secrets.LOCK_REFRESH_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- apks/; then
+            echo "The lock is current - nothing to propose."
+            exit 0
+          fi
+          make check
+          branch="lock-refresh/$(date -u +%Y-%m-%d)"
+          git config user.name "andashi lock refresh"
+          git config user.email "lock-refresh@users.noreply.github.com"
+          git switch -c "$branch"
+          git add apks/lock.json apks/SHA256SUMS apks/certs
+          {
+            echo "Lock refresh $(date -u +%Y-%m-%d)"
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+          } > "$RUNNER_TEMP/message"
+          # The attribution rule, applied here: commit-hygiene.yml runs on
+          # pull_request, which a GITHUB_TOKEN pull request never triggers.
+          sh .githooks/commit-msg "$RUNNER_TEMP/message"
+          git commit -q -F "$RUNNER_TEMP/message"
+          # A second run on the same day meets its own branch: fetch it, so
+          # the lease has something to compare against, and replace it.
+          git fetch -q origin "$branch" 2>/dev/null || true
+          git push -q --force-with-lease origin "$branch"
+          # Only an OPEN pull request counts; one closed or merged earlier
+          # today must not stop a new one.
+          open="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$open" ]; then
+            gh pr edit "$open" --body-file "$RUNNER_TEMP/summary.md"
+          else
+            gh pr create --base main --head "$branch" \
+              --title "Lock refresh $(date -u +%Y-%m-%d)" --body-file "$RUNNER_TEMP/summary.md"
+          fi
+          if [ "$HAS_PAT" != true ]; then
+            gh workflow run verify --ref "$branch"
+          fi

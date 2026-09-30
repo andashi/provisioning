@@ -3,6 +3,10 @@ name: verify
 on:
   push:
   pull_request:
+  # The scheduled lock refresh opens its pull request with GITHUB_TOKEN, which
+  # starts no workflows; it dispatches this one on its branch instead
+  # (.github/workflows/lock-refresh.yml).
+  workflow_dispatch:
 
 jobs:
   config:
