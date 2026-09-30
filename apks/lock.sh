@@ -169,7 +169,15 @@ if [ "${#missing[@]}" -gt 0 ]; then
   bad "${#missing[@]} file(s) could not be locked - lock.json NOT written"
   exit 1
 fi
-jq -n --argjson e "$entries" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{lockVersion: 1, generated: $at, entries: ($e | sort_by(.pkg, .abi))}' > "$OUT.tmp"
+# A lock whose entries did not change keeps its file, date included: the
+# scheduled refresh proposes a new lock only when there is a new lock, not
+# every morning because the clock moved.
+sorted="$(jq -c 'sort_by(.pkg, .abi)' <<<"$entries")"
+if [ -f "$OUT" ] && [ "$(jq -cS '.entries' "$OUT" 2>/dev/null)" = "$(jq -cS . <<<"$sorted")" ]; then
+  log "$(jq length <<<"$sorted") file(s) - the lock in $OUT already says exactly this, left as it is"
+  exit 0
+fi
+jq -n --argjson e "$sorted" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{lockVersion: 1, generated: $at, entries: $e}' > "$OUT.tmp"
 mv "$OUT.tmp" "$OUT"
 log "$(jq '.entries | length' "$OUT") file(s) locked in $OUT"

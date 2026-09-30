@@ -131,6 +131,18 @@ pick_asset() {   # stdin = JSON array of assets; picks the best APK URL
 PRUNE=0
 [ "${1:-}" = "--prune" ] && { PRUNE=1; shift; }
 
+# GitHub's release API allows 60 unauthenticated requests an hour per address.
+# One pass over the catalog takes about 22, and a runner shares its address
+# with strangers - the scheduled lock refresh ran out after two passes on
+# 2026-09-30 and reported seven "release query failed". With GITHUB_TOKEN or
+# GH_TOKEN set, the requests are authenticated (5000 an hour); the token only
+# reads public releases.
+gh_curl() {   # $1=api url
+  local tok="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [ -n "$tok" ]; then curl -fsSL -H "Authorization: Bearer $tok" "$1" 2>/dev/null
+  else curl -fsSL "$1" 2>/dev/null; fi
+}
+
 # Old versions pile up: nothing ever deleted them, SHA256SUMS lists every file
 # on disk, and Tor Browser alone is ~106 MB per version and ABI. Harmless for
 # installs (apk_for_pkg takes the highest version) but not free.
@@ -261,9 +273,9 @@ for id in "${ids[@]}"; do
   # package name).
   pin=$(jq -r 'if has("release_tag") then .release_tag else empty end' <<<"$row")
   if [ -n "$pin" ]; then
-    rel=$(curl -fsSL "https://api.github.com/repos/$slug/releases/tags/$pin" 2>/dev/null)
+    rel=$(gh_curl "https://api.github.com/repos/$slug/releases/tags/$pin")
   else
-    rel=$(curl -fsSL "https://api.github.com/repos/$slug/releases/latest" 2>/dev/null)
+    rel=$(gh_curl "https://api.github.com/repos/$slug/releases/latest")
   fi
   [ -z "$rel" ] && { bad "$label: release query failed${pin:+ (tag $pin)}"; fail=1; continue; }
   tag=$(jq -r '.tag_name // "?"' <<<"$rel")

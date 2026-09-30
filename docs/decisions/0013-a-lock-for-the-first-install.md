@@ -44,10 +44,20 @@ this project conveys, with each licence's obligations attached.
 - Two machines provisioning from the same lock install the same builds.
 - **The price:** the first install is as current as the last lock. A fix Signal
   ships tomorrow reaches a new phone when somebody runs `fetch.sh`,
-  `verify.sh` and `lock.sh` and commits the result. After the first install
-  nothing changes: every zone keeps updating itself through Obtainium
-  ([0012](0012-every-zone-updates-itself.md)). The lock decides what a phone
-  starts from, not what it gets afterwards.
+  `verify.sh` and `lock.sh` and commits the result. On the day this was
+  decided, 10 of about 20 apps that could be checked were behind upstream -
+  Signal, Bitwarden, Orbot and Tor Browser among them.
+  **Amended 2026-09-30:** that somebody is a scheduled workflow now
+  (`.github/workflows/lock-refresh.yml`, running `apks/refresh-lock.sh`
+  daily). It proposes each new lock as a pull request and never merges it; a
+  changed signer fails it, a newly pinned one is named at the top of the
+  pull request.
+- **What happens after the first install is not settled by this decision.**
+  It leaned on Obtainium ([0012](0012-every-zone-updates-itself.md)), and
+  measuring that showed it does not happen by itself: Obtainium knows no app
+  after provisioning, may not install, and an app installed over adb needs a
+  person's confirmation for its first update
+  ([provisioning#18](https://github.com/andashi/provisioning/issues/18)).
 - A lock can rot: an upstream may delete even the archived build. `from-lock.sh`
   then says which app it could not get and that nothing else was touched; the
   answer is a new lock, not a fallback to "whatever is latest".

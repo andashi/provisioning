@@ -30,7 +30,10 @@ fresh; lk "del(.entries[] | $H)"
 t "a pinned app missing from the lock" "org.andashi.home (universal): provisioning would install universal/org.andashi.home-0.12.0.apk, the lock has nothing"
 fresh; printf '%s  universal/org.andashi.home-0.13.0.apk\n' "$(printf %064d 1)" >> "$tmp/SHA256SUMS"
 t "fetch.sh brought a newer build, the lock was not renewed" "provisioning would install universal/org.andashi.home-0.13.0.apk"
-fresh; jq '(.apps[] | select(.pkg == "org.andashi.home") | .release_tag) = "v0.11.0"' "$tmp/apps.json" > "$tmp/a" && mv "$tmp/a" "$tmp/apps.json"
+# The case brings its own older build into the inventory list: after a
+# refresh, SHA256SUMS holds only the newest file per app.
+fresh; printf '%s  universal/org.andashi.home-0.11.0.apk\n' "$(printf %064d 2)" >> "$tmp/SHA256SUMS"
+jq '(.apps[] | select(.pkg == "org.andashi.home") | .release_tag) = "v0.11.0"' "$tmp/apps.json" > "$tmp/a" && mv "$tmp/a" "$tmp/apps.json"
 t "a release_tag pin decides which file belongs in the lock" "provisioning would install universal/org.andashi.home-0.11.0.apk"
 fresh; jq 'del(.apps[] | select(.pkg == "org.andashi.home"))' "$tmp/apps.json" > "$tmp/a" && mv "$tmp/a" "$tmp/apps.json"
 t "an entry for a package the catalog dropped" "org.andashi.home is not in the catalog"
