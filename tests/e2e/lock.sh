@@ -43,6 +43,8 @@ check "... exactly the $want the lock names for x86_64" '[ "$(find "$APKS" -name
 printf '\n== the full chain from clean\n'
 "$ROOT/emulator/run.sh" restore clean >/dev/null 2>&1 || { echo "could not restore clean"; exit 1; }
 sleep 5
+# shellcheck source=identity.sh
+source "$ROOT/tests/e2e/identity.sh"; as_shell
 dev="$(printf %s "$SERIAL" | tr -c 'A-Za-z0-9_.-' _)"
 rm -rf "$ROOT/.provision-state/"{launcher-sha,applied,pending,installed}/"$dev"
 t0="$(date +%s)"
@@ -56,6 +58,8 @@ check "no version was left uncompared for want of aapt2" '! grep -q "versions no
 check "every installed app matches the locked inventory" 'grep -qE "[0-9]+ app\(s\) match the APK inventory on the host" "$WORK/run.log" && ! grep -q "differ from the host inventory" "$WORK/run.log"'
 check "all zones converged and verified" 'grep -q "All profiles converged and verified" "$WORK/run.log"'
 check "Andashi Home is the locked build" '[ "$(adb -s "$SERIAL" shell dumpsys package org.andashi.home | tr -d "\r" | sed -n "s/.*versionName=//p" | head -1)" = "$(jq -r ".entries[] | select(.pkg == \"org.andashi.home\") | .version" "$ROOT/apks/lock.json")" ]'
+
+check "adbd still ran as shell at the end" '[ "$(adb -s "$SERIAL" shell id -u | tr -d "\r")" = 2000 ]'
 
 printf '\n  %d ok, %d failed   (chain %ss)\n  logs: %s\n' "$pass" "$fail" "$secs" "$WORK"
 [ "$fail" = 0 ]

@@ -7,7 +7,8 @@
 # Needs a running instance at a provisioned snapshot, and the device lock held
 # by LOCK_OWNER (AGENTS.md). Restores SNAPSHOT before it starts, so it begins
 # from a known phone; leaves the instance at whatever the last case produced.
-# Every adb call runs as `shell`: nothing here uses root.
+# Every adb call runs as `shell`, and that is asserted after the restore
+# (tests/e2e/identity.sh): a snapshot can carry a root adbd.
 #
 # It works on a COPY of config/ (a private catalog, as a person would have),
 # so adopting edits from the phone has somewhere to write and the template is
@@ -61,6 +62,8 @@ foreground_home() {
 section "setup: $SNAPSHOT on $SERIAL"
 "$ROOT/emulator/run.sh" restore "$SNAPSHOT" >/dev/null 2>&1 || { echo "could not restore $SNAPSHOT"; exit 1; }
 sleep 5
+# shellcheck source=identity.sh
+source "$ROOT/tests/e2e/identity.sh"; as_shell
 # The host's records describe the phone as the LAST run left it, and a restored
 # snapshot is a different phone under the same serial. Kept, they make every
 # guard in the chain see edits nobody made (the first run of this file found
@@ -270,6 +273,8 @@ run typo andashi status --zone lap
 check "an unknown zone refuses" '[ $RC != 0 ] && grep -q "not a zone" "$LOG/typo"'
 run only-typo andashi apply --only themes
 check "an unknown section refuses" '[ $RC != 0 ] && grep -q "not a section" "$LOG/only-typo"'
+
+check "adbd still ran as shell at the end" '[ "$(adb -s "$SERIAL" shell id -u | tr -d "\r")" = 2000 ]'
 
 printf '\n  %d ok, %d failed   (full run %ss, one-zone glass change %ss)\n' "$pass" "$fail" "$FULL_SECS" "$TINT_SECS"
 printf '  logs: %s\n' "$LOG"
