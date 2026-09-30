@@ -1,31 +1,44 @@
 name: lock refresh
 
-# Keeps apks/lock.json current, so a first install is days old at most rather
-# than as old as the last time somebody remembered (decision 0013, and the
-# measurement behind this: 10 of ~20 checkable apps were behind upstream on
-# 2026-09-30, among them Signal, Bitwarden, Orbot and Tor Browser).
+# Keeps apks/lock.json current without a person (decision 0013). On
+# 2026-09-30, 10 of about 20 checkable apps in the lock were behind upstream,
+# among them Signal, Bitwarden, Orbot and Tor Browser.
 #
-# It does on a runner what the maintainer did by hand - fetch.sh, verify.sh,
-# lock.sh, all of it in apks/refresh-lock.sh - and proposes the result as a
-# pull request. It never merges: the new lock goes through review and
-# bin/pr-gate like any change. A signer that changed fails the fetch, and the
-# job with it; a signer seen for the first time is named in the pull request.
+# It runs apks/refresh-lock.sh - fetch both ABIs, verify hashes and pinned
+# signers, lock - and acts on its verdict:
 #
-# Checks on that pull request: a pull request opened with GITHUB_TOKEN starts
-# no workflows (GitHub's rule against recursion). With a secret
-# LOCK_REFRESH_TOKEN - a fine-grained token with contents and pull-requests
-# write on this repository - it is opened under that token and every check
-# runs as for any other. Without one, this job dispatches `verify` on the
-# branch itself, which GitHub does allow.
+#   unchanged  nothing to do
+#   safe       new versions under signers already pinned, nothing else:
+#              make check, then the lock is committed to the target branch
+#              (main) directly. This is the one change that reaches main
+#              without a pull request, on purpose and only under these
+#              conditions (AGENTS.md, "The lock refresh").
+#   review     a signer pinned for the first time, or a version whose bytes
+#              or URLs changed: main is left alone, the result is pushed to a
+#              branch, and an issue labelled lock-refresh asks for a look.
+#
+# A run that fails - a signer that CHANGED makes fetch.sh reject the build and
+# fail - opens or updates the same kind of issue. So the maintainer is
+# involved exactly when something is unusual, and otherwise never.
+#
+# Everything uses GITHUB_TOKEN: pushing and opening issues need no extra
+# token and no repository setting. A push with GITHUB_TOKEN starts no
+# workflows, so the job dispatches `verify` on the new head itself -
+# bin/pr-gate requires a green run on main before the next merge.
 
 on:
   schedule:
     - cron: '17 5 * * *'
   workflow_dispatch:
+    inputs:
+      target:
+        description: Branch a safe lock is committed to (main; another branch only to test this workflow)
+        default: main
+        required: true
 
 permissions:
   contents: write
-  pull-requests: write
+  issues: write
   actions: write
 
 concurrency:
@@ -36,15 +49,19 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      TARGET: ${{ inputs.target || 'main' }}
+      GH_TOKEN: ${{ github.token }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.LOCK_REFRESH_TOKEN || github.token }}
+          ref: ${{ inputs.target || 'main' }}
 
       - name: Android build tools on PATH
-        # The runner image ships the Android SDK; the newest build-tools
-        # carry aapt2 and apksigner. Their versions go into the log, so a
-        # lock can always be traced to the tools that checked it.
+        # The runner image ships the Android SDK; the newest build-tools carry
+        # aapt2 and apksigner. Their versions go into the log, so a lock can
+        # always be traced to the tools that checked it.
         run: |
           set -euo pipefail
           bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
@@ -58,50 +75,86 @@ jobs:
           # Authenticated release queries: 5000 an hour instead of the 60 an
           # unauthenticated runner address shares with everybody else.
           GITHUB_TOKEN: ${{ github.token }}
-        run: apks/refresh-lock.sh --summary "$RUNNER_TEMP/summary.md"
+        run: apks/refresh-lock.sh --summary "$RUNNER_TEMP/summary.md" --verdict "$RUNNER_TEMP/verdict"
 
-      - name: Propose the new lock
-        env:
-          GH_TOKEN: ${{ secrets.LOCK_REFRESH_TOKEN || github.token }}
-          HAS_PAT: ${{ secrets.LOCK_REFRESH_TOKEN != '' }}
+      - name: Act on the verdict
         run: |
           set -euo pipefail
-          if git diff --quiet -- apks/; then
-            echo "The lock is current - nothing to propose."
-            exit 0
-          fi
+          verdict="$(cat "$RUNNER_TEMP/verdict")"
+          day="$(date -u +%Y-%m-%d)"
+          echo "verdict: $verdict"
+          [ "$verdict" != unchanged ] || { echo "The lock is current - nothing to do."; exit 0; }
+
           make check
-          # No slash: a branch named lock-refresh would make every
-          # lock-refresh/<date> unpushable ("directory file conflict") - which
-          # is how the first run on GitHub failed, against the branch of the
-          # pull request that introduced this workflow.
-          branch="lock-refresh-$(date -u +%Y-%m-%d)"
           git config user.name "andashi lock refresh"
           git config user.email "lock-refresh@users.noreply.github.com"
-          git switch -c "$branch"
           git add apks/lock.json apks/SHA256SUMS apks/certs
-          {
-            echo "Lock refresh $(date -u +%Y-%m-%d)"
-            echo
-            cat "$RUNNER_TEMP/summary.md"
-          } > "$RUNNER_TEMP/message"
-          # The attribution rule, applied here: commit-hygiene.yml runs on
-          # pull_request, which a GITHUB_TOKEN pull request never triggers.
+          { echo "Lock refresh $day"; echo; cat "$RUNNER_TEMP/summary.md"; } > "$RUNNER_TEMP/message"
+          # The attribution rule, applied here: no pull request runs
+          # commit-hygiene.yml over this commit.
           sh .githooks/commit-msg "$RUNNER_TEMP/message"
           git commit -q -F "$RUNNER_TEMP/message"
-          # A second run on the same day meets its own branch: fetch it, so
-          # the lease has something to compare against, and replace it.
-          git fetch -q origin "$branch" 2>/dev/null || true
-          git push -q --force-with-lease origin "$branch"
-          # Only an OPEN pull request counts; one closed or merged earlier
-          # today must not stop a new one.
-          open="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
-          if [ -n "$open" ]; then
-            gh pr edit "$open" --body-file "$RUNNER_TEMP/summary.md"
-          else
-            gh pr create --base main --head "$branch" \
-              --title "Lock refresh $(date -u +%Y-%m-%d)" --body-file "$RUNNER_TEMP/summary.md"
+
+          if [ "$verdict" = safe ]; then
+            # Straight onto the target. If somebody pushed meanwhile, the lock
+            # commit goes on top of theirs; it touches apks/ only, so a
+            # conflict means somebody else changed the lock - then a person
+            # decides, and main stays as it is.
+            for attempt in 1 2 3; do
+              if git push -q origin "HEAD:$TARGET"; then
+                echo "committed to $TARGET: $(git rev-parse --short HEAD)"
+                gh workflow run verify --ref "$TARGET"
+                exit 0
+              fi
+              git fetch -q origin "$TARGET"
+              git rebase -q "origin/$TARGET" || { git rebase --abort; break; }
+              make check
+            done
+            echo "could not put the lock onto $TARGET - asking for review instead" | tee -a "$RUNNER_TEMP/summary.md"
           fi
-          if [ "$HAS_PAT" != true ]; then
-            gh workflow run verify --ref "$branch"
+
+          # review: the result on a branch, and an issue that says why.
+          branch="lock-refresh-$day"
+          git fetch -q origin "$branch" 2>/dev/null || true
+          git push -q --force-with-lease origin "HEAD:refs/heads/$branch"
+          {
+            echo "The scheduled lock refresh found something a person should look at, and left \`$TARGET\` alone."
+            echo
+            echo "- The proposed lock: branch [\`$branch\`](${{ github.server_url }}/${{ github.repository }}/compare/$TARGET...$branch)"
+            echo "- The run: $RUN_URL"
+            echo "- To take it after checking: merge the branch through a pull request as usual."
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+          } > "$RUNNER_TEMP/issue.md"
+          echo "ISSUE_TITLE=Lock refresh $day needs a look" >> "$GITHUB_ENV"
+          echo "ISSUE_FILE=$RUNNER_TEMP/issue.md" >> "$GITHUB_ENV"
+
+      - name: A failed run is an issue too
+        if: failure()
+        run: |
+          {
+            echo "The scheduled lock refresh failed, and nothing was changed."
+            echo
+            echo "The run, with the reason in its log: $RUN_URL"
+            echo
+            echo "The usual cause is a signer that changed upstream: fetch.sh rejects that build and says which app in the log line starting with \`x\`. An upstream that was briefly unreachable is the other one; the next run tries again."
+          } > "$RUNNER_TEMP/issue.md"
+          echo "ISSUE_TITLE=Lock refresh $(date -u +%Y-%m-%d) failed" >> "$GITHUB_ENV"
+          echo "ISSUE_FILE=$RUNNER_TEMP/issue.md" >> "$GITHUB_ENV"
+
+      - name: Open or update the issue
+        if: always() && env.ISSUE_FILE != ''
+        run: |
+          set -euo pipefail
+          gh label create lock-refresh --color BFD4F2 --description "Raised by the scheduled lock refresh" 2>/dev/null || true
+          # One open issue per kind of trouble at a time: a second day with the
+          # same problem is a comment on it, not another issue.
+          case "$ISSUE_TITLE" in *"needs a look") kind="needs a look";; *) kind="failed";; esac
+          open="$(gh issue list --label lock-refresh --state open --json number,title \
+                  | jq -r --arg k "$kind" '[.[] | select(.title | endswith($k))][0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file "$ISSUE_FILE"
+            echo "commented on #$open"
+          else
+            gh issue create --title "$ISSUE_TITLE" --label lock-refresh --body-file "$ISSUE_FILE"
           fi

@@ -26,13 +26,13 @@ e() { jq -n --arg p "$1" --arg v "$2" --arg s "$3" '{pkg: $p, label: $p, abi: "u
 lockof() { jq -s '{lockVersion: 1, generated: "g", entries: .}'; }
 setup() {   # stdin: the lock as it is before
   rm -rf "$tmp/inv"; mkdir -p "$tmp/inv/certs"; echo a > "$tmp/inv/certs/app.a.cert"
-  cat > "$tmp/inv/lock.json"; : > "$tmp/calls"; rm -f "$tmp/summary.md"
+  cat > "$tmp/inv/lock.json"; : > "$tmp/calls"; rm -f "$tmp/summary.md" "$tmp/verdict"
 }
 run() {   # env passed through; stdin: the lock lock.sh "writes"
   cat > "$tmp/newlock"
   CALLS="$tmp/calls" FAKE_LOCK="$tmp/newlock" APKS_DIR="$tmp/inv" \
     FETCH="$tmp/fake/fetch" VERIFY="$tmp/fake/verify" LOCKER="$tmp/fake/lock" \
-    "$@" "$root/apks/refresh-lock.sh" --summary "$tmp/summary.md" > "$tmp/out" 2>&1
+    "$@" "$root/apks/refresh-lock.sh" --summary "$tmp/summary.md" --verdict "$tmp/verdict" > "$tmp/out" 2>&1
 }
 
 { e app.a 1.0 aa; } | lockof | setup
@@ -41,21 +41,25 @@ t "both ABIs are fetched, the second pass prunes, then verify, then lock" \
   '[ "$(tr "\n" "|" < "$tmp/calls")" = "fetch arm64-v8a |fetch x86_64 --prune|verify|lock|" ]'
 t "a new version is a row: was, now"              'grep -qF "| app.a | universal | 1.0 | 1.1 |" "$tmp/summary.md"'
 t "... and nothing claims the lock did not change" '! grep -q "did not change" "$tmp/summary.md"'
+t "... verdict: safe - main may take it without a person" '[ "$(cat "$tmp/verdict")" = safe ]'
 
 { e app.a 1.0 aa; } | lockof | setup
 { e app.a 1.0 aa; } | lockof | run env FAKE_FETCH_FAIL=1
 t "a failed fetch stops everything: exit non-zero" '[ $? != 0 ]'
 t "... no verify, no lock, no summary"            '! grep -qE "verify|lock" "$tmp/calls" && [ ! -e "$tmp/summary.md" ]'
+t "... and no verdict to act on"                  '[ ! -e "$tmp/verdict" ]'
 
 { e app.a 1.0 aa; } | lockof | setup
 { e app.a 1.0 aa; e app.b 2.0 bb; } | lockof | run env FAKE_NEW_CERT=app.b
 t "a signer pinned for the first time comes first" '[ "$(grep -m1 "^## " "$tmp/summary.md")" = "## ⚠ Signers pinned for the first time - review before merging" ] && grep -q "\`app.b\`" "$tmp/summary.md"'
 t "... and the new app is a row too"              'grep -qF "| app.b | universal | new | 2.0 |" "$tmp/summary.md"'
+t "... verdict: review"                           '[ "$(cat "$tmp/verdict")" = review ]'
 
 { e app.a 1.0 aa; } | lockof | setup
 { e app.a 1.0 zz; } | lockof | run env
 t "same version, other bytes: its own section, first" '[ "$(grep -m1 "^## " "$tmp/summary.md")" = "## Same version, changed entry - look at these" ] && grep -qF "| app.a | universal | 1.0 | same version, OTHER BYTES |" "$tmp/summary.md"'
 t "... and not \"did not change\""                 '! grep -q "did not change" "$tmp/summary.md"'
+t "... verdict: review"                           '[ "$(cat "$tmp/verdict")" = review ]'
 
 { e app.a 1.0 aa; e app.gone 3.0 cc; } | lockof | setup
 { e app.a 1.0 aa; } | lockof | run env
@@ -64,6 +68,7 @@ t "an entry that left the lock is a row"          'grep -qF "| app.gone | univer
 { e app.a 1.0 aa; } | lockof | setup
 { e app.a 1.0 aa; } | lockof | run env
 t "nothing changed: says so"                      '[ $? = 0 ] && grep -q "The lock did not change." "$tmp/summary.md"'
+t "... verdict: unchanged"                        '[ "$(cat "$tmp/verdict")" = unchanged ]'
 
 APKS_DIR="$tmp/inv" "$root/apks/refresh-lock.sh" > "$tmp/out" 2>&1
 t "another inventory with the real fetch and verify is refused" '[ $? = 2 ] && grep -q "only work in" "$tmp/out"'

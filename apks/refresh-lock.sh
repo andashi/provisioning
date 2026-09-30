@@ -2,7 +2,15 @@
 # Brings apks/lock.json up to what the upstreams publish today: fetch both
 # ABIs, verify hashes and signers, write the lock, and say what changed.
 #
-#   apks/refresh-lock.sh [--summary FILE]
+#   apks/refresh-lock.sh [--summary FILE] [--verdict FILE]
+#
+# The verdict file gets one word, and the scheduled workflow acts on it
+# without a person:
+#   unchanged  the lock already says this - nothing to do
+#   safe       new versions under signers already pinned, nothing else -
+#              the workflow commits the lock to main by itself
+#   review     a signer pinned for the first time, or a version whose bytes
+#              or URLs changed - main is left alone and an issue is opened
 #
 # The maintainer's whole routine in one command, and what the scheduled
 # workflow runs (.github/workflows/lock-refresh.yml). It changes files in
@@ -30,10 +38,11 @@ fi
 cd "${APKS_DIR:-$here}"
 FETCH="${FETCH:-$here/fetch.sh}"; VERIFY="${VERIFY:-$here/verify.sh}"; LOCKER="${LOCKER:-$here/lock.sh}"
 
-summary=""
+summary=""; verdict_file=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --summary) summary="${2:?--summary needs a file}"; shift 2;;
+    --verdict) verdict_file="${2:?--verdict needs a file}"; shift 2;;
     *) echo "refresh-lock: unknown argument $1" >&2; exit 2;;
   esac
 done
@@ -103,3 +112,12 @@ report() {
 }
 if [ -n "$summary" ]; then report > "$summary"; fi
 report
+
+# Anything a reviewer must look at makes it "review"; only plain version
+# moves under known signers are "safe". An unchanged lock file is
+# "unchanged" whatever else happened, since there is nothing to commit.
+if cmp -s "$old" lock.json; then verdict=unchanged
+elif [ -n "$new_certs$rebuilt" ]; then verdict=review
+else verdict=safe; fi
+[ -z "$verdict_file" ] || printf '%s\n' "$verdict" > "$verdict_file"
+echo "verdict: $verdict"

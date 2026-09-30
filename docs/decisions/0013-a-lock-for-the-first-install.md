@@ -49,9 +49,12 @@ this project conveys, with each licence's obligations attached.
   Signal, Bitwarden, Orbot and Tor Browser among them.
   **Amended 2026-09-30:** that somebody is a scheduled workflow now
   (`.github/workflows/lock-refresh.yml`, running `apks/refresh-lock.sh`
-  daily). It proposes each new lock as a pull request and never merges it; a
-  changed signer fails it, a newly pinned one is named at the top of the
-  pull request.
+  daily), and it needs nobody in the ordinary case: new versions under
+  signers already pinned are committed to `main` directly, after
+  `make check`. A signer pinned for the first time, a same-version rebuild or
+  a failed run (a changed signer fails `fetch.sh`) leave `main` alone and
+  open an issue instead. That is the one change allowed onto `main` without a
+  pull request; AGENTS.md says why and fences it in.
 - **What happens after the first install is not settled by this decision.**
   It leaned on Obtainium ([0012](0012-every-zone-updates-itself.md)), and
   measuring that showed it does not happen by itself: Obtainium knows no app

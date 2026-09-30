@@ -73,8 +73,10 @@ and signers were checked when it was written. No JDK, no Android build tools,
 no gpg ([0013](docs/decisions/0013-a-lock-for-the-first-install.md)).
 `fetch.sh` is the maintainer's side, and it runs daily on its own:
 `.github/workflows/lock-refresh.yml` fetches, verifies and locks
-(`apks/refresh-lock.sh`) and opens a pull request when anything changed. By
-hand it is the same command; `make check` fails until the lock is renewed.
+(`apks/refresh-lock.sh`). New versions under the pinned signers go onto `main`
+by themselves; anything unusual - a new signer, a rebuilt version, a failed
+run - becomes an issue labelled `lock-refresh` instead. By hand it is the same
+command; `make check` fails until the lock is renewed.
 
 `make update` matters more than it looks: four zones carry no app store, so for
 everything this repository fetches, the chain is the update mechanism. Each run

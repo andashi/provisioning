@@ -62,6 +62,24 @@ any other way. It refuses unless:
 - `main` itself is green. An unfinished run means wait, a red one means fix
   `main` first.
 
+## The lock refresh: the one exception
+
+`.github/workflows/lock-refresh.yml` commits `apks/lock.json`, `apks/SHA256SUMS`
+and `apks/certs/` to `main` **without a pull request** - daily, and only when
+`apks/refresh-lock.sh` rules the change `safe`: new versions under signers that
+were already pinned, `make check` green on the result, nothing else. The
+checks that matter for these files are the hash and the pinned signer, and
+they ran; a review of a table of hashes and URLs adds little, and a lock that
+waits for one is a stale first install.
+
+Anything else is `review`: a signer pinned for the first time, a version whose
+bytes or URLs changed, or a failed run (a changed signer fails `fetch.sh`).
+Then `main` is left alone and an issue labelled `lock-refresh` says why. Take
+such a lock only through a pull request, after looking.
+
+Nothing else reaches `main` this way, and the workflow must not be widened to
+other files.
+
 ## Tests
 
 Two levels, and a change names which one proves it.
