@@ -166,12 +166,24 @@ while read -r key; do
   # Only from the list of what this chain put here. `pm uninstall --user`
   # removes the app and its data from this zone and nowhere else. PRUNE=0
   # keeps them, for a run that should only add.
+  #
+  # Everything below reads the zone's packages ONCE, with the read's status
+  # checked. pkg_installed_for_user answers "no" for a failed query as well as
+  # for an absent package, and here "no" means "nothing to remove" and "drop
+  # it from the record" - a flaky adb call would quietly turn an owed removal
+  # into somebody's own app. An inventory that cannot be read skips all of it
+  # and leaves the record as it was.
   rec="$(installed_record "$key")"
+  if ! inv="$(ash_ro pm list packages --user "$uid" 2>/dev/null | tr -d '\r')" || [ -z "$inv" ]; then
+    warn "$label: could not read its installed packages - removals and the install record are left for the next run"
+    continue
+  fi
+  inv=" $(sed -n 's/^package://p' <<<"$inv" | tr '\n' ' ') "
   if [ -f "$rec" ]; then
     while read -r p; do
       [ -n "$p" ] || continue
       case "$DECLARED" in *" $p "*) continue;; esac
-      pkg_installed_for_user "$p" "$uid" || continue
+      case "$inv" in *" $p "*) ;; *) continue;; esac
       if [ "${PRUNE:-1}" = "0" ]; then
         warn "$p: no longer in the catalog for $label - kept (PRUNE=0)"
         OWED="$OWED$p "
@@ -186,7 +198,10 @@ while read -r key; do
   # Somebody's own apps are theirs: named, never removed - unless a person asks
   # with PRUNE_UNDECLARED=1 (andashi apply --prune-undeclared), after `andashi
   # diff` has shown them.
-  third="$(ash_ro pm list packages -3 --user "$uid" 2>/dev/null | tr -d '\r' | sed -n 's/^package://p')" || third=""
+  if ! third="$(ash_ro pm list packages -3 --user "$uid" 2>/dev/null | tr -d '\r' | sed -n 's/^package://p')"; then
+    warn "$label: could not list its own apps - foreign apps not checked this run"
+    third=""
+  fi
   for p in $third; do
     case "$DECLARED$(zone_system_pkgs "$key")" in *" $p "*) continue;; esac
     grep -qxF "$p" "$rec" 2>/dev/null && continue    # handled above
@@ -199,11 +214,18 @@ while read -r key; do
     fi
   done
 
-  # The record is what the catalog declares AND the zone now holds.
+  # The record is what the catalog declares AND the zone now holds, plus what
+  # is still owed. Read again after the removals, and rewritten only from a
+  # read that worked.
   if [ "$DRY_RUN" != "1" ]; then
+    if ! inv="$(ash_ro pm list packages --user "$uid" 2>/dev/null | tr -d '\r')" || [ -z "$inv" ]; then
+      warn "$label: could not read its packages after the run - the install record is left as it was"
+      continue
+    fi
+    inv=" $(sed -n 's/^package://p' <<<"$inv" | tr '\n' ' ') "
     mkdir -p "$(dirname "$rec")"
     : > "$rec.tmp"
-    for p in $DECLARED; do pkg_installed_for_user "$p" "$uid" && printf '%s\n' "$p" >> "$rec.tmp"; done
+    for p in $DECLARED; do case "$inv" in *" $p "*) printf '%s\n' "$p" >> "$rec.tmp";; esac; done
     # A removal that failed, or was held back with PRUNE=0, stays on the
     # record: it is still owed. Dropped from it, the next run would take the
     # package for somebody's own and keep it - the catalog's removal quietly

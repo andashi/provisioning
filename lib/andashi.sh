@@ -148,17 +148,19 @@ declared_pkgs() {   # $1=zone -> package names, one per line
     jq -r .pkg <<<"$app"
   done < <(apps_for_profile "$1")
 }
-# Of those, the ones this host can install: those it has an APK for. Play and
-# manual apps go through MANUAL.md, and an app whose APK was never fetched
-# cannot be installed by running apply again - calling either "missing" would
-# make every apply start the zone to fail at the same thing.
-installable_pkgs() {   # $1=zone
+# Of those, the ones this host can install the way 10-apps.sh does: from an
+# APK it has, or with `pm install-existing` from another zone that holds it.
+# Play and manual apps go through MANUAL.md, and an app with neither path
+# cannot be installed by running apply again - calling any of those "missing"
+# would make every apply start the zone to fail at the same thing.
+installable_pkgs() {   # $1=zone $2=packages present on the device (any user), space separated
   local app feat pkg
   while read -r app; do
     feat="$(jq -r 'if has("feature") then .feature else "" end' <<<"$app")"
     [ -z "$feat" ] || feature_enabled "$feat" || continue
     case "$(jq -r .source <<<"$app")" in play-sandboxed|manual) continue;; esac
     pkg="$(jq -r .pkg <<<"$app")"
+    case " ${2:-} " in *" $pkg "*) printf '%s\n' "$pkg"; continue;; esac
     apk_for_pkg "$pkg" >/dev/null || continue
     printf '%s\n' "$pkg"
   done < <(apps_for_profile "$1")

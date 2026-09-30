@@ -210,10 +210,17 @@ lab_uid="$(A shell pm list users | tr -d '\r' | sed -n 's/.*UserInfo{\([0-9]*\):
 # Collect, then match. `grep -q` in a pipeline under pipefail exits at the
 # first match, adb dies of SIGPIPE, and the match reads as a miss - which
 # turns every "is not installed" check here into a pass (lib/common.sh).
-has_pkg() { local out; out="$(A shell pm list packages --user "$1" | tr -d '\r')"
-            case $'\n'"$out"$'\n' in *$'\n'"package:$2"$'\n'*) return 0;; *) return 1;; esac; }
-inlab()  { has_pkg "$lab_uid" "$1"; }
-inhome() { has_pkg 0 "$1"; }
+# And a failed query is neither answer: `pkg_state` prints yes or no only for
+# a list it read, and nothing otherwise - so after a failed query both
+# inlab and notinlab are false, and a check that relied on either fails
+# instead of passing on an empty list.
+pkg_state() { local out; out="$(A shell pm list packages --user "$1" | tr -d '\r')" && [ -n "$out" ] \
+                || { echo "e2e: could not list packages of user $1" >&2; return 1; }
+              case $'\n'"$out"$'\n' in *$'\n'"package:$2"$'\n'*) echo yes;; *) echo no;; esac; }
+inlab()     { [ "$(pkg_state "$lab_uid" "$1")" = yes ]; }
+inhome()    { [ "$(pkg_state 0 "$1")" = yes ]; }
+notinlab()  { [ "$(pkg_state "$lab_uid" "$1")" = no ]; }
+notinhome() { [ "$(pkg_state 0 "$1")" = no ]; }
 run app-add andashi app add tubular --zone lab
 check "app add edits the catalog, no phone involved" '[ $RC = 0 ] && jq -e ".apps[] | select(.id == \"tubular\") | .profiles | index(\"lab\")" "$CONFIG_DIR/apps.json" >/dev/null'
 run diff-add andashi diff --zone lab
@@ -224,7 +231,7 @@ run app-rm andashi app rm opencamera --zone home
 run diff-rm andashi diff --zone home
 check "diff says it will be removed" 'grep -q "apps to remove (no longer in the catalog): net.sourceforge.opencamera" "$LOG/diff-rm" || grep -q "inputs changed: .*apps" "$LOG/diff-rm"'
 run apply-rm andashi apply --zone home
-check "apply removes it from Home" '[ $RC = 0 ] && ! inhome net.sourceforge.opencamera && grep -q "net.sourceforge.opencamera removed - no longer in the catalog for Home" "$LOG/apply-rm"'
+check "apply removes it from Home" '[ $RC = 0 ] && notinhome net.sourceforge.opencamera && grep -q "net.sourceforge.opencamera removed - no longer in the catalog for Home" "$LOG/apply-rm"'
 A shell pm install-existing --user "$lab_uid" im.molly.app >/dev/null 2>&1
 check "an app installed by hand in Lab" 'inlab im.molly.app'
 run diff-foreign andashi diff --zone lab
@@ -235,7 +242,7 @@ check "apply keeps it" '[ $RC = 0 ] && inlab im.molly.app'
 run diff-prune andashi diff --zone lab --prune-undeclared
 check "diff --prune-undeclared previews the removal, exit 1" '[ $RC = 1 ] && grep -q "apps to remove (--prune-undeclared): .*im.molly.app" "$LOG/diff-prune"'
 run apply-prune andashi apply --zone lab --prune-undeclared
-check "--prune-undeclared removes it, and says so" '[ $RC = 0 ] && ! inlab im.molly.app && grep -q "im.molly.app removed - not in the catalog for Lab" "$LOG/apply-prune"'
+check "--prune-undeclared removes it, and says so" '[ $RC = 0 ] && notinlab im.molly.app && grep -q "im.molly.app removed - not in the catalog for Lab" "$LOG/apply-prune"'
 
 section "an unreadable catalog removes nothing"
 cp "$CONFIG_DIR/apps.json" "$WORK/apps.good"

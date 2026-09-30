@@ -40,6 +40,14 @@ t "a Play app into Anon is refused by the invariants" '[ $? != 0 ]'
 t "... and apps.json is as it was"            'diff -q "$tmp/apps.before" "$tmp/config/apps.json" >/dev/null'
 
 fresh
+a app rm torbrowser --zone anon
+t "Tor Browser out of Anon is refused (the zone's browser)" '[ $? != 0 ] && grep -q "browser org.torproject.torbrowser is not placed" "$tmp/out"'
+t "... and apps.json is as it was"            'diff -q "$tmp/apps.before" "$tmp/config/apps.json" >/dev/null'
+a app add signal --zone lab --dry-run
+t "--dry-run on a catalog command is refused" '[ $? != 0 ] && grep -q "review the result with git diff" "$tmp/out"'
+t "... before anything is written"            'diff -q "$tmp/apps.before" "$tmp/config/apps.json" >/dev/null'
+
+fresh
 a theme set glass.tint 0.3 --zone lab
 t "theme set writes per_profile, as a number" '[ $? = 0 ] && [ "$(jq -c .per_profile.lab.glass.tint "$tmp/config/theming.json")" = 0.3 ]'
 t "... and regenerates lab's launcher file"   '[ "$(jq -c .appearance.glass.tint "$tmp/config/launcher/lab.json")" = 0.3 ]'

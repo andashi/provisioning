@@ -43,5 +43,12 @@ t "no always-on zone besides Home is fine" ""
 fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .perms.grant) = ["android.permission.INTERNET"]'
 t "net: false with an INTERNET grant" "HeliBoard is net: false and grants INTERNET"
 
+fresh; edit apps.json '.apps += [.apps[0] | .id = "copy"]'
+t "a package twice" "packages in the catalog more than once"
+fresh; edit apps.json '(.apps[] | select(.needs? == "tailnet") | .profiles) |= . + ["anon"]'
+t "a tailnet app in a zone without Tailscale" "is in anon, whose VPN slot is"
+fresh; edit apps.json '(.apps[] | select(.pkg == "org.torproject.torbrowser") | .profiles) -= ["anon"]'
+t "Tor Browser taken out of Anon" "Anon: browser org.torproject.torbrowser is not placed in this zone"
+
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]

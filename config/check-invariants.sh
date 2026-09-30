@@ -13,6 +13,16 @@
 #   3. An app declared net: false is never granted INTERNET through perms.
 #      The zone model's strongest claim is a missing permission, and a grant
 #      in the same entry would quietly undo it.
+#   4. A package appears in the catalog once.
+#   5. An app that needs the private tailnet sits only in zones whose one
+#      VPN slot is Tailscale (docs/architecture/zones.md).
+#   6. A zone that names a browser has that browser placed in it. Anon's links
+#      open in Tor Browser only because Tor Browser is there; take it out and
+#      they land in Vanadium, outside Tor, without a word.
+#
+# 4-6 lived inline in the Makefile, where `andashi app rm` could not reach
+# them: removing Tor Browser from Anon passed every check the command ran.
+# One file now serves both.
 #
 # Cases: check-invariants.test.sh, one per rule that must fail.
 set -euo pipefail
@@ -38,5 +48,22 @@ net="$(jq -r '.apps[] | select(.net == false)
               | "  \(.label) is net: false and grants INTERNET"' "$A")"
 [ -z "$net" ] || bad="${bad}net: false undone by a grant:"$'\n'"$net"$'\n'
 
+# 4
+dupes="$(jq -r '.apps[].pkg' "$A" | sort | uniq -d | tr '\n' ' ')"
+[ -z "$dupes" ] || bad="${bad}packages in the catalog more than once: $dupes"$'\n'
+# 5
+unreachable="$(jq -r -n --slurpfile a "$A" --slurpfile p "$P" '
+  ($p[0].profiles | INDEX(.key)) as $z | $a[0].apps[] | select(.needs? == "tailnet") | . as $app
+  | (.profiles // [])[] | . as $k | ($z[$k].vpn // "") as $vpn
+  | select(($vpn | startswith("tailscale")) | not)
+  | "  \($app.label) is in \($k), whose VPN slot is \($vpn)"')"
+[ -z "$unreachable" ] || bad="${bad}apps that need the private tailnet, in zones that cannot reach it:"$'\n'"$unreachable"$'\n'"  a zone has ONE always-on VPN slot - see docs/architecture/zones.md"$'\n'
+# 6
+stray="$(jq -r -n --slurpfile a "$A" --slurpfile p "$P" '
+  $p[0].profiles[] | select(.browser) | . as $z
+  | select([ $a[0].apps[] | select(.pkg == $z.browser) | (.profiles // [])[] | select(. == $z.key) ] | length == 0)
+  | "  \($z.label): browser \($z.browser) is not placed in this zone"')"
+[ -z "$stray" ] || bad="${bad}zone browsers the catalog does not install there:"$'\n'"$stray"$'\n'
+
 if [ -n "$bad" ]; then printf '%s' "$bad" >&2; exit 1; fi
-echo "ok: catalog invariants (Play-free zones, one always-on zone, net: false)"
+echo "ok: catalog invariants (Play-free zones, one always-on zone, net: false, unique packages, tailnet, zone browsers)"

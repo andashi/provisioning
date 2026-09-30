@@ -7,22 +7,6 @@ help:  ## This overview
 check: ## Check JSON + bash syntax + catalog consistency locally
 	@for f in config/*.json; do jq -e . $$f >/dev/null && echo "ok: $$f"; done
 	@for f in $$(find . -name '*.sh'); do bash -n $$f || exit 1; done; echo "ok: bash -n"
-	@dupes=$$(jq -r '.apps[].pkg' config/apps.json | sort | uniq -d); \
-	  [ -z "$$dupes" ] || { echo "Duplicate packages: $$dupes"; exit 1; }; echo "ok: catalog"
-	@unreachable=$$(jq -r -n --slurpfile a config/apps.json --slurpfile p config/profiles.json \
-	  '($$p[0].profiles | INDEX(.key)) as $$z | $$a[0].apps[] | select(.needs? == "tailnet") | . as $$app \
-	   | (.profiles // [])[] | . as $$k | ($$z[$$k].vpn // "") as $$vpn \
-	   | select(($$vpn | startswith("tailscale")) | not) \
-	   | "  \($$app.label) is in \($$k), whose VPN slot is \($$vpn)"'); \
-	  [ -z "$$unreachable" ] || { echo "apps that need the private tailnet, in zones that cannot reach it:"; \
-	    echo "$$unreachable"; echo "  a zone has ONE always-on VPN slot - see docs/architecture/zones.md"; exit 1; }; \
-	  echo "ok: tailnet reachability"
-	@stray=$$(jq -r -n --slurpfile a config/apps.json --slurpfile p config/profiles.json \
-	  '$$p[0].profiles[] | select(.browser) | . as $$z \
-	   | select([ $$a[0].apps[] | select(.pkg == $$z.browser) | (.profiles // [])[] | select(. == $$z.key) ] | length == 0) \
-	   | "  \($$z.label): browser \($$z.browser) is not placed in this zone"'); \
-	  [ -z "$$stray" ] || { echo "zone browsers the catalog does not install there:"; echo "$$stray"; exit 1; }; \
-	  echo "ok: zone browsers"
 	@tests/commit-msg.test.sh > /dev/null && echo "ok: commit-msg hook (cases)"
 	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison (cases)"
 	@lib/report-moved.test.sh > /dev/null && echo "ok: report-moved condition (cases)"

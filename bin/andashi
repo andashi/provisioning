@@ -64,6 +64,12 @@ case "$CMD" in
   app|theme)                    NEEDS_DEVICE=0;;
   *) echo "andashi: unknown command '$CMD' (andashi --help)" >&2; exit 2;;
 esac
+if [ "$NEEDS_DEVICE" = 0 ] && [ "${DRY_RUN:-0}" = 1 ]; then
+  # The edit IS the preview: it changes one file you review with git diff and
+  # take back with git checkout. A dry run that wrote anyway would be worse
+  # than none, so it is refused rather than half-honoured.
+  echo "andashi: '$CMD' edits the catalog; review the result with git diff instead of --dry-run" >&2; exit 2
+fi
 if [ "$NEEDS_DEVICE" = 0 ]; then
   for z in ${ZONE_ARGS[@]+"${ZONE_ARGS[@]}"}; do
     case "$z" in *current*) echo "andashi: '$CMD' edits the catalog; name the zone, 'current' needs a phone" >&2; exit 2;; esac
@@ -115,7 +121,10 @@ pkgs_of() {   # $1=uid [$2=-3] -> package names, space separated
 zone_apps() {   # $1=zone $2=uid
   local rec
   rec="$(tr '\n' ' ' < "$STATE_DIR/installed/$(device_id)/$1" 2>/dev/null || true)"
-  eval "$(apps_drift "$(declared_pkgs "$1" | tr '\n' ' ')" "$(installable_pkgs "$1" | tr '\n' ' ')" \
+  # `-u` lists every package present on the device, installed for this user
+  # or not - what `pm install-existing` can bring into the zone.
+  [ -n "${DEVICE_PKGS:-}" ] || DEVICE_PKGS="$(pkgs_of 0 -u)"
+  eval "$(apps_drift "$(declared_pkgs "$1" | tr '\n' ' ')" "$(installable_pkgs "$1" "$DEVICE_PKGS" | tr '\n' ' ')" \
             "$(pkgs_of "$2")" "$(pkgs_of "$2" -3)" "$rec" "$(zone_system_pkgs "$1")" \
           | sed "s/^\([a-z]*\)=\(.*\)\$/A_\1='\2'/")"
 }
@@ -385,13 +394,18 @@ report_conflicts() {
 catalog_checks() {
   regenerate || { warn "the catalog no longer generates cleanly - see above"; return 1; }
   CONFIG_DIR="$CONFIG_DIR" "$ROOT/config/check-invariants.sh" >/dev/null || return 1
-  ok "catalog checks pass - review with git diff in $CONFIG_DIR, then: andashi diff && andashi apply"
+  ok "catalog checks pass - review with git diff in $CONFIG_DIR; then look at 'andashi diff' and run 'andashi apply'"
 }
 # An edit the checks refuse is taken back: a command that leaves the catalog
 # in a state `make check` rejects hands the next person - or the agent that
 # ran it - a broken file and a message they may not have read.
 KEEP="$(mktemp -d)"; trap 'rm -rf "$KEEP"' EXIT
 catalog_keep() { cp "$CONFIG_DIR/apps.json" "$CONFIG_DIR/theming.json" "$KEEP/"; }
+catalog_restore_and_die() {   # $1=why
+  cp "$KEEP/apps.json" "$KEEP/theming.json" "$CONFIG_DIR/"
+  regenerate >/dev/null 2>&1 || true
+  die "$1 - the catalog is as it was before this command"
+}
 catalog_commit_or_restore() {
   catalog_checks && return 0
   cp "$KEEP/apps.json" "$KEEP/theming.json" "$CONFIG_DIR/"
@@ -412,9 +426,11 @@ cmd_app() {
   for z in $ZONES; do
     case "$verb" in
       add) edit_json "$CONFIG_DIR/apps.json" '(.apps[] | select(.id == $id) | .profiles) |= ((. // []) + [$z] | unique)' \
-             --arg id "$id" --arg z "$z" && ok "$id placed in $z";;
+             --arg id "$id" --arg z "$z" || catalog_restore_and_die "could not place $id in $z"
+           ok "$id placed in $z";;
       rm)  edit_json "$CONFIG_DIR/apps.json" '(.apps[] | select(.id == $id) | .profiles) |= ((. // []) - [$z])' \
-             --arg id "$id" --arg z "$z" && ok "$id taken out of $z - the next apply removes it there";;
+             --arg id "$id" --arg z "$z" || catalog_restore_and_die "could not take $id out of $z"
+           ok "$id taken out of $z - the next apply removes it there";;
       *)   die "andashi app: '$verb' is neither add nor rm";;
     esac
   done
@@ -432,11 +448,14 @@ cmd_theme() {
   catalog_keep
   if [ -z "${ZONES:-}" ]; then
     edit_json "$CONFIG_DIR/theming.json" 'setpath(["all_profiles"] + $p; $v)' --argjson p "$path" --argjson v "$val" \
-      && ok "all_profiles.$key = $val"
+      || catalog_restore_and_die "could not set all_profiles.$key"
+    ok "all_profiles.$key = $val"
   else
     for z in $ZONES; do
       edit_json "$CONFIG_DIR/theming.json" 'setpath(["per_profile", $z] + $p; $v)' \
-        --arg z "$z" --argjson p "$path" --argjson v "$val" && ok "per_profile.$z.$key = $val"
+        --arg z "$z" --argjson p "$path" --argjson v "$val" \
+        || catalog_restore_and_die "could not set per_profile.$z.$key"
+      ok "per_profile.$z.$key = $val"
     done
   fi
   catalog_commit_or_restore
@@ -450,8 +469,16 @@ cmd_theme() {
 # every change, so switching zones on the phone moves the watch with you.
 cmd_watch() {
   local fixed="${ZONES:-}" last="" now
+  fixed="${fixed// /,}"
+  # What watch was started with, every apply gets: --all, --only and
+  # --prune-undeclared belong to the loop, not to its first round.
+  local fwd=()
+  [ "$ALL" = 1 ] && fwd+=(--all)
+  [ -n "$ONLY" ] && fwd+=(--only "$ONLY")
+  [ "$PRUNE_UNDECLARED" = 1 ] && fwd+=(--prune-undeclared)
   snap() {   # the inputs of the watched zones, as one hash
     local z zs="$fixed"
+    zs="${zs//,/ }"
     [ -n "$zs" ] || zs="$(ZONES=current bash -c 'source "$0/lib/common.sh"; printf %s "$ZONES_RESOLVED"' "$ROOT" 2>/dev/null)"
     for z in $zs; do zone_snapshot "$z"; done | sha256sum
   }
@@ -467,8 +494,7 @@ cmd_watch() {
     # lands while it runs is not in it, so it is not acknowledged here: the
     # next poll sees it differ from $last and applies again.
     last="$now"
-    if [ -n "$fixed" ]; then "$0" apply --zone "${fixed// /,}" || true
-    else "$0" apply --zone current || true; fi
+    "$0" apply --zone "${fixed:-current}" ${fwd[@]+"${fwd[@]}"} || true
     log "watching again"
   done
 }
