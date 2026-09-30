@@ -347,6 +347,13 @@ adb -s <serial> emu avd snapshot list           # while running
 A run that starts from a snapshot runs writable, and that is safe: loading resets
 RAM and disks, and nothing is written back unless someone runs `run.sh snapshot`.
 
+**`run.sh start` leaves adbd running as root**, and a snapshot saved afterwards
+carries that. Everything this repository claims is about the adb shell
+(uid 2000), the only identity a production phone offers - so a test that
+loads a snapshot runs `adb unroot` and asserts `id -u` is 2000
+(`tests/e2e/identity.sh`). Found when `pm set-installer` failed with
+"Unknown calling UID: 0" in a session whose pull requests said "as shell".
+
 **Loading a snapshot does not reset the host.** `.provision-state/` records, per
 serial, what this laptop last agreed with each zone - and after a restore the
 same serial is a different phone. The next run then sees edits nobody made and
