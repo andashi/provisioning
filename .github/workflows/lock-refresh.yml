@@ -58,6 +58,21 @@ jobs:
         with:
           ref: ${{ inputs.target || 'main' }}
 
+      - name: A head this job pushed is verified
+        # A push with GITHUB_TOKEN starts no workflow, so this job dispatches
+        # verify after its own push - and if that dispatch was lost, main's
+        # head would stay without the green run bin/pr-gate requires. Every
+        # run therefore looks first: a head last committed by this job with
+        # no verify run at all gets one now.
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          if [ "$(git log -1 --format=%ae)" = lock-refresh@users.noreply.github.com ] \
+             && [ "$(gh run list --workflow verify --commit "$head" --json databaseId --jq length)" = 0 ]; then
+            echo "head ${head:0:12} came from this job and was never verified - dispatching verify"
+            gh workflow run verify --ref "$TARGET"
+          fi
+
       - name: Android build tools on PATH
         # The runner image ships the Android SDK; the newest build-tools carry
         # aapt2 and apksigner. Their versions go into the log, so a lock can
@@ -103,8 +118,15 @@ jobs:
             for attempt in 1 2 3; do
               if git push -q origin "HEAD:$TARGET"; then
                 echo "committed to $TARGET: $(git rev-parse --short HEAD)"
-                gh workflow run verify --ref "$TARGET"
-                exit 0
+                # From here on something WAS changed; a failure report must
+                # say so (see the failure step).
+                echo "PUSHED=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+                for try in 1 2 3; do
+                  gh workflow run verify --ref "$TARGET" && exit 0
+                  sleep $((try * 10))
+                done
+                echo "::error::the lock is on $TARGET, but verify could not be dispatched; the next run retries it"
+                exit 1
               fi
               git fetch -q origin "$TARGET"
               git rebase -q "origin/$TARGET" || { git rebase --abort; break; }
@@ -133,11 +155,17 @@ jobs:
         if: failure()
         run: |
           {
-            echo "The scheduled lock refresh failed, and nothing was changed."
+            if [ -n "${PUSHED:-}" ]; then
+              echo "The scheduled lock refresh committed the new lock to \`$TARGET\` (${PUSHED:0:12}), but could not start \`verify\` for it."
+              echo
+              echo "The next run dispatches it by itself. Until verify has run green on that commit, bin/pr-gate refuses merges; to clear it at once: \`gh workflow run verify --ref $TARGET\`."
+            else
+              echo "The scheduled lock refresh failed, and nothing was changed."
+              echo
+              echo "The usual cause is a signer that changed upstream: fetch.sh rejects that build and says which app in the log line starting with \`x\`. An upstream that was briefly unreachable is the other one; the next run tries again."
+            fi
             echo
             echo "The run, with the reason in its log: $RUN_URL"
-            echo
-            echo "The usual cause is a signer that changed upstream: fetch.sh rejects that build and says which app in the log line starting with \`x\`. An upstream that was briefly unreachable is the other one; the next run tries again."
           } > "$RUNNER_TEMP/issue.md"
           echo "ISSUE_TITLE=Lock refresh $(date -u +%Y-%m-%d) failed" >> "$GITHUB_ENV"
           echo "ISSUE_FILE=$RUNNER_TEMP/issue.md" >> "$GITHUB_ENV"

@@ -64,6 +64,19 @@ t "... verdict: review"                           '[ "$(cat "$tmp/verdict")" = r
 { e app.a 1.0 aa; e app.gone 3.0 cc; } | lockof | setup
 { e app.a 1.0 aa; } | lockof | run env
 t "an entry that left the lock is a row"          'grep -qF "| app.gone | universal | 3.0 | removed |" "$tmp/summary.md"'
+t "... verdict: review - a removal is not a version move" '[ "$(cat "$tmp/verdict")" = review ]'
+
+{ e app.a 1.0 aa; } | lockof | setup
+{ e app.a 1.1 ab; e app.new 1.0 nn; } | lockof | run env
+t "an app added under a known signer: review, not safe" '[ "$(cat "$tmp/verdict")" = review ]'
+
+{ e app.a 1.0 aa; } | lockof | setup
+{ e app.a 1.0 aa; } | lockof | run env FAKE_NEW_CERT=app.z
+t "a new signer with an unchanged lock: still review" '[ "$(cat "$tmp/verdict")" = review ]'
+
+{ e app.a 1.0 aa; e app.b 2.0 bb; } | lockof | setup
+{ e app.a 1.1 ab; e app.b 2.1 bc; } | lockof | run env
+t "several plain version moves: safe"             '[ "$(cat "$tmp/verdict")" = safe ]'
 
 { e app.a 1.0 aa; } | lockof | setup
 { e app.a 1.0 aa; } | lockof | run env

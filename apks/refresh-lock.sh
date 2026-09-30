@@ -113,11 +113,19 @@ report() {
 if [ -n "$summary" ]; then report > "$summary"; fi
 report
 
-# Anything a reviewer must look at makes it "review"; only plain version
-# moves under known signers are "safe". An unchanged lock file is
-# "unchanged" whatever else happened, since there is nothing to commit.
-if cmp -s "$old" lock.json; then verdict=unchanged
-elif [ -n "$new_certs$rebuilt" ]; then verdict=review
-else verdict=safe; fi
+# "safe" is defined by what it is, not by what it is not: the same packages
+# and ABIs as before, every changed entry a new version, no signer pinned for
+# the first time. Everything else - an app added or removed, a same-version
+# rebuild, a new signer even with an unchanged lock - is "review". A rule
+# defined as "not suspicious" lets through whatever nobody thought of.
+same_keys="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
+  ([$o[0].entries[] | "\(.pkg) \(.abi)"] | sort) == ([$n[0].entries[] | "\(.pkg) \(.abi)"] | sort)')"
+only_versions="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
+  ($o[0].entries | map({key: "\(.pkg) \(.abi)", value: .}) | from_entries) as $ov
+  | all($n[0].entries[]; ($ov["\(.pkg) \(.abi)"]) as $w | $w == null or $w == . or $w.version != .version)')"
+if [ -n "$new_certs" ]; then verdict=review
+elif cmp -s "$old" lock.json; then verdict=unchanged
+elif [ "$same_keys" = true ] && [ "$only_versions" = true ] && [ -z "$rebuilt$gone" ]; then verdict=safe
+else verdict=review; fi
 [ -z "$verdict_file" ] || printf '%s\n' "$verdict" > "$verdict_file"
 echo "verdict: $verdict"
