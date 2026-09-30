@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# A stand-in for adb in case files: answers the read-only questions the
+# decisions under test ask, from environment variables, and fails loudly on
+# anything else - a case that reaches an unexpected adb call is a broken case,
+# not a device that said nothing.
+#   FAKE_CURRENT_USER   answer to `am get-current-user` (empty = the call fails)
+#   FAKE_USERS          the body of `pm list users`, one UserInfo per line
+[ "$1" = "-s" ] && shift 2
+[ "$1" = "shell" ] || { echo "fake-adb: unexpected: $*" >&2; exit 97; }
+shift
+case "$*" in
+  "am get-current-user")
+    [ -n "${FAKE_CURRENT_USER:-}" ] || exit 1
+    printf '%s\n' "$FAKE_CURRENT_USER";;
+  "pm list users")
+    printf 'Users:\n%s\n' "${FAKE_USERS:-}";;
+  *) echo "fake-adb: unexpected: shell $*" >&2; exit 97;;
+esac

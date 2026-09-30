@@ -47,8 +47,9 @@ Both must print nothing for a pull request that is only a part.
 ## Merging
 
 `bin/pr-gate <pr>` checks the conditions and `bin/pr-gate <pr> --merge` merges
-exactly the head it checked (`--match-head-commit`). Do not merge any other way.
-It refuses unless:
+exactly the head it checked, through the asynchronous merge API pinned to that
+sha - the only path GitHub accepts for a pull request in a stack. Do not merge
+any other way. It refuses unless:
 
 - the pull request is open, not a draft, and its base is `main` - in a stack,
   only the bottom merges; GitHub retargets the next one;

@@ -20,4 +20,9 @@ for s in "${STEPS[@]}"; do
   "$REPO_ROOT/provision/$s.sh"
 done
 printf '\n'
+# Every step went through (each one exits non-zero on failure, and this script
+# stops there), so this is what the host has now applied to each zone.
+# `andashi apply` starts from it and touches only what changes afterwards.
+source "$REPO_ROOT/lib/andashi.sh"
+while read -r _z; do record_applied "$_z"; done < <(profile_keys)
 ok "Done in $(( $(date +%s) - start ))s. Now work through MANUAL.md."

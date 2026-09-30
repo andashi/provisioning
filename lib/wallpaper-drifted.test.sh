@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Cases for wallpaper_drifted() in provision/45-launcher-config.sh. The pull
+# Cases for wallpaper_drifted() in lib/launcher-state.sh. The pull
 # deliberately does not carry the wallpaper back - the config holds an upload
 # name, not a path - so this is the one thing it can still say about it.
 set -uo pipefail
-eval "$(sed -n '/^wallpaper_drifted()/,/^}/p' "$(dirname "${BASH_SOURCE[0]}")/../provision/45-launcher-config.sh")"
+eval "$(sed -n '/^wallpaper_drifted()/,/^}/p' "$(dirname "${BASH_SOURCE[0]}")/launcher-state.sh")"
 pass=0; fail=0
 t() {   # $1=name $2=device $3=path $4=yes|no
   local got=no

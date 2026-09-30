@@ -70,6 +70,37 @@ everything this repository fetches, the chain is the update mechanism. Each run
 ends by comparing what the device runs against the APKs on the host, so
 "is anything stale?" has an answer rather than an assumption.
 
+## After provisioning: `andashi`
+
+`provision/run.sh` sets a phone up and proves every zone. Changing it afterwards
+is `bin/andashi`, which runs the same steps but only the ones a change needs,
+only for the zones it concerns, and never starts a stopped zone unless asked:
+
+```bash
+ln -s "$PWD/bin/andashi" ~/.local/bin/andashi     # once
+
+andashi status                   # every zone: running or not, in sync or not, what waits
+andashi diff                     # what apply would do; exit 1 when there is anything
+andashi apply --zone current     # the zone on the screen - edit, apply, look, again
+andashi apply                    # everything that changed, in every running zone
+andashi apply --zone ops --all   # a stopped zone gets started for its pending change
+```
+
+Measured on the Fold emulator: a glass change to the zone in front takes about
+9 seconds, where a full run takes a minute and a half. What makes that safe is
+the same record the full run keeps, per device and zone, in `.provision-state/`:
+
+- **Every apply pulls first.** An arrangement made on the phone - a widget, the
+  order of favourites, a glass value - is adopted into your catalog before
+  anything is pushed, so the phone is never overwritten by a laptop that did
+  not know. Adopting writes into `CONFIG_DIR`, so it needs your own catalog,
+  never this template.
+- **Both sides changed is a stop, not a merge.** That zone is left alone, both
+  values are named, and the other zones go ahead.
+- **A stopped zone is not started.** Android runs three profiles, and every
+  start evicts one - usually Cloud, the one that must keep running. The change
+  waits on the host and `andashi status` names it.
+
 ## What stays manual
 
 By GrapheneOS design, not for convenience:

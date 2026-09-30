@@ -1,0 +1,316 @@
+#!/usr/bin/env bash
+# andashi - steer a provisioned phone from the laptop (provisioning#7).
+#
+#   andashi status                what each zone holds, and what waits on this host
+#   andashi diff                  what apply would do; exit 1 if anything
+#   andashi apply                 bring the phone to the catalog, touching only what changed
+#   andashi pull                  adopt the phone's launcher edits into the catalog
+#
+# Options (before or after the command):
+#   --zone Z        only these zones; repeat or comma-separate; `current` is
+#                   the one in the foreground. Default: every zone.
+#   --only S        only these sections: profiles apps permissions settings
+#                   vpn theme launcher manual. Default: whatever changed.
+#   --all           may start stopped zones (evicting others) and pushes
+#                   every zone's launcher whether it changed or not
+#   --dry-run       show, change nothing
+#   --serial S      the device, like ADB_SERIAL
+#
+# A thin layer over provision/*.sh, not a second implementation: every change
+# to the phone is made by the same step a full run uses, and every decision
+# here reads the same records those steps write (.provision-state/). The one
+# thing it adds is knowing what NOT to do - which is where the time goes:
+# a full run on a phone where nothing changed took 106 s, a launcher change
+# to the zone you are looking at takes seconds.
+#
+# The catalog is CONFIG_DIR, like everywhere else. Adopting edits from the
+# phone writes into it, so that needs your own catalog, never this
+# repository's template.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+
+usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; }
+
+CMD=""; ZONE_ARGS=(); ONLY=""; ALL=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --zone)    ZONE_ARGS+=("${2:?--zone needs a value}"); shift 2;;
+    --zone=*)  ZONE_ARGS+=("${1#*=}"); shift;;
+    --only)    ONLY="${ONLY:+$ONLY,}${2:?--only needs a value}"; shift 2;;
+    --only=*)  ONLY="${ONLY:+$ONLY,}${1#*=}"; shift;;
+    --all)     ALL=1; shift;;
+    --dry-run) export DRY_RUN=1; shift;;
+    --serial)  export ADB_SERIAL="${2:?--serial needs a value}"; shift 2;;
+    -h|--help|help) usage; exit 0;;
+    -*)        echo "andashi: unknown option $1 (andashi --help)" >&2; exit 2;;
+    *)         [ -z "$CMD" ] || { echo "andashi: one command at a time ($CMD, $1)" >&2; exit 2; }
+               CMD="$1"; shift;;
+  esac
+done
+[ -n "$CMD" ] || { usage; exit 2; }
+case "$CMD" in status|diff|apply|pull) ;; *) echo "andashi: unknown command '$CMD' (andashi --help)" >&2; exit 2;; esac
+
+# The zone selection is resolved ONCE, here, and handed to every step as plain
+# keys. `current` asked again by each step could name a different zone if the
+# phone switched in between, and a run would then touch two zones for one ask.
+if [ "${#ZONE_ARGS[@]}" -gt 0 ]; then
+  export ZONES="${ZONE_ARGS[*]}"
+fi
+# shellcheck source=../lib/common.sh
+source "$ROOT/lib/common.sh"
+require_device
+[ -z "${ZONES:-}" ] || export ZONES="${ZONES_RESOLVED# }"
+# shellcheck source=../lib/andashi.sh
+source "$ROOT/lib/andashi.sh"
+
+THEME_FILE="$CONFIG_DIR/theming.json"
+LKEY="$(jq -r '.launcher // empty' "$THEME_FILE")"
+# Read by query_state in lib/launcher-state.sh.
+# shellcheck disable=SC2034
+PKG="$(jq -r --arg k "$LKEY" '.launchers[$k].pkg // empty' "$THEME_FILE")"
+# shellcheck source=../lib/launcher-state.sh
+source "$ROOT/lib/launcher-state.sh"
+
+pending_sections() {   # $1=zone
+  awk -v z="$1" '$1 == z { print $2 }' "$(pending_file)" 2>/dev/null || true
+}
+selected_zones() { profile_keys; }
+
+# ---- Per-zone facts, asked once --------------------------------------------
+uid_of() { resolve_uid "$1"; }
+state_of() {   # $1=uid -> running|stopped|locked|missing
+  [ -n "$1" ] || { printf 'missing'; return; }
+  if ! user_running_uid "$1"; then printf 'stopped'; return; fi
+  user_unlocked "$1" && printf 'running' || printf 'locked'
+}
+want_sha_of() { [ -f "$CONFIG_DIR/launcher/$1.json" ] && sha256sum "$CONFIG_DIR/launcher/$1.json" | cut -d' ' -f1 || true; }
+dev_sha_of() {   # $1=uid; empty when the zone cannot answer
+  query_state diagnostics "$1" 2>/dev/null | jq -r '.configSha256 // empty' 2>/dev/null || true
+}
+is_managed() { [ "$(profile_field "$1" type)" = "managed" ]; }
+
+regenerate() {
+  # The generated files follow the catalog; a stale one would be pushed as if
+  # it were the catalog. The generator refuses to overwrite a file that
+  # changed since it wrote it, which is the answer, not an obstacle.
+  local out="$CONFIG_DIR/launcher"
+  export CONFIG_DIR
+  OUT_DIR="$out" "$ROOT/config/gen-launcher.sh" >/dev/null
+  OUT_DIR="$out" "$ROOT/config/check-schema.sh" >/dev/null
+  OUT_DIR="$out" "$ROOT/config/check-contacts.sh" >/dev/null
+  OUT_DIR="$out" "$ROOT/config/check-appwidgets.sh" >/dev/null
+}
+
+private_catalog() {
+  [ "$(cd "$CONFIG_DIR" && pwd)" != "$ROOT/config" ]
+}
+
+# ---- status / diff -----------------------------------------------------------
+# One report, two readings: status always exits 0 and says everything; diff
+# prints only what is to do and exits 1 when there is any.
+report() {   # $1=status|diff
+  local mode="$1" todo=0 z uid st sections pend want rec dev plan line
+  [ "$mode" = status ] && printf '%-8s %-5s %-8s %-34s %s\n' ZONE USER STATE LAUNCHER "CHANGED SINCE LAST APPLY"
+  while read -r z; do
+    uid="$(uid_of "$z")"; st="$(state_of "$uid")"
+    sections="$(changed_sections "$(cat "$(applied_record "$z")" 2>/dev/null || true)" "$(zone_snapshot "$z")" | tr '\n' ' ')"
+    pend="$(pending_sections "$z" | tr '\n' ' ')"
+    if is_managed "$z"; then
+      line="(home screen of its parent)"
+    else
+      want="$(want_sha_of "$z")"
+      rec="$(record_field "$(sha_record "$z")" sha 2>/dev/null || true)"
+      dev=""; [ "$st" = running ] && dev="$(dev_sha_of "$uid")"
+      if [ "$st" = running ]; then
+        plan="$(reconcile_plan "$want" "$rec" "$dev")"
+      else
+        # A stopped zone cannot be asked; say what the host knows.
+        plan="$([ -n "$rec" ] && [ "$want" = "$rec" ] && echo "host-unchanged" || echo "host-changed")"
+      fi
+      case "$plan" in
+        none)           line="in sync";;
+        push)           line="host changed - push";;
+        adopt)          line="edited on the phone - adopt";;
+        conflict)       line="CONFLICT: both sides changed";;
+        first)          line="never pushed from this host";;
+        unknown)        line="running, but not answering";;
+        host-unchanged) line="unchanged here (zone $st)";;
+        host-changed)   line="changed here, waits for the zone";;
+      esac
+    fi
+    if [ "$mode" = status ]; then
+      printf '%-8s %-5s %-8s %-34s %s\n' "$z" "${uid:--}" "$st" "$line" \
+        "${sections:-nothing}${pend:+ | pending: $pend}"
+    else
+      local out=""
+      [ -n "$sections" ] && out="$out  inputs changed: $sections"$'\n'
+      [ -n "$pend" ]     && out="$out  pending on this host: $pend"$'\n'
+      case "$line" in "in sync"|"unchanged here"*|"(home screen"*) ;; *) out="$out  launcher: $line"$'\n';; esac
+      if [ -n "$out" ]; then printf '%s\n%s' "$z" "$out"; todo=1; fi
+    fi
+  done < <(selected_zones)
+  if [ "$mode" = diff ]; then
+    [ "$todo" = 0 ] && echo "nothing to do"
+    return "$todo"
+  fi
+  local pf; pf="$(pending_file)"
+  [ -s "$pf" ] && printf '\npending on this host (stopped zones): %s\n' "$(tr '\n' ',' < "$pf" | sed 's/,$//; s/,/, /g')"
+  return 0
+}
+
+# ---- pull ------------------------------------------------------------------------
+cmd_pull() {
+  private_catalog || die "pull writes into the catalog, and CONFIG_DIR is this repository's template.
+   Point it at your own:  CONFIG_DIR=/path/to/config andashi pull"
+  "$ROOT/provision/45-launcher-config.sh" --pull
+  regenerate
+}
+
+# ---- apply ------------------------------------------------------------------------
+# Per zone: which sections changed since this host last applied to it (or
+# --only), plus what a stopped zone still owes. Per step: the zones that need
+# it. Each step then runs once, in chain order, for exactly those zones - so a
+# palette change in Lab starts nothing but Lab, and a wallpaper change in the
+# zone you are looking at touches that zone and no other.
+cmd_apply() {
+  local t0 z s st uid want rec dev plan rc=0
+  local -A ZSTEPS=()
+  local adopt=() conflict=()
+  t0="$(date +%s)"
+
+  if [ -n "$ONLY" ]; then
+    for s in ${ONLY//,/ }; do
+      section_steps "$s" >/dev/null || die "--only: '$s' is not a section ($SECTIONS)"
+    done
+  fi
+  while read -r z; do
+    local secs=()
+    if [ -n "$ONLY" ]; then
+      read -ra secs <<<"${ONLY//,/ }"
+    else
+      mapfile -t secs < <(changed_sections "$(cat "$(applied_record "$z")" 2>/dev/null || true)" "$(zone_snapshot "$z")"
+                           pending_sections "$z")
+      # Every apply starts with a pull (#7), so a zone where nothing changed on
+      # this host is still asked - if it is running - whether the phone
+      # changed. One query per running zone; a stopped one cannot have been
+      # edited since it stopped, and the step's guard meets it when it runs.
+      if ! is_managed "$z" && [ "$(state_of "$(uid_of "$z")")" = running ]; then
+        case "$(reconcile_plan "$(want_sha_of "$z")" \
+                  "$(record_field "$(sha_record "$z")" sha 2>/dev/null || true)" \
+                  "$(dev_sha_of "$(uid_of "$z")")")" in
+          adopt|conflict) secs+=(launcher);;
+        esac
+      fi
+    fi
+    [ "${#secs[@]}" -gt 0 ] || continue
+    ZSTEPS[$z]=" $(steps_for_sections "${secs[@]}" | tr '\n' ' ')"
+    log "$z: ${secs[*]}"
+  done < <(selected_zones)
+
+  if [ "${#ZSTEPS[@]}" -eq 0 ]; then
+    ok "nothing changed since the last apply${ZONES:+ in $ZONES}"
+    return 0
+  fi
+  zones_for_step() {   # $1=step -> zone keys, in catalog order, space separated
+    local k out=""
+    while read -r k; do
+      case "${ZSTEPS[$k]:-}" in *" $1 "*) out="$out $k";; esac
+    done < <(selected_zones)
+    printf '%s' "${out# }"
+  }
+
+  if [ -n "$(zones_for_step 45-launcher-config)" ]; then
+    regenerate || die "the catalog does not generate cleanly - fix it before applying"
+
+    # Pull before push (#7): the phone is the other half of the configuration,
+    # and an edit made there must not be lost because the host pushed. Only a
+    # running zone can be asked; a stopped one meets the step's own guard the
+    # next time it runs.
+    for z in $(zones_for_step 45-launcher-config); do
+      is_managed "$z" && continue
+      uid="$(uid_of "$z")"; st="$(state_of "$uid")"
+      [ "$st" = running ] || continue
+      want="$(want_sha_of "$z")"
+      rec="$(record_field "$(sha_record "$z")" sha 2>/dev/null || true)"
+      dev="$(dev_sha_of "$uid")"
+      plan="$(reconcile_plan "$want" "$rec" "$dev")"
+      case "$plan" in
+        adopt)    adopt+=("$z");;
+        conflict) conflict+=("$z");;
+      esac
+    done
+    if [ "${#adopt[@]}" -gt 0 ] && [ "${DRY_RUN:-0}" = 1 ]; then
+      # Adopting writes the catalog; a dry run changes nothing, there either.
+      log "[dry-run] would adopt what was edited on the phone: ${adopt[*]}"
+    elif [ "${#adopt[@]}" -gt 0 ]; then
+      if private_catalog; then
+        log "edited on the phone, adopting before pushing: ${adopt[*]}"
+        ZONES="${adopt[*]}" "$ROOT/provision/45-launcher-config.sh" --pull
+        regenerate || die "the adopted edit does not generate cleanly - see git diff in $CONFIG_DIR"
+      else
+        warn "edited on the phone: ${adopt[*]} - the template cannot adopt it; point CONFIG_DIR at your own catalog"
+      fi
+    fi
+    # A zone in conflict is left alone - by EVERY step, not only the launcher
+    # one: a settings or theme change applied to it while its launcher waits
+    # for a person would be half an apply to a zone we said we left alone.
+    # Both sides are named below; every other zone goes ahead.
+    for z in ${conflict[@]+"${conflict[@]}"}; do
+      unset "ZSTEPS[$z]"
+    done
+  fi
+
+  local env_mode=(NO_START=1 ONLY_CHANGED=1) zs st_rc step_fail=0
+  [ "$ALL" = 1 ] && env_mode=(NO_START=0 ONLY_CHANGED=0)
+  for s in "${STEP_ORDER[@]}"; do
+    zs="$(zones_for_step "$s")"
+    [ -n "$zs" ] || continue
+    printf '\n%s\n' "$(_c '1;35' "===== $s ($zs) =====")"
+    st_rc=0
+    env ZONES="$zs" "${env_mode[@]}" "$ROOT/provision/$s.sh" || st_rc=$?
+    [ "$st_rc" = 0 ] || { step_fail=1; warn "$s failed (exit $st_rc)"; }
+  done
+  rc="$step_fail"
+  [ "${#conflict[@]}" -eq 0 ] || { report_conflicts "${conflict[@]}"; rc=1; }
+
+  # Recorded only after a run that went through: a zone recorded as applied
+  # after a failed step would never be retried. What a stopped zone still owes
+  # is in the pending file, not here; a zone in conflict is not recorded.
+  # --only ran some sections, and the record is of whole zones: writing it
+  # would mark the sections that did NOT run as applied, and they would never
+  # be delivered. So a partial apply leaves the record alone; the next apply
+  # runs what is still outstanding (the parts already applied converge as
+  # no-ops).
+  if [ "$step_fail" = 0 ] && [ -z "$ONLY" ]; then
+    for z in "${!ZSTEPS[@]}"; do
+      case " ${conflict[*]:-} " in *" $z "*) continue;; esac
+      record_applied "$z"
+    done
+  fi
+  printf '\n'
+  if [ "$rc" = 0 ]; then ok "applied in $(( $(date +%s) - t0 ))s"
+  else warn "apply finished with failures in $(( $(date +%s) - t0 ))s"; fi
+  return "$rc"
+}
+
+report_conflicts() {
+  local z uid eff mism
+  printf '\n'
+  for z in "$@"; do
+    uid="$(uid_of "$z")"
+    eff="$(query_state config "$uid" 2>/dev/null || true)"
+    mism="$(jq -r -n --argjson eff "${eff:-null}" --slurpfile want "$CONFIG_DIR/launcher/$z.json" \
+              -f "$ROOT/lib/readback-compare.jq" 2>/dev/null || true)"
+    warn "$z: changed on the phone AND here since the last agreement - left alone"
+    warn "$z: they differ in: ${mism:-<could not compare>}"
+    warn "$z: keep the phone's:  andashi pull --zone $z   (then re-apply your change on top)"
+    warn "$z: keep this host's:  pull, revert the pulled lines in $CONFIG_DIR, apply"
+  done
+}
+
+case "$CMD" in
+  status) report status;;
+  diff)   report diff;;
+  pull)   cmd_pull;;
+  apply)  cmd_apply;;
+esac

@@ -3,6 +3,7 @@
 #
 #   bin/pr-gate <pr>            check, print every verdict, exit 0 only if all hold
 #   bin/pr-gate <pr> --merge    the same, and merge exactly the head it checked
+#                               (asynchronous merge, pinned to that sha)
 #
 # Taken over from andashi/home, where every rule below cost a pull request
 # first: a recount printed BESIDE a merge stopped nothing (#194), a bot that
@@ -171,9 +172,28 @@ fi
 echo "mergeable"
 [ "$MERGE" = 1 ] || exit 0
 
-# --match-head-commit: a push between the checks above and this line makes
-# GitHub refuse, instead of merging a head nobody checked.
-gh pr merge "$pr" --repo "$REPO" --squash --match-head-commit "$head"
+# Pinned to the head that was checked: a push between the checks above and
+# this line makes GitHub cancel, instead of merging a head nobody checked.
+# The asynchronous endpoint, because a pull request that is part of a stack
+# refuses every other merge path ("must be merged using the asynchronous
+# merge REST API" - found on #13, the first merge through this gate); it takes
+# the same `sha` pin as --match-head-commit, and works for a lone one too.
+uuid="$(gh api -X PUT "repos/$REPO/pulls/$pr/merge-async" -f sha="$head" -f merge_method=squash --jq .details.uuid)" \
+  || { echo "pr-gate: the merge request was refused" >&2; exit 1; }
+# A lookup that fails says nothing about the merge, so it is retried like
+# "pending"; only an answer ends the wait. Running out of time is its own
+# message: the merge may still complete, and the one thing not to do then is
+# to request it again.
+st=""
+for _ in $(seq 1 100); do
+  st="$(gh api "repos/$REPO/pulls/$pr/merge-async/$uuid" --jq .status 2>/dev/null || true)"
+  case "$st" in ""|pending) sleep 3;; *) break;; esac
+done
+case "$st" in
+  merged) ;;
+  ""|pending) echo "pr-gate: no final answer after 5 minutes (last: ${st:-no answer}) - check the pull request before doing anything; the merge request $uuid may still complete" >&2; exit 1;;
+  *) echo "pr-gate: the merge ended as '$st', not merged" >&2; exit 1;;
+esac
 state="$(gh pr view "$pr" --repo "$REPO" --json state -q .state)"
 [ "$state" = "MERGED" ] || { echo "pr-gate: merge reported, state is $state" >&2; exit 1; }
 echo "merged #$pr at ${head:0:12}"

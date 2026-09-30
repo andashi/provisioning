@@ -54,7 +54,14 @@ while read -r key; do
   log "Profile $label (user $uid)"
 
   # Start stopped users ourselves - same eviction trap as in 10-apps.sh:
-  # role/ime need a running user.
+  # role/ime need a running user. Unless NO_START asks not to (the
+  # edit-and-look loop, see 45-launcher-config.sh): then the zone keeps its
+  # theme until it runs, and the host remembers that it owes it one.
+  if ! user_running_uid "$uid" && [ "${NO_START:-0}" = "1" ]; then
+    pending_add "$key" theme
+    warn "$label: stopped - its theme stays pending here until $label runs (or apply --all)"
+    continue
+  fi
   if ! user_running_uid "$uid"; then
     ash am start-user -w "$uid" >/dev/null && ok "$label started (had been evicted)" \
       || warn "$label could not be started - theming may fail"
@@ -195,4 +202,5 @@ while read -r key; do
     ash am force-stop --user "$uid" "$LAUNCHER" >/dev/null \
       && ok "Launcher restarted (palette changed)" || true
   fi
+  pending_clear "$key" theme
 done < <(profile_keys)
