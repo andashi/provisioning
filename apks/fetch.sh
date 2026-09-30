@@ -139,7 +139,9 @@ PRUNE=0
 # reads public releases.
 gh_curl() {   # $1=api url
   local tok="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-  if [ -n "$tok" ]; then curl -fsSL -H "Authorization: Bearer $tok" "$1" 2>/dev/null
+  # The header comes through stdin (-H @-): as an argument, the expanded token
+  # would sit in curl's command line, readable by any user of the machine.
+  if [ -n "$tok" ]; then printf 'Authorization: Bearer %s\n' "$tok" | curl -fsSL -H @- "$1" 2>/dev/null
   else curl -fsSL "$1" 2>/dev/null; fi
 }
 
