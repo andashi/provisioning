@@ -144,6 +144,17 @@ pending_clear() {   # $1=zone $2=section
   mv "$f.tmp" "$f"
 }
 
+# Packages in a zone that are neither the catalog's nor somebody's own:
+# sandboxed Play itself, which GrapheneOS's app store installs into a zone
+# that asks for it, and a managed profile's owner, which 00-profiles.sh
+# installs to own the profile. The owner is the one to be careful with:
+# removing it as "not in the catalog" would dissolve the work profile.
+zone_system_pkgs() {   # $1=zone -> space separated
+  local owner
+  owner="$(profile_field "$1" profile_owner)"
+  printf ' com.google.android.gms com.google.android.gsf com.android.vending %s ' "${owner%%/*}"
+}
+
 # ---------- Catalog ----------
 apps_for_profile() {   # $1 = profile key -> JSON lines
   jq -c --arg p "$1" '.apps[] | select(.profiles | index($p))' "$CONFIG_DIR/apps.json"

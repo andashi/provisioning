@@ -137,3 +137,52 @@ record_applied() {   # $1=zone
   mkdir -p "$(dirname "$f")"
   zone_snapshot "$1" > "$f.tmp" && mv "$f.tmp" "$f"
 }
+
+# The packages the catalog declares for a zone, the way 10-apps.sh decides
+# them: every app placed there whose feature, if it names one, is on.
+declared_pkgs() {   # $1=zone -> package names, one per line
+  local app feat
+  while read -r app; do
+    feat="$(jq -r 'if has("feature") then .feature else "" end' <<<"$app")"
+    [ -z "$feat" ] || feature_enabled "$feat" || continue
+    jq -r .pkg <<<"$app"
+  done < <(apps_for_profile "$1")
+}
+# Of those, the ones this host can install the way 10-apps.sh does: from an
+# APK it has, or with `pm install-existing` from another zone that holds it.
+# Play and manual apps go through MANUAL.md, and an app with neither path
+# cannot be installed by running apply again - calling any of those "missing"
+# would make every apply start the zone to fail at the same thing.
+installable_pkgs() {   # $1=zone $2=packages present on the device (any user), space separated
+  local app feat pkg
+  while read -r app; do
+    feat="$(jq -r 'if has("feature") then .feature else "" end' <<<"$app")"
+    [ -z "$feat" ] || feature_enabled "$feat" || continue
+    case "$(jq -r .source <<<"$app")" in play-sandboxed|manual) continue;; esac
+    pkg="$(jq -r .pkg <<<"$app")"
+    case " ${2:-} " in *" $pkg "*) printf '%s\n' "$pkg"; continue;; esac
+    apk_for_pkg "$pkg" >/dev/null || continue
+    printf '%s\n' "$pkg"
+  done < <(apps_for_profile "$1")
+}
+
+# Apps on the device against the catalog, three lists (space separated):
+#   missing  installable, declared, not installed
+#   remove   installed by this chain, no longer declared - apply removes them
+#   foreign  installed, not declared, not by this chain - somebody's own;
+#            named, never removed unless asked (--prune-undeclared)
+# $1=declared $2=installable $3=installed (all) $4=third-party $5=record
+# $6=the zone's own system packages (zone_system_pkgs)
+apps_drift() {
+  local p missing="" remove="" foreign=""
+  for p in $2; do case " $3 " in *" $p "*) ;; *) missing="$missing $p";; esac; done
+  for p in $5; do
+    case " $1 " in *" $p "*) continue;; esac
+    case " $3 " in *" $p "*) remove="$remove $p";; esac
+  done
+  for p in $4; do
+    case " $1 $5 ${6:-} " in *" $p "*) continue;; esac
+    foreign="$foreign $p"
+  done
+  printf 'missing=%s\nremove=%s\nforeign=%s\n' "${missing# }" "${remove# }" "${foreign# }"
+}

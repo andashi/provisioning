@@ -5,6 +5,14 @@
 #   andashi diff                  what apply would do; exit 1 if anything
 #   andashi apply                 bring the phone to the catalog, touching only what changed
 #   andashi pull                  adopt the phone's launcher edits into the catalog
+#   andashi watch                 apply to the zone in front whenever the catalog changes
+#
+# Editing the catalog (no phone needed; each ends in the catalog's checks):
+#   andashi app add <id> --zone Z     place a catalog app in a zone
+#   andashi app rm <id> --zone Z      take it out; the next apply removes it there
+#   andashi theme set <key> <value> [--zone Z]
+#                                     e.g. glass.tint 0.3 --zone lab; without
+#                                     --zone it sets all_profiles
 #
 # Options (before or after the command):
 #   --zone Z        only these zones; repeat or comma-separate; `current` is
@@ -13,6 +21,9 @@
 #                   vpn theme launcher manual. Default: whatever changed.
 #   --all           may start stopped zones (evicting others) and pushes
 #                   every zone's launcher whether it changed or not
+#   --prune-undeclared
+#                   also remove apps that are in a zone but not in the
+#                   catalog - somebody's own, which diff lists as foreign
 #   --dry-run       show, change nothing
 #   --serial S      the device, like ADB_SERIAL
 #
@@ -31,7 +42,7 @@ ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 
 usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; }
 
-CMD=""; ZONE_ARGS=(); ONLY=""; ALL=0
+CMD=""; POS=(); ZONE_ARGS=(); ONLY=""; ALL=0; PRUNE_UNDECLARED=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --zone)    ZONE_ARGS+=("${2:?--zone needs a value}"); shift 2;;
@@ -39,16 +50,31 @@ while [ $# -gt 0 ]; do
     --only)    ONLY="${ONLY:+$ONLY,}${2:?--only needs a value}"; shift 2;;
     --only=*)  ONLY="${ONLY:+$ONLY,}${1#*=}"; shift;;
     --all)     ALL=1; shift;;
+    --prune-undeclared) PRUNE_UNDECLARED=1; shift;;
     --dry-run) export DRY_RUN=1; shift;;
     --serial)  export ADB_SERIAL="${2:?--serial needs a value}"; shift 2;;
     -h|--help|help) usage; exit 0;;
     -*)        echo "andashi: unknown option $1 (andashi --help)" >&2; exit 2;;
-    *)         [ -z "$CMD" ] || { echo "andashi: one command at a time ($CMD, $1)" >&2; exit 2; }
-               CMD="$1"; shift;;
+    *)         if [ -z "$CMD" ]; then CMD="$1"; else POS+=("$1"); fi; shift;;
   esac
 done
 [ -n "$CMD" ] || { usage; exit 2; }
-case "$CMD" in status|diff|apply|pull) ;; *) echo "andashi: unknown command '$CMD' (andashi --help)" >&2; exit 2;; esac
+case "$CMD" in
+  status|diff|apply|pull|watch) NEEDS_DEVICE=1;;
+  app|theme)                    NEEDS_DEVICE=0;;
+  *) echo "andashi: unknown command '$CMD' (andashi --help)" >&2; exit 2;;
+esac
+if [ "$NEEDS_DEVICE" = 0 ] && [ "${DRY_RUN:-0}" = 1 ]; then
+  # The edit IS the preview: it changes one file you review with git diff and
+  # take back with git checkout. A dry run that wrote anyway would be worse
+  # than none, so it is refused rather than half-honoured.
+  echo "andashi: '$CMD' edits the catalog; review the result with git diff instead of --dry-run" >&2; exit 2
+fi
+if [ "$NEEDS_DEVICE" = 0 ]; then
+  for z in ${ZONE_ARGS[@]+"${ZONE_ARGS[@]}"}; do
+    case "$z" in *current*) echo "andashi: '$CMD' edits the catalog; name the zone, 'current' needs a phone" >&2; exit 2;; esac
+  done
+fi
 
 # The zone selection is resolved ONCE, here, and handed to every step as plain
 # keys. `current` asked again by each step could name a different zone if the
@@ -58,7 +84,7 @@ if [ "${#ZONE_ARGS[@]}" -gt 0 ]; then
 fi
 # shellcheck source=../lib/common.sh
 source "$ROOT/lib/common.sh"
-require_device
+[ "$NEEDS_DEVICE" = 0 ] || require_device
 [ -z "${ZONES:-}" ] || export ZONES="${ZONES_RESOLVED# }"
 # shellcheck source=../lib/andashi.sh
 source "$ROOT/lib/andashi.sh"
@@ -88,17 +114,37 @@ dev_sha_of() {   # $1=uid; empty when the zone cannot answer
   query_state diagnostics "$1" 2>/dev/null | jq -r '.configSha256 // empty' 2>/dev/null || true
 }
 is_managed() { [ "$(profile_field "$1" type)" = "managed" ]; }
+pkgs_of() {   # $1=uid [$2=-3] -> package names, space separated
+  ash_ro pm list packages ${2:-} --user "$1" 2>/dev/null | tr -d '\r' | sed -n 's/^package://p' | tr '\n' ' '
+}
+# Sets A_missing, A_remove, A_foreign for a zone (see apps_drift).
+zone_apps() {   # $1=zone $2=uid
+  local rec
+  rec="$(tr '\n' ' ' < "$STATE_DIR/installed/$(device_id)/$1" 2>/dev/null || true)"
+  # `-u` lists every package present on the device, installed for this user
+  # or not - what `pm install-existing` can bring into the zone.
+  [ -n "${DEVICE_PKGS:-}" ] || DEVICE_PKGS="$(pkgs_of 0 -u)"
+  eval "$(apps_drift "$(declared_pkgs "$1" | tr '\n' ' ')" "$(installable_pkgs "$1" "$DEVICE_PKGS" | tr '\n' ' ')" \
+            "$(pkgs_of "$2")" "$(pkgs_of "$2" -3)" "$rec" "$(zone_system_pkgs "$1")" \
+          | sed "s/^\([a-z]*\)=\(.*\)\$/A_\1='\2'/")"
+}
 
 regenerate() {
   # The generated files follow the catalog; a stale one would be pushed as if
   # it were the catalog. The generator refuses to overwrite a file that
   # changed since it wrote it, which is the answer, not an obstacle.
+  #
+  # Chained with && on purpose. Every caller says `regenerate || die`, and
+  # inside a function called that way bash ignores `set -e`: a generator that
+  # failed was followed by three checks that passed, and the function reported
+  # success for a catalog that did not generate (found by
+  # tests/andashi-catalog.test.sh, a glass key that does not exist).
   local out="$CONFIG_DIR/launcher"
   export CONFIG_DIR
-  OUT_DIR="$out" "$ROOT/config/gen-launcher.sh" >/dev/null
-  OUT_DIR="$out" "$ROOT/config/check-schema.sh" >/dev/null
-  OUT_DIR="$out" "$ROOT/config/check-contacts.sh" >/dev/null
-  OUT_DIR="$out" "$ROOT/config/check-appwidgets.sh" >/dev/null
+  OUT_DIR="$out" "$ROOT/config/gen-launcher.sh" >/dev/null \
+    && OUT_DIR="$out" "$ROOT/config/check-schema.sh" >/dev/null \
+    && OUT_DIR="$out" "$ROOT/config/check-contacts.sh" >/dev/null \
+    && OUT_DIR="$out" "$ROOT/config/check-appwidgets.sh" >/dev/null
 }
 
 private_catalog() {
@@ -110,7 +156,8 @@ private_catalog() {
 # prints only what is to do and exits 1 when there is any.
 report() {   # $1=status|diff
   local mode="$1" todo=0 z uid st sections pend want rec dev plan line
-  [ "$mode" = status ] && printf '%-8s %-5s %-8s %-34s %s\n' ZONE USER STATE LAUNCHER "CHANGED SINCE LAST APPLY"
+  [ "$mode" = status ] && printf '%-8s %-5s %-8s %-34s %-12s %s\n' ZONE USER STATE LAUNCHER APPS "CHANGED SINCE LAST APPLY"
+  local apps
   while read -r z; do
     uid="$(uid_of "$z")"; st="$(state_of "$uid")"
     sections="$(changed_sections "$(cat "$(applied_record "$z")" 2>/dev/null || true)" "$(zone_snapshot "$z")" | tr '\n' ' ')"
@@ -138,15 +185,34 @@ report() {   # $1=status|diff
         host-changed)   line="changed here, waits for the zone";;
       esac
     fi
+    A_missing=""; A_remove=""; A_foreign=""
+    [ -n "$uid" ] && zone_apps "$z" "$uid"
+    apps="$(n() { set -- $1; echo $#; }
+            printf '+%s -%s ?%s' "$(n "$A_missing")" "$(n "$A_remove")" "$(n "$A_foreign")")"
+    [ "$apps" = "+0 -0 ?0" ] && apps="in sync"
     if [ "$mode" = status ]; then
-      printf '%-8s %-5s %-8s %-34s %s\n' "$z" "${uid:--}" "$st" "$line" \
+      printf '%-8s %-5s %-8s %-34s %-12s %s\n' "$z" "${uid:--}" "$st" "$line" "$apps" \
         "${sections:-nothing}${pend:+ | pending: $pend}"
     else
       local out=""
       [ -n "$sections" ] && out="$out  inputs changed: $sections"$'\n'
       [ -n "$pend" ]     && out="$out  pending on this host: $pend"$'\n'
       case "$line" in "in sync"|"unchanged here"*|"(home screen"*) ;; *) out="$out  launcher: $line"$'\n';; esac
-      if [ -n "$out" ]; then printf '%s\n%s' "$z" "$out"; todo=1; fi
+      [ -n "$A_missing" ] && out="$out  apps to install: $A_missing"$'\n'
+      [ -n "$A_remove" ]  && out="$out  apps to remove (no longer in the catalog): $A_remove"$'\n'
+      # Named, but not a reason to exit 1 on its own: they are somebody's -
+      # unless this diff previews an apply that was told to remove them.
+      if [ "$PRUNE_UNDECLARED" = 1 ]; then
+        [ -n "$A_foreign" ] && out="$out  apps to remove (--prune-undeclared): $A_foreign"$'\n'
+      else
+        [ -n "$A_foreign" ] && out="$out  not in the catalog, kept: $A_foreign"$'\n'
+      fi
+      [ -n "$out" ] && printf '%s\n%s' "$z" "$out"
+      # Everything above is said; only what apply would act on makes it a
+      # diff. Foreign apps are somebody's, so naming them is not a to-do.
+      [ -n "$sections$pend$A_missing$A_remove" ] && todo=1
+      [ "$PRUNE_UNDECLARED" = 1 ] && [ -n "$A_foreign" ] && todo=1
+      case "$line" in "in sync"|"unchanged here"*|"(home screen"*) ;; *) todo=1;; esac
     fi
   done < <(selected_zones)
   if [ "$mode" = diff ]; then
@@ -194,6 +260,17 @@ cmd_apply() {
       # this host is still asked - if it is running - whether the phone
       # changed. One query per running zone; a stopped one cannot have been
       # edited since it stopped, and the step's guard meets it when it runs.
+      # The phone's side of the apps: something the catalog names that is not
+      # there, or something it stopped naming that still is. Asked of every
+      # zone that exists - the package manager answers for stopped ones too.
+      local zuid; zuid="$(uid_of "$z")"
+      if [ -n "$zuid" ]; then
+        A_missing=""; A_remove=""; A_foreign=""
+        zone_apps "$z" "$zuid"
+        if [ -n "$A_missing$A_remove" ] || { [ "$PRUNE_UNDECLARED" = 1 ] && [ -n "$A_foreign" ]; }; then
+          secs+=(apps)
+        fi
+      fi
       if ! is_managed "$z" && [ "$(state_of "$(uid_of "$z")")" = running ]; then
         case "$(reconcile_plan "$(want_sha_of "$z")" \
                   "$(record_field "$(sha_record "$z")" sha 2>/dev/null || true)" \
@@ -203,6 +280,7 @@ cmd_apply() {
       fi
     fi
     [ "${#secs[@]}" -gt 0 ] || continue
+    mapfile -t secs < <(printf '%s\n' "${secs[@]}" | awk '!seen[$0]++')
     ZSTEPS[$z]=" $(steps_for_sections "${secs[@]}" | tr '\n' ' ')"
     log "$z: ${secs[*]}"
   done < <(selected_zones)
@@ -262,6 +340,7 @@ cmd_apply() {
 
   local env_mode=(NO_START=1 ONLY_CHANGED=1) zs st_rc step_fail=0
   [ "$ALL" = 1 ] && env_mode=(NO_START=0 ONLY_CHANGED=0)
+  env_mode+=(PRUNE_UNDECLARED="$PRUNE_UNDECLARED")
   for s in "${STEP_ORDER[@]}"; do
     zs="$(zones_for_step "$s")"
     [ -n "$zs" ] || continue
@@ -308,7 +387,126 @@ report_conflicts() {
   done
 }
 
+# ---- editing the catalog ------------------------------------------------------
+# For people and for agents alike: the change lands in CONFIG_DIR, the same
+# checks as `make check` run over it, and nothing touches a phone. Applying is
+# a separate, deliberate step.
+catalog_checks() {
+  regenerate || { warn "the catalog no longer generates cleanly - see above"; return 1; }
+  CONFIG_DIR="$CONFIG_DIR" "$ROOT/config/check-invariants.sh" >/dev/null || return 1
+  ok "catalog checks pass - review with git diff in $CONFIG_DIR; then look at 'andashi diff' and run 'andashi apply'"
+}
+# An edit the checks refuse is taken back: a command that leaves the catalog
+# in a state `make check` rejects hands the next person - or the agent that
+# ran it - a broken file and a message they may not have read.
+KEEP="$(mktemp -d)"; trap 'rm -rf "$KEEP"' EXIT
+catalog_keep() { cp "$CONFIG_DIR/apps.json" "$CONFIG_DIR/theming.json" "$KEEP/"; }
+catalog_restore_and_die() {   # $1=why
+  cp "$KEEP/apps.json" "$KEEP/theming.json" "$CONFIG_DIR/"
+  regenerate >/dev/null 2>&1 || true
+  die "$1 - the catalog is as it was before this command"
+}
+catalog_commit_or_restore() {
+  catalog_checks && return 0
+  cp "$KEEP/apps.json" "$KEEP/theming.json" "$CONFIG_DIR/"
+  regenerate >/dev/null 2>&1 || true
+  die "refused - the catalog is as it was before this command"
+}
+edit_json() {   # $1=file $2=jq program, rest=jq args; atomic, and only if jq succeeds
+  local f="$1" prog="$2"; shift 2
+  jq --indent 2 "$@" "$prog" "$f" > "$f.new" && mv "$f.new" "$f" || { rm -f "$f.new"; return 1; }
+}
+cmd_app() {
+  local verb="${POS[0]:-}" id="${POS[1]:-}" z
+  [ -n "$verb" ] && [ -n "$id" ] && [ -n "${ZONES:-}" ] \
+    || die "usage: andashi app add|rm <id> --zone Z"
+  jq -e --arg id "$id" '.apps[] | select(.id == $id)' "$CONFIG_DIR/apps.json" >/dev/null \
+    || die "no app '$id' in $CONFIG_DIR/apps.json - a new app needs its own entry first (package, source, net)"
+  catalog_keep
+  for z in $ZONES; do
+    case "$verb" in
+      add) edit_json "$CONFIG_DIR/apps.json" '(.apps[] | select(.id == $id) | .profiles) |= ((. // []) + [$z] | unique)' \
+             --arg id "$id" --arg z "$z" || catalog_restore_and_die "could not place $id in $z"
+           ok "$id placed in $z";;
+      rm)  edit_json "$CONFIG_DIR/apps.json" '(.apps[] | select(.id == $id) | .profiles) |= ((. // []) - [$z])' \
+             --arg id "$id" --arg z "$z" || catalog_restore_and_die "could not take $id out of $z"
+           ok "$id taken out of $z - the next apply removes it there";;
+      *)   die "andashi app: '$verb' is neither add nor rm";;
+    esac
+  done
+  catalog_commit_or_restore
+}
+cmd_theme() {
+  local verb="${POS[0]:-}" key="${POS[1]:-}" val="${POS[2]:-}" path z
+  [ "$verb" = set ] && [ -n "$key" ] && [ "${#POS[@]}" -ge 3 ] \
+    || die "usage: andashi theme set <key> <value> [--zone Z]   e.g. glass.tint 0.3"
+  # A value that parses as JSON is JSON (0.3, true, "x"); anything else is a string.
+  # Whether it parses, not whether it is truthy: `jq -e` would call a valid
+  # `false` a failure and store the string "false".
+  jq -n --argjson v "$val" 'true' >/dev/null 2>&1 || val="$(jq -cn --arg v "$val" '$v')"
+  path="$(jq -cn --arg k "$key" '$k | split(".")')"
+  catalog_keep
+  if [ -z "${ZONES:-}" ]; then
+    edit_json "$CONFIG_DIR/theming.json" 'setpath(["all_profiles"] + $p; $v)' --argjson p "$path" --argjson v "$val" \
+      || catalog_restore_and_die "could not set all_profiles.$key"
+    ok "all_profiles.$key = $val"
+  else
+    for z in $ZONES; do
+      edit_json "$CONFIG_DIR/theming.json" 'setpath(["per_profile", $z] + $p; $v)' \
+        --arg z "$z" --argjson p "$path" --argjson v "$val" \
+        || catalog_restore_and_die "could not set per_profile.$z.$key"
+      ok "per_profile.$z.$key = $val"
+    done
+  fi
+  catalog_commit_or_restore
+}
+
+# ---- watch ------------------------------------------------------------------------
+# The edit-and-look loop without typing the apply: every time an input of the
+# zone in front changes, apply to that zone. Polls instead of inotify, because
+# editors save by rename and wallpaper paths live outside CONFIG_DIR; hashing
+# one zone's inputs costs a few milliseconds. The zone is asked for again on
+# every change, so switching zones on the phone moves the watch with you.
+cmd_watch() {
+  local fixed="${ZONES:-}" last="" now
+  # `--zone current` means "whatever is in front", every time - not the zone
+  # that happened to be in front when watch started. It was resolved to a key
+  # above like every selection, so it is recognised from the arguments here.
+  [ "${ZONE_ARGS[*]:-}" = current ] && fixed=""
+  fixed="${fixed// /,}"
+  # What watch was started with, every apply gets: --all, --only and
+  # --prune-undeclared belong to the loop, not to its first round.
+  local fwd=()
+  [ "$ALL" = 1 ] && fwd+=(--all)
+  [ -n "$ONLY" ] && fwd+=(--only "$ONLY")
+  [ "$PRUNE_UNDECLARED" = 1 ] && fwd+=(--prune-undeclared)
+  snap() {   # the inputs of the watched zones, as one hash
+    local z zs="$fixed"
+    zs="${zs//,/ }"
+    [ -n "$zs" ] || zs="$(ZONES=current bash -c 'source "$0/lib/common.sh"; printf %s "$ZONES_RESOLVED"' "$ROOT" 2>/dev/null)"
+    for z in $zs; do zone_snapshot "$z"; done | sha256sum
+  }
+  log "watching $CONFIG_DIR${fixed:+ for $fixed} - Ctrl-C to stop"
+  last="$(snap)"
+  while :; do
+    sleep 1
+    now="$(snap)"
+    [ "$now" != "$last" ] || continue
+    sleep 0.3   # an editor writing in two steps
+    now="$(snap)"
+    # What this apply is FOR is the state before it starts. A save that
+    # lands while it runs is not in it, so it is not acknowledged here: the
+    # next poll sees it differ from $last and applies again.
+    last="$now"
+    "$0" apply --zone "${fixed:-current}" ${fwd[@]+"${fwd[@]}"} || true
+    log "watching again"
+  done
+}
+
 case "$CMD" in
+  app)    cmd_app;;
+  theme)  cmd_theme;;
+  watch)  cmd_watch;;
   status) report status;;
   diff)   report diff;;
   pull)   cmd_pull;;
