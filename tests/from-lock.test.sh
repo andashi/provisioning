@@ -81,6 +81,21 @@ chmod a-w "$tmp/apks/stale/universal"; fl
 rc=$?
 chmod u+w "$tmp/apks/stale/universal"
 t "an APK that cannot be set aside fails the run" '[ $rc != 0 ] && grep -q "could not set universal/g-2.apk aside" "$tmp/out"'
+t "... and the locked file it had promoted is taken back" '[ ! -e "$tmp/apks/universal/g-1.apk" ] && [ -f "$tmp/apks/universal/g-2.apk" ]'
+
+# A promotion that fails halfway undoes the half.
+{ entry u universal universal/u-1.apk "$good" https://x/good.apk
+  entry x x86_64 x86_64/x-1.apk "$good" https://x/good.apk; } | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks/universal" "$tmp/apks/x86_64"; chmod a-w "$tmp/apks/x86_64"; fl
+# shellcheck disable=SC2034
+rc=$?
+chmod u+w "$tmp/apks/x86_64"
+t "a promotion that fails halfway is undone"   '[ $rc != 0 ] && grep -q "undoing" "$tmp/out" && [ ! -e "$tmp/apks/universal/u-1.apk" ] && [ ! -e "$tmp/apks/x86_64/x-1.apk" ]'
+
+entry g universal universal/g-1.apk "$good" https://x/good.apk | lock
+rm -rf "$tmp/apks"; mkdir -p "$tmp/apks/.from-lock.lock"; fl
+t "a second run on the same inventory is refused" '[ $? != 0 ] && grep -q "another from-lock.sh is working" "$tmp/out" && [ ! -e "$tmp/apks/universal/g-1.apk" ]'
+t "... and does not remove the other run's lock"  '[ -d "$tmp/apks/.from-lock.lock" ]'
 
 printf '{"entries": []}' > "$tmp/lock.json"; fl
 t "a file that is not a lock is refused"  '[ $? != 0 ] && grep -q "not a lock" "$tmp/out"'

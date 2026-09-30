@@ -56,11 +56,16 @@ sel="$(jq -r --arg abi "$APK_ABI" '
   || { bad "could not read the entries of $LOCK - nothing fetched"; exit 1; }
 [ -n "$sel" ] || { bad "$LOCK names nothing for $APK_ABI - nothing fetched"; exit 1; }
 
-# One staging directory per run: two runs on the same inventory must not
-# delete each other's downloads.
+# One run per inventory. Separate staging directories are not enough: two runs
+# look at the same destinations, and one could set aside a file the other has
+# just put in place. mkdir is the lock because it is atomic everywhere this
+# runs, flock is not on macOS.
 mkdir -p "$APKS_DIR"
-stage="$(mktemp -d "$APKS_DIR/.from-lock.XXXXXX")" || { bad "cannot create a staging directory in $APKS_DIR"; exit 1; }
-trap 'rm -rf "$stage"' EXIT
+lockdir="$APKS_DIR/.from-lock.lock"
+mkdir "$lockdir" 2>/dev/null \
+  || { bad "another from-lock.sh is working on $APKS_DIR (or one was killed: remove $lockdir)"; exit 1; }
+stage="$(mktemp -d "$APKS_DIR/.from-lock.XXXXXX")" || { rmdir "$lockdir"; bad "cannot create a staging directory in $APKS_DIR"; exit 1; }
+trap 'rm -rf "$stage"; rmdir "$lockdir" 2>/dev/null' EXIT
 fail=0; got=0; had=0; keep=" "; wrong=()
 while IFS=$'\t' read -r label file sha urls; do
   keep="$keep$file "
@@ -101,24 +106,39 @@ if [ "$fail" != 0 ]; then
   exit 1
 fi
 
-# Promotion. Each move is checked: a move that failed is not a file in place.
+# Promotion and set-aside, as one transaction. Every move is journalled, and
+# a move that fails undoes the ones before it, newest first, so a run that
+# cannot finish leaves the inventory as it found it - apart from the
+# wrong-bytes quarantine above, which is kept on purpose.
+journal=()   # "from<TAB>to" per completed move
+undo() {
+  local i from to
+  for (( i=${#journal[@]}-1; i>=0; i-- )); do
+    from="${journal[$i]%%$'\t'*}"; to="${journal[$i]#*$'\t'}"
+    mkdir -p "$(dirname "$from")" && mv -f "$to" "$from" \
+      || bad "could not undo: $to should be back at $from"
+  done
+}
+move() {   # $1=from $2=to - journalled, and checked
+  mkdir -p "$(dirname "$2")" && mv -f -T "$1" "$2" && [ -f "$2" ] || return 1
+  journal+=("$1"$'\t'"$2")
+}
+
 while IFS= read -r -d '' f; do
   rel="${f#"$stage"/}"
-  mkdir -p "$APKS_DIR/$(dirname "$rel")"
-  mv -f -T "$f" "$APKS_DIR/$rel" && [ -f "$APKS_DIR/$rel" ] \
-    || { bad "could not put $rel into $APKS_DIR"; exit 1; }
+  move "$f" "$APKS_DIR/$rel" \
+    || { bad "could not put $rel into $APKS_DIR - undoing this run's changes"; undo; exit 1; }
 done < <(find "$stage" -type f -name '*.apk' -print0)
 
-# What the lock did not name, in the directories it speaks for, is set aside.
+# What the lock did not name, in the directories it speaks for, is set aside:
+# apk_for_pkg installs the highest version, so it would win otherwise.
 moved=0
 for dir in universal "$APK_ABI"; do
   for f in "$APKS_DIR/$dir"/*.apk; do
     [ -e "$f" ] || continue
     case "$keep" in *" $dir/$(basename "$f") "*) continue;; esac
-    # A move that fails leaves a file apk_for_pkg would prefer: that is a
-    # failed run, however many downloads went through.
-    mkdir -p "$APKS_DIR/stale/$dir" && mv -f "$f" "$APKS_DIR/stale/$dir/" \
-      || { bad "could not set $dir/$(basename "$f") aside - it would be installed instead of the locked build"; exit 1; }
+    move "$f" "$APKS_DIR/stale/$dir/$(basename "$f")" \
+      || { bad "could not set $dir/$(basename "$f") aside - it would be installed instead of the locked build; undoing this run's changes"; undo; exit 1; }
     moved=$((moved+1))
   done
 done
