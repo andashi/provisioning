@@ -212,8 +212,14 @@ state="$(gh pr view "$pr" --repo "$REPO" --json state -q .state)"
 # The merged branch goes: left behind, a name like lock-refresh blocks every
 # lock-refresh/<date> after it. A stack keeps working, GitHub has retargeted
 # the next pull request to main before this point.
+# Only a branch of THIS repository: a fork's branch name says nothing about
+# the branch of the same name here, which may be somebody's work.
 headref="$(gh pr view "$pr" --repo "$REPO" --json headRefName -q .headRefName)"
-if gh api -X DELETE "repos/$REPO/git/refs/heads/$headref" >/dev/null 2>&1; then
+headrepo="$(gh pr view "$pr" --repo "$REPO" --json headRepository,headRepositoryOwner \
+            -q '.headRepositoryOwner.login + "/" + .headRepository.name')"
+if [ "$headrepo" != "$REPO" ]; then
+  echo "head branch lives in $headrepo, not here - nothing deleted"
+elif gh api -X DELETE "repos/$REPO/git/refs/heads/$headref" >/dev/null 2>&1; then
   echo "deleted branch $headref"
 else
   echo "pr-gate: merged, but the branch $headref could not be deleted - delete it by hand" >&2
