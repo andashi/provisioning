@@ -180,12 +180,20 @@ echo "mergeable"
 # the same `sha` pin as --match-head-commit, and works for a lone one too.
 uuid="$(gh api -X PUT "repos/$REPO/pulls/$pr/merge-async" -f sha="$head" -f merge_method=squash --jq .details.uuid)" \
   || { echo "pr-gate: the merge request was refused" >&2; exit 1; }
-for _ in $(seq 1 60); do
+# A lookup that fails says nothing about the merge, so it is retried like
+# "pending"; only an answer ends the wait. Running out of time is its own
+# message: the merge may still complete, and the one thing not to do then is
+# to request it again.
+st=""
+for _ in $(seq 1 100); do
   st="$(gh api "repos/$REPO/pulls/$pr/merge-async/$uuid" --jq .status 2>/dev/null || true)"
-  [ "$st" = pending ] || break
-  sleep 3
+  case "$st" in ""|pending) sleep 3;; *) break;; esac
 done
-[ "$st" = merged ] || { echo "pr-gate: the merge ended as '${st:-unknown}', not merged" >&2; exit 1; }
+case "$st" in
+  merged) ;;
+  ""|pending) echo "pr-gate: no final answer after 5 minutes (last: ${st:-no answer}) - check the pull request before doing anything; the merge request $uuid may still complete" >&2; exit 1;;
+  *) echo "pr-gate: the merge ended as '$st', not merged" >&2; exit 1;;
+esac
 state="$(gh pr view "$pr" --repo "$REPO" --json state -q .state)"
 [ "$state" = "MERGED" ] || { echo "pr-gate: merge reported, state is $state" >&2; exit 1; }
 echo "merged #$pr at ${head:0:12}"
