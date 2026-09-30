@@ -209,4 +209,13 @@ case "$st" in
 esac
 state="$(gh pr view "$pr" --repo "$REPO" --json state -q .state)"
 [ "$state" = "MERGED" ] || { echo "pr-gate: merge reported, state is $state" >&2; exit 1; }
+# The merged branch goes: left behind, a name like lock-refresh blocks every
+# lock-refresh/<date> after it. A stack keeps working, GitHub has retargeted
+# the next pull request to main before this point.
+headref="$(gh pr view "$pr" --repo "$REPO" --json headRefName -q .headRefName)"
+if gh api -X DELETE "repos/$REPO/git/refs/heads/$headref" >/dev/null 2>&1; then
+  echo "deleted branch $headref"
+else
+  echo "pr-gate: merged, but the branch $headref could not be deleted - delete it by hand" >&2
+fi
 echo "merged #$pr at ${head:0:12}"
