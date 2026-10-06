@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-05T12:18:57Z",
+  "generated": "2026-10-06T12:04:20Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -47,15 +47,15 @@
     {
       "pkg": "app.comaps",
       "label": "CoMaps",
-      "version": "2026.08.31-14",
-      "versionCode": 26083114,
+      "version": "2026.10.05-19",
+      "versionCode": 26100519,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/app.comaps-2026.08.31-14.apk",
-      "sha256": "6fa705e67b464ef4c3daa7781c53ae6e5061858687e4c46b7836b4a99bab4ed3",
-      "size": 61716469,
+      "file": "arm64-v8a/app.comaps-2026.10.05-19.apk",
+      "sha256": "7eea2f49dd79e583e14cd9ebac3b98e754b3e351dad2522530e40cedf9b5987a",
+      "size": 63779356,
       "signer": "4894e8e6963627ef660031d8593fe77297f835acb4e23810003e926135023b4c",
       "urls": [
-        "https://codeberg.org/comaps/comaps/releases/download/v2026.08.31-14/CoMaps-26083114-main-release.apk"
+        "https://codeberg.org/comaps/comaps/releases/download/v2026.10.05-19/CoMaps-26100519-main-release.apk"
       ]
     },
     {
@@ -187,15 +187,15 @@
     {
       "pkg": "com.x8bit.bitwarden",
       "label": "Bitwarden",
-      "version": "2026.9.0-bwpm",
-      "versionCode": 21909,
+      "version": "2026.9.1-bwpm",
+      "versionCode": 21929,
       "abi": "universal",
-      "file": "universal/com.x8bit.bitwarden-2026.9.0-bwpm.apk",
-      "sha256": "981939c676baf7cb0f0ddd2142794749e5b885bac2c06529f4ef21fb8b925112",
-      "size": 91140277,
+      "file": "universal/com.x8bit.bitwarden-2026.9.1-bwpm.apk",
+      "sha256": "d09124150e0d3714745ffa4b5b08908e9639ca97e53acd7c47aafe4df0e352fb",
+      "size": 91578509,
       "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90",
       "urls": [
-        "https://github.com/bitwarden/android/releases/download/v2026.9.0-bwpm/com.x8bit.bitwarden-fdroid.apk"
+        "https://github.com/bitwarden/android/releases/download/v2026.9.1-bwpm/com.x8bit.bitwarden-fdroid.apk"
       ]
     },
     {
@@ -369,15 +369,15 @@
     {
       "pkg": "org.torproject.android",
       "label": "Orbot",
-      "version": "17.9.6-RC-1-tor-0.4.9.13",
-      "versionCode": 1796300100,
+      "version": "17.9.7-BETA-1-tor-0.4.9.13.2",
+      "versionCode": 1797200100,
       "abi": "universal",
-      "file": "universal/org.torproject.android-17.9.6-RC-1-tor-0.4.9.13.apk",
-      "sha256": "4b9bbde9cc8b96f42232898dd9cad6f11e41e9e5bb39be9466f94e1c1af8196a",
-      "size": 82550661,
+      "file": "universal/org.torproject.android-17.9.7-BETA-1-tor-0.4.9.13.2.apk",
+      "sha256": "623b37c1f7bacfb60340874130f58e3214edd37afa2df83a975bd7d3c81571b0",
+      "size": 79394667,
       "signer": "a454b87a1847a89ed7f5e70fba6bba96f3ef29c26e0981204fe347bf231dfd5b",
       "urls": [
-        "https://github.com/guardianproject/orbot-android/releases/download/17.9.6-RC-1-tor-0.4.9.13/Orbot-17.9.6-RC-1-tor-0.4.9.13-fullperm-universal-release.apk"
+        "https://github.com/guardianproject/orbot-android/releases/download/17.9.7-BETA-1-tor-0.4.9.13.2/Orbot-17.9.7-BETA-1-tor-0.4.9.13.2-1-g1bf1722f4-fullperm-universal-release.apk"
       ]
     },
     {

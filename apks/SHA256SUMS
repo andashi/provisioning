@@ -3,7 +3,7 @@ e830b37e1cd7cd66487492f4a1084ba086254b2b09541d729da0ec2169a73bfe  universal/app.
 33d4b21c85169bbe2b22b7efc17aa17a685b295e28810cfdf063402a60ae064c  universal/at.bitfire.davdroid-4.5.20-ose.apk
 ab1aeb91d7ca70731af2a03e5153e9a8ae6bcb7d06ea172517fbf2a8756832d2  universal/com.pocketpalai-1.19.0.apk
 7ecfb863e08f5fbd1ecd70235d8c34ba135a4124bdd8e166b9d6fb962782e0b5  universal/com.tailscale.ipn-1.102.4-t3caf7d9e7-g8fbef364a.apk
-981939c676baf7cb0f0ddd2142794749e5b885bac2c06529f4ef21fb8b925112  universal/com.x8bit.bitwarden-2026.9.0-bwpm.apk
+d09124150e0d3714745ffa4b5b08908e9639ca97e53acd7c47aafe4df0e352fb  universal/com.x8bit.bitwarden-2026.9.1-bwpm.apk
 22dd0227762c663de3b3483ab5a1f6e449e92ccfb71d2f3ca0f25bd8d30ee9f8  universal/digital.ventral.ips-1.2.apk
 eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075  universal/helium314.keyboard-4.1.apk
 f1c6fd929f9047809a7a9bb4e663d1ec1ec4d9f33d9794799c8e2f8e1663ec11  universal/im.molly.app-8.19.2-4.apk
@@ -14,9 +14,9 @@ d6d67b22f066d40f8771d8d7c0e0efe9315b37224d5b7e724f4c0e9b0eecca07  universal/net.
 542ac1d9211fd710ccb9226de4c01a7cb3e4d9b5ab322e48ffa6d45b59bdffdd  universal/org.andashi.home-0.12.0.apk
 b362605d9a7a3383262622d016a069221726a60a1288be1b8fade4b563e499f1  universal/org.polymorphicshade.tubular-0.28.4.apk
 384606e9a7337b20a6b991840c89510cb6ab8541e68d81fb76e2d375e91412fd  universal/org.thoughtcrime.securesms-8.28.4.apk
-4b9bbde9cc8b96f42232898dd9cad6f11e41e9e5bb39be9466f94e1c1af8196a  universal/org.torproject.android-17.9.6-RC-1-tor-0.4.9.13.apk
+623b37c1f7bacfb60340874130f58e3214edd37afa2df83a975bd7d3c81571b0  universal/org.torproject.android-17.9.7-BETA-1-tor-0.4.9.13.2.apk
 12ce9a9c6b9ac3b9d48550d9a41314a93eef46d5bf41c3b3a080a7a0981a0376  arm64-v8a/app.alextran.immich-3.2.4.apk
-6fa705e67b464ef4c3daa7781c53ae6e5061858687e4c46b7836b4a99bab4ed3  arm64-v8a/app.comaps-2026.08.31-14.apk
+7eea2f49dd79e583e14cd9ebac3b98e754b3e351dad2522530e40cedf9b5987a  arm64-v8a/app.comaps-2026.10.05-19.apk
 ec051d90bc9f82587a726b525976494bacef50bc8a7dd0e3789b859373121753  arm64-v8a/com.Vali98.ChatterUI-0.10.0.apk
 88f2cfd8ae8840b983c4d3c08549239e928d5f2b4a2e4577f11f681c048e67b1  arm64-v8a/com.celzero.bravedns-0.5.7.apk
 66c2db3108fdf0556bfa295b042ddbbbe13e469780c95a0c65859076142bff67  arm64-v8a/com.governikus.ausweisapp2-2.5.5.apk
