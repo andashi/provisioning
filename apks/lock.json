@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-08T12:04:18Z",
+  "generated": "2026-10-09T11:56:22Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -19,29 +19,29 @@
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.3.0",
-      "versionCode": 3032099,
+      "version": "3.3.1",
+      "versionCode": 3032199,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/app.alextran.immich-3.3.0.apk",
-      "sha256": "4dad6a7eced6111d93acef5368b739b83e0dc0eb97048ec9393cedff9ab26ea7",
+      "file": "arm64-v8a/app.alextran.immich-3.3.1.apk",
+      "sha256": "9215280247d74479f779b1fc756eca7281e3fd67ea816a31075080f1f372b08c",
       "size": 69260133,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.3.0/app-arm64-v8a-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.3.1/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.3.0",
-      "versionCode": 3034099,
+      "version": "3.3.1",
+      "versionCode": 3034199,
       "abi": "x86_64",
-      "file": "x86_64/app.alextran.immich-3.3.0.apk",
-      "sha256": "a87d0ca191a172f5425623e27b40ba79b51184c8d1403bb4ca25f3347c065870",
+      "file": "x86_64/app.alextran.immich-3.3.1.apk",
+      "sha256": "d80bd845ef312fad2e8f6b0045b8f073f5737d689866869fc24ff5da09d49926",
       "size": 71980079,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.3.0/app-x86_64-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.3.1/app-x86_64-release.apk"
       ]
     },
     {
@@ -173,15 +173,15 @@
     {
       "pkg": "com.tailscale.ipn",
       "label": "Tailscale",
-      "version": "1.102.4-t3caf7d9e7-g8fbef364a",
-      "versionCode": 298177930,
+      "version": "1.104.1-t7f4efe814-g6d75bd403",
+      "versionCode": 298567190,
       "abi": "universal",
-      "file": "universal/com.tailscale.ipn-1.102.4-t3caf7d9e7-g8fbef364a.apk",
-      "sha256": "7ecfb863e08f5fbd1ecd70235d8c34ba135a4124bdd8e166b9d6fb962782e0b5",
-      "size": 105440859,
+      "file": "universal/com.tailscale.ipn-1.104.1-t7f4efe814-g6d75bd403.apk",
+      "sha256": "b3a1a81b52d1437769e5570c89a95f5824518a6b376d10c39eb64af213a625b6",
+      "size": 105518311,
       "signer": "5cdb295551bfe1a087fed6acda07141c6c929fa7c29bd273a7092813acc434bf",
       "urls": [
-        "https://github.com/tailscale/tailscale-android/releases/download/1.102.4-t3caf7d9e7-g8fbef364a/tailscale-android-universal-1.102.4.apk"
+        "https://github.com/tailscale/tailscale-android/releases/download/1.104.1-t7f4efe814-g6d75bd403/tailscale-android-universal-1.104.1.apk"
       ]
     },
     {
