@@ -13,8 +13,9 @@
 # the script cannot decide is a refusal with a reason, never a pass.
 #
 # Stacked pull requests: only the bottom of a stack merges, the one whose base
-# is main. GitHub retargets the next one, which then gets its own full review
-# against main before it may follow. A pull request whose base is another
+# is main. The next one is moved to main after the merge - by GitHub for a
+# `gh stack` stack, by this script otherwise (delete_merged_branch) - and
+# then gets its own full review against main before it may follow. A pull request whose base is another
 # branch is refused here with that explanation.
 set -euo pipefail
 
@@ -75,7 +76,7 @@ echo "#$pr  head ${head:0:12}  base $base_ref ${base:0:12}"
 [ "$(jq -r .state <<<"$p")" = "OPEN" ] && good "open" || bad "not open"
 [ "$(jq -r .isDraft <<<"$p")" = "false" ] && good "not a draft" || bad "draft"
 [ "$base_ref" = "main" ] && good "base is main" \
-  || bad "base is $base_ref, not main - merge the pull request below it first; GitHub retargets this one"
+  || bad "base is $base_ref, not main - merge the pull request below it first; this one is retargeted then"
 
 # ---- checks on the head -----------------------------------------------------
 checks="$(gh pr checks "$pr" --repo "$REPO" --json name,state,bucket 2>/dev/null || true)"
@@ -210,18 +211,40 @@ esac
 state="$(gh pr view "$pr" --repo "$REPO" --json state -q .state)"
 [ "$state" = "MERGED" ] || { echo "pr-gate: merge reported, state is $state" >&2; exit 1; }
 # The merged branch goes: left behind, a name like lock-refresh blocks every
-# lock-refresh/<date> after it. A stack keeps working, GitHub has retargeted
-# the next pull request to main before this point.
+# lock-refresh/<date> after it.
 # Only a branch of THIS repository: a fork's branch name says nothing about
 # the branch of the same name here, which may be somebody's work.
-headref="$(gh pr view "$pr" --repo "$REPO" --json headRefName -q .headRefName)"
-headrepo="$(gh pr view "$pr" --repo "$REPO" --json headRepository,headRepositoryOwner \
-            -q '.headRepositoryOwner.login + "/" + .headRepository.name')"
-if [ "$headrepo" != "$REPO" ]; then
-  echo "head branch lives in $headrepo, not here - nothing deleted"
-elif gh api -X DELETE "repos/$REPO/git/refs/heads/$headref" >/dev/null 2>&1; then
-  echo "deleted branch $headref"
-else
-  echo "pr-gate: merged, but the branch $headref could not be deleted - delete it by hand" >&2
-fi
+# And not while a pull request still builds on it. Deleting the base of an
+# open pull request CLOSES that pull request, and GitHub cannot reopen or
+# retarget a closed one. A stack made with `gh stack` is retargeted by GitHub
+# before this point; one made with plain `gh pr create` is not - two pull
+# requests of andashi/updater died that way (2026-10-10). So whatever still
+# names the branch as its base is moved to main first, and read back.
+delete_merged_branch() {   # $1=pr $2=head sha (for the message)
+  local headref headrepo n got left=""
+  headref="$(gh pr view "$1" --repo "$REPO" --json headRefName -q .headRefName)"
+  headrepo="$(gh pr view "$1" --repo "$REPO" --json headRepository,headRepositoryOwner \
+              -q '.headRepositoryOwner.login + "/" + .headRepository.name')"
+  if [ "$headrepo" != "$REPO" ]; then
+    echo "head branch lives in $headrepo, not here - nothing deleted"
+    return 0
+  fi
+  if ! n="$(gh pr list --repo "$REPO" --base "$headref" --state open --json number -q '.[].number')"; then
+    echo "pr-gate: merged, but could not list the pull requests based on $headref - branch kept" >&2
+    return 0
+  fi
+  for n in $n; do
+    gh pr edit "$n" --repo "$REPO" --base main >/dev/null 2>&1 || true
+    got="$(gh pr view "$n" --repo "$REPO" --json baseRefName -q .baseRefName 2>/dev/null || true)"
+    if [ "$got" = main ]; then echo "retargeted #$n from $headref to main"; else left="$left #$n"; fi
+  done
+  if [ -n "$left" ]; then
+    echo "pr-gate: merged, but$left still build on $headref - branch kept, so they stay open; retarget them, then delete it" >&2
+  elif gh api -X DELETE "repos/$REPO/git/refs/heads/$headref" >/dev/null 2>&1; then
+    echo "deleted branch $headref"
+  else
+    echo "pr-gate: merged, but the branch $headref could not be deleted - delete it by hand" >&2
+  fi
+}
+delete_merged_branch "$pr" "$head"
 echo "merged #$pr at ${head:0:12}"
