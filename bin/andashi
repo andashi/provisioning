@@ -6,6 +6,8 @@
 #   andashi apply                 bring the phone to the catalog, touching only what changed
 #   andashi pull                  adopt the phone's launcher edits into the catalog
 #   andashi watch                 apply to the zone in front whenever the catalog changes
+#   andashi update                every running zone's updater checks the lock now;
+#                                 waits for it and says what it found
 #
 # Editing the catalog (no phone needed; each ends in the catalog's checks):
 #   andashi app add <id> --zone Z     place a catalog app in a zone
@@ -18,7 +20,7 @@
 #   --zone Z        only these zones; repeat or comma-separate; `current` is
 #                   the one in the foreground. Default: every zone.
 #   --only S        only these sections: profiles apps permissions settings
-#                   vpn theme launcher manual. Default: whatever changed.
+#                   vpn theme launcher updater manual. Default: whatever changed.
 #   --all           may start stopped zones (evicting others) and pushes
 #                   every zone's launcher whether it changed or not
 #   --prune-undeclared
@@ -60,7 +62,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$CMD" ] || { usage; exit 2; }
 case "$CMD" in
-  status|diff|apply|pull|watch) NEEDS_DEVICE=1;;
+  status|diff|apply|pull|watch|update) NEEDS_DEVICE=1;;
   app|theme)                    NEEDS_DEVICE=0;;
   *) echo "andashi: unknown command '$CMD' (andashi --help)" >&2; exit 2;;
 esac
@@ -96,6 +98,8 @@ LKEY="$(jq -r '.launcher // empty' "$THEME_FILE")"
 PKG="$(jq -r --arg k "$LKEY" '.launchers[$k].pkg // empty' "$THEME_FILE")"
 # shellcheck source=../lib/launcher-state.sh
 source "$ROOT/lib/launcher-state.sh"
+# shellcheck source=../lib/updater.sh
+source "$ROOT/lib/updater.sh"
 
 pending_sections() {   # $1=zone
   awk -v z="$1" '$1 == z { print $2 }' "$(pending_file)" 2>/dev/null || true
@@ -222,7 +226,59 @@ report() {   # $1=status|diff
   fi
   local pf; pf="$(pending_file)"
   [ -s "$pf" ] && printf '\npending on this host (stopped zones): %s\n' "$(tr '\n' ',' < "$pf" | sed 's/,$//; s/,/, /g')"
+  updates_report
   return 0
+}
+
+# ---- updates ------------------------------------------------------------------
+# What each zone's updater says about its apps. Asked, never assumed: a zone
+# whose updater does not answer is said to be silent, and a stopped zone is
+# not started to ask it - its apps wait for it to run (design §8).
+zone_has_updater() {   # $1=zone
+  jq -e --arg p "$UPDATER_PKG" --arg k "$1" '.apps[] | select(.pkg == $p) | .profiles | index($k)' "$CONFIG_DIR/apps.json" >/dev/null
+}
+updates_report() {
+  [ -n "$UPDATER_PKG" ] || return 0
+  local z uid st json
+  printf '\nupdates (%s)\n' "$UPDATER_PKG"
+  while read -r z; do
+    zone_has_updater "$z" || continue
+    uid="$(uid_of "$z")"; st="$(state_of "$uid")"
+    if [ "$st" != running ]; then printf '  %-8s %s - its apps are checked when it runs\n' "$z" "$st"; continue; fi
+    if ! json="$(updater_state "$uid")"; then printf '  %-8s the updater does not answer\n' "$z"; continue; fi
+    printf '  %-8s %s\n' "$z" "$(updater_summary <<<"$json")"
+    updater_attention <<<"$json" | sed 's/^/             /'
+  done < <(selected_zones)
+}
+
+cmd_update() {
+  [ -n "$UPDATER_PKG" ] || die "the catalog has no updater (an app with role updater) - nothing to ask"
+  local z uid before now i
+  while read -r z; do
+    zone_has_updater "$z" || continue
+    uid="$(uid_of "$z")"
+    [ "$(state_of "$uid")" = running ] || { skip "$z: not running - its updater checks when it runs"; continue; }
+    before="$(updater_state "$uid" | jq -r '.lastCheck // empty' 2>/dev/null || true)"
+    if [ "${DRY_RUN:-0}" = 1 ]; then
+      printf '   [dry-run] am broadcast --user %s -n %s/%s -a %s.action.CHECK_NOW\n' "$uid" "$UPDATER_PKG" "$UPDATER_RECEIVER_CLASS" "$UPDATER_PKG"
+      continue
+    fi
+    ash am broadcast --user "$uid" -n "$UPDATER_PKG/$UPDATER_RECEIVER_CLASS" -a "$UPDATER_PKG.action.CHECK_NOW" >/dev/null \
+      || { warn "$z: CHECK_NOW could not be sent"; continue; }
+    # The check runs in the background; its lastCheck moves when it is done.
+    now="$before"
+    for i in $(seq 1 60); do
+      now="$(updater_state "$uid" | jq -r '.lastCheck // empty' 2>/dev/null || true)"
+      [ -n "$now" ] && [ "$now" != "$before" ] && break
+      sleep 2
+    done
+    if [ -z "$now" ] || [ "$now" = "$before" ]; then
+      warn "$z: no new check within 2 minutes - the updater may be waiting for a network"
+    else
+      ok "$z: checked at $now"
+    fi
+  done < <(selected_zones)
+  updates_report
 }
 
 # ---- pull ------------------------------------------------------------------------
@@ -508,6 +564,7 @@ case "$CMD" in
   app)    cmd_app;;
   theme)  cmd_theme;;
   watch)  cmd_watch;;
+  update) cmd_update;;
   status) report status;;
   diff)   report diff;;
   pull)   cmd_pull;;

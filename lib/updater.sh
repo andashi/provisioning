@@ -197,3 +197,40 @@ updater_manages() {   # $1=source
   case "$1" in obtainium|fdroid|torproject|direct) return 0;; esac
   return 1
 }
+
+# ---- What the updater says --------------------------------------------------
+# The zone's state as JSON (andashi/updater design §9.2), or status 1 when the
+# zone's updater does not answer - not installed, zone stopped, provider gone.
+updater_state() {   # $1=uid
+  local out
+  out="$(ash_ro content query --user "$1" --uri "content://$UPDATER_PKG.state/state" 2>/dev/null | tr -d '\r')" || return 1
+  out="${out#Row: 0 json=}"
+  jq -e .apps >/dev/null 2>&1 <<<"$out" || return 1
+  printf '%s' "$out"
+}
+
+# One line for a person, from a state document on stdin: what is fine, what is
+# on its way, what needs somebody - and the lock it was all measured against.
+# The groups are the design's: an app is fine only when the package manager
+# confirmed the lock's build with the updater as its installer.
+updater_summary() {
+  jq -r '
+    def grp: if . == "current" or . == "ahead" then "ok"
+             elif . == "behind" or . == "downloading" or . == "verifying" or . == "installing"
+                  or . == "waiting-constraints" then "pending"
+             else "attention" end;
+    . as $st
+    | ([.apps[] | .state] | group_by(.) | map({s: .[0], n: length})) as $c
+    | [ ($c[] | select(.s | grp == "ok")        | "\(.n) \(.s)"),
+        ($c[] | select(.s | grp == "pending")   | "\(.n) \(.s)"),
+        ($c[] | select(.s | grp == "attention") | "\(.n) \(.s | ascii_upcase)") ] | join(", ")
+    | . + " | lock \(($st.lock.generated // "none")[:10]) (\($st.lock.freshness // "?"))"
+        + (if $st.lock.lastError then " ERROR \($st.lock.lastError)" else "" end)
+        + (if $st.exemption == "granted" then "" else " | battery exemption \($st.exemption // "?")" end)'
+}
+
+# The packages that need somebody, one "pkg state" per line.
+updater_attention() {
+  jq -r '.apps[] | select(.state as $s | ["current","ahead","behind","downloading","verifying","installing","waiting-constraints"] | index($s) | not)
+         | "\(.pkg) \(.state)\(if .error then " (\(.error))" else "" end)"'
+}

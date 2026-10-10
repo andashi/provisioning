@@ -32,6 +32,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@config/check-invariants.test.sh > /dev/null && echo "ok: catalog invariants (cases)"
 	@config/check-hosts.test.sh > /dev/null && echo "ok: allowed hosts (cases)"
 	@config/gen-updater.test.sh > /dev/null && echo "ok: updater config generation (cases)"
+	@config/gen-obtainium.test.sh > /dev/null && echo "ok: obtainium import (cases)"
 	@tests/andashi-catalog.test.sh > /dev/null && echo "ok: andashi catalog commands (cases)"
 	@config/check-schema.sh
 	@config/check-contacts.sh
