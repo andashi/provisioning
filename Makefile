@@ -23,6 +23,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@tests/updater-config.test.sh > /dev/null && echo "ok: updater config push (cases)"
 	@tests/lock.test.sh > /dev/null && echo "ok: writing the lock (cases)"
 	@tests/refresh-lock.test.sh > /dev/null && echo "ok: lock refresh routine (cases)"
+	@tests/heartbeat.test.sh > /dev/null && echo "ok: lock heartbeat (cases)"
 	@apks/check-lock.test.sh > /dev/null && echo "ok: lock consistency (cases)"
 	@apks/check-lock.sh
 	@config/check-schema.test.sh > /dev/null && echo "ok: schema check (cases)"
