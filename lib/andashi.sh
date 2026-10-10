@@ -5,8 +5,8 @@
 # The chain, in the order run.sh runs it. `apply` never reorders it: every
 # later step assumes the earlier ones have run (apps before permissions,
 # the theme before the launcher that is restarted by a palette change).
-STEP_ORDER=(00-profiles 10-apps 20-permissions 30-settings 35-vpn 40-theming 45-launcher-config 90-manual 99-finalize)
-SECTIONS="profiles apps permissions settings vpn theme launcher manual"
+STEP_ORDER=(00-profiles 10-apps 20-permissions 30-settings 35-vpn 40-theming 45-launcher-config 50-updater-config 90-manual 99-finalize)
+SECTIONS="profiles apps permissions settings vpn theme launcher updater manual"
 
 # What a person changes, mapped to the steps that deliver it. The launcher
 # step is in `apps` because the home screen resolves favourites and search
@@ -21,6 +21,7 @@ section_steps() {   # $1=section -> step names, one per line
     vpn)         printf '%s\n' 35-vpn;;
     theme)       printf '%s\n' 40-theming 45-launcher-config;;
     launcher)    printf '%s\n' 45-launcher-config;;
+    updater)     printf '%s\n' 50-updater-config;;
     manual)      printf '%s\n' 90-manual;;
     *)           return 1;;
   esac
@@ -30,7 +31,10 @@ section_steps() {   # $1=section -> step names, one per line
 # which zones exist and what lives in them, so a change there is a change to
 # everything; the others are narrower. `wallpapers` is not a file but the
 # bytes of every image theming.json points at: the launcher step notices new
-# bytes under an old name, but only if something makes it look.
+# bytes under an old name, but only if something makes it look. `updater.json`
+# is the zone's generated updater config, which already folds in the catalog,
+# the pinned signers and distribution.json - so a new pin or a moved lock URL
+# reaches the phone without anyone naming the section.
 sections_for_input() {   # $1=input name -> sections, one per line
   case "$1" in
     profiles.json|features.json) printf '%s\n' $SECTIONS;;
@@ -38,6 +42,7 @@ sections_for_input() {   # $1=input name -> sections, one per line
     settings.json)               printf '%s\n' settings;;
     theming.json)                printf '%s\n' theme launcher;;
     wallpapers)                  printf '%s\n' launcher;;
+    updater.json)                printf '%s\n' updater;;
     *)                           return 1;;
   esac
 }
@@ -76,6 +81,7 @@ zone_snapshot() {   # $1=zone
   printf 'theming.json %s\n' "$(jq -cS --arg z "$z" '{g: .global, k: .keyboard_pkg, l: .launcher, ls: .launchers, a: .all_profiles, p: .per_profile[$z]}' "$CONFIG_DIR/theming.json" | sha256sum | cut -d' ' -f1)"
   printf 'features.json %s\n' "$(jq -cS . "$CONFIG_DIR/features.json" | sha256sum | cut -d' ' -f1)"
   w="$(jq -r --arg z "$z" '((.all_profiles // {}) * (.per_profile[$z] // {})).wallpaper // empty' "$CONFIG_DIR/theming.json")"
+  printf 'updater.json %s\n' "$( { [ -f "$CONFIG_DIR/updater/$z.json" ] && cat "$CONFIG_DIR/updater/$z.json"; } | sha256sum | cut -d' ' -f1)"
   printf 'wallpapers %s\n' "$(
     for a in tall square; do
       f="$REPO_ROOT/${w//\{aspect\}/$a}"

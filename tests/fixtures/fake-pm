@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# A stand-in for adb with a package manager behind it, for the case files of
+# lib/updater.sh and the install paths of 10-apps.sh. It keeps a device in
+# FAKE_DEV (a directory) and behaves the way the real one was MEASURED to
+# (2026-10-10, emulator-5558, API 37, shell):
+#
+# - `install` without --user installs for every user, a replace included;
+#   with --user N it updates the shared code and adds only user N.
+# - The installer of record belongs to the package. `-i X` sets it to X if X
+#   is installed for the user the install runs as (a package naming itself on
+#   its first install gets null; so does X absent from that user); an
+#   install without -i sets it to null.
+# - `pm install-existing --user N` adds a user and keeps the installer.
+#
+# Device layout: FAKE_DEV/users (one uid per line), FAKE_DEV/pkg/<pkg>/{users,
+# installer,vc}, FAKE_DEV/appops/<uid>, FAKE_DEV/grants/<uid>, FAKE_DEV/idle.
+# An APK fixture is a text file: "pkg=<name>" and "vc=<versionCode>" lines.
+# Every mutating command is appended to FAKE_DEV/log; anything not modelled
+# fails loudly, so a case cannot pass by reaching a call nobody answered.
+#   FAKE_GRANT_NOOP=1   pm grant exits 0 and changes nothing (as for an
+#                       undeclared permission)
+#   FAKE_IDLE_NOOP=1    cmd deviceidle whitelist +x says Added and keeps nothing
+#
+# Users run when listed in FAKE_DEV/running (user 0 always); FAKE_DEV/locked
+# lists users that run but are locked. The updater's providers keep their
+# diagnostics in FAKE_DEV/diag/<uid>; FAKE_INGEST says what a write does:
+#   accept (default)  loads the file: configSha256 = its sha256, success true
+#   refuse            keeps the old hash, success false, error "bad config"
+#   ignore            changes nothing (a provider that took the bytes and died)
+# FAKE_DIAG_LAG=1 serves the previous diagnostics once after a write, as an
+# asynchronous provider does.
+set -uo pipefail
+D="${FAKE_DEV:?FAKE_DEV not set}"
+[ "${1:-}" = "-s" ] && shift 2
+log() { printf '%s\n' "$*" >> "$D/log"; }
+apkf() { sed -n "s/^$1=//p" "$2" | head -1; }
+installed_anywhere() { [ -s "$D/pkg/$1/users" ]; }
+has_user() { grep -qx "$2" "$D/pkg/$1/users" 2>/dev/null; }
+add_user() { has_user "$1" "$2" || printf '%s\n' "$2" >> "$D/pkg/$1/users"; }
+
+cmd_install() {
+  log "install $*"
+  local inst="" user="" apk="" pkg vc
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -i) inst="$2"; shift 2;;
+      --user) user="$2"; shift 2;;
+      -r) shift;;
+      *) apk="$1"; shift;;
+    esac
+  done
+  [ -f "$apk" ] || { echo "Error: no file $apk"; exit 1; }
+  pkg="$(apkf pkg "$apk")"; vc="$(apkf vc "$apk")"
+  if [ -f "$D/pkg/$pkg/vc" ] && [ "$vc" -lt "$(cat "$D/pkg/$pkg/vc")" ]; then
+    echo "Failure [INSTALL_FAILED_VERSION_DOWNGRADE]"; exit 1
+  fi
+  local named=null
+  if [ -n "$inst" ]; then
+    if [ -n "$user" ]; then has_user "$inst" "$user" && named="$inst"
+    else installed_anywhere "$inst" && named="$inst"; fi
+  fi
+  mkdir -p "$D/pkg/$pkg"; touch "$D/pkg/$pkg/users"
+  if [ -n "$user" ]; then add_user "$pkg" "$user"
+  else while read -r u; do add_user "$pkg" "$u"; done < "$D/users"; fi
+  printf '%s\n' "$vc" > "$D/pkg/$pkg/vc"
+  printf '%s\n' "$named" > "$D/pkg/$pkg/installer"
+  echo Success
+}
+
+list_packages() {   # args after "pm list packages"
+  local showi=0 user="" filter=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -i) showi=1; shift;;
+      -3) shift;;
+      --user) user="$2"; shift 2;;
+      *) filter="$1"; shift;;
+    esac
+  done
+  for p in "$D"/pkg/*/; do
+    p="$(basename "$p")"
+    [ -z "$filter" ] || [[ "$p" == *"$filter"* ]] || continue
+    has_user "$p" "$user" || continue
+    if [ "$showi" = 1 ]; then printf 'package:%s  installer=%s\n' "$p" "$(cat "$D/pkg/$p/installer")"
+    else printf 'package:%s\n' "$p"; fi
+  done
+}
+
+[ "${1:-}" = install ] && { shift; cmd_install "$@"; exit $?; }
+[ "${1:-}" = devices ] && { printf 'List of devices attached\nfake\tdevice\n'; exit 0; }
+[ "${1:-}" = shell ] || { echo "fake-pm: unexpected: $*" >&2; exit 97; }
+shift
+set -- $*   # `adb shell` joins its arguments into one command line
+case "$1 ${2:-}" in
+  "pm list")
+    case "$3" in
+      users) printf 'Users:\n'; while read -r u; do
+               r=""; { [ "$u" = 0 ] || grep -qx "$u" "$D/running" 2>/dev/null; } && r=" running"
+               printf '\tUserInfo{%s:U%s:0}%s\n' "$u" "$u" "$r"; done < "$D/users";;
+      packages) shift 3; list_packages "$@";;
+      *) echo "fake-pm: unexpected: $*" >&2; exit 97;;
+    esac;;
+  "pm install-existing")
+    log "$*"; [ "$3" = --user ] || exit 97
+    installed_anywhere "$5" || { echo "Package $5 doesn't exist"; exit 1; }
+    add_user "$5" "$4"; echo "Package $5 installed for user: $4";;
+  "pm grant")
+    log "$*"; [ "$3" = --user ] || exit 97
+    [ "${FAKE_GRANT_NOOP:-0}" = 1 ] || printf '%s %s\n' "$5" "$6" >> "$D/grants/$4";;
+  "appops set")
+    log "$*"; [ "$3" = --user ] || exit 97
+    printf '%s %s %s\n' "$5" "$6" "$7" >> "$D/appops/$4";;
+  "appops get")
+    [ "$3" = --user ] || exit 97
+    m="$(awk -v p="$5" -v o="$6" '$1 == p && $2 == o { m = $3 } END { print m }' "$D/appops/$4" 2>/dev/null)"
+    if [ -n "$m" ]; then printf '%s: %s; time=+1s ago\n' "$6" "$m"; else printf 'No operations.\nDefault mode: default\n'; fi;;
+  "cmd deviceidle")
+    log "$*"
+    [ "${FAKE_IDLE_NOOP:-0}" = 1 ] || printf 'user,%s,10201\n' "${4#+}" >> "$D/idle"; echo "Added: ${4#+}";;
+  "dumpsys deviceidle")
+    cat "$D/idle" 2>/dev/null;;
+  "dumpsys package")
+    p="$3"; [ -d "$D/pkg/$p" ] || exit 0
+    printf 'Packages:\n  Package [%s]\n    versionCode=%s minSdk=24 targetSdk=36\n' "$p" "$(cat "$D/pkg/$p/vc")"
+    while read -r u; do
+      printf '    User %s: installed=%s\n      runtime permissions:\n' "$u" "$(has_user "$p" "$u" && echo true || echo false)"
+      [ -f "$D/grants/$u" ] && awk -v p="$p" '$1 == p { printf "        %s: granted=true, flags=[ ]\n", $2 }' "$D/grants/$u"
+    done < "$D/users"; exit 0;;
+  "getprop ro.product.cpu.abi") echo x86_64;;
+  "am start-user")
+    log "$*"; [ "${FAKE_START_FAILS:-0}" = 1 ] && { echo "Error: could not start"; exit 1; }
+    echo "$4" >> "$D/running"; echo "Success: user started";;
+  "am get-started-user-state")
+    if [ "$3" = 0 ] || grep -qx "$3" "$D/running" 2>/dev/null; then
+      grep -qx "$3" "$D/locked" 2>/dev/null && echo RUNNING_LOCKED || echo RUNNING_UNLOCKED
+    else echo "User is not started"; fi;;
+  "am broadcast") log "$*"; echo "Broadcast completed: result=0";;
+  "content write")
+    log "content write $3 $4 $5 $6"; u="$4"; mkdir -p "$D/diag"
+    sha="$(sha256sum | cut -d' ' -f1)"; n=$(( $(cat "$D/diag/seq" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$D/diag/seq"
+    old="$(cat "$D/diag/$u" 2>/dev/null || echo '{}')"
+    case "${FAKE_INGEST:-accept}" in
+      accept) new="{\"configSha256\":\"$sha\",\"success\":true,\"error\":null,\"at\":\"t$n\"}";;
+      refuse) new="$(jq -c --arg n "t$n" '.success = false | .error = "bad config" | .at = $n' <<<"$old")";;
+      ignore) exit 0;;
+    esac
+    if [ "${FAKE_DIAG_LAG:-0}" = 1 ]; then printf '%s' "$new" > "$D/diag/$u.next"; else printf '%s' "$new" > "$D/diag/$u"; fi;;
+  "content query")
+    u="$4"
+    if [ -f "$D/diag/$u.next" ]; then
+      if [ -f "$D/diag/$u.lagged" ]; then mv "$D/diag/$u.next" "$D/diag/$u"; rm -f "$D/diag/$u.lagged"; else touch "$D/diag/$u.lagged"; fi
+    fi
+    if [ -f "$D/diag/$u" ]; then printf 'Row: 0 json=%s\n' "$(cat "$D/diag/$u")"; else echo "No result found."; fi;;
+  *) echo "fake-pm: unexpected: shell $*" >&2; exit 97;;
+esac
