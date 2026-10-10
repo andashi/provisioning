@@ -49,10 +49,12 @@ classify_abi() {   # $1 = apk file
 # Every version a directory listing offers for a file name pattern, one per
 # line. The pattern is literal except for {version}, so a dot in it is a dot.
 # A version starts with a digit and holds only what release numbers hold.
+# The name must END where the pattern ends: x.apk.sig is not x.apk, and a
+# listing that kept only the signature of a version offers no such version.
 direct_versions() {  # $1 = file name with {version}; stdin = the listing
-  local pre="${1%%\{version\}*}" post="${1#*\{version\}}" q='s/[][\.*^$/+?(){}|]/\\&/g'
+  local pre="${1%%\{version\}*}" post="${1#*\{version\}}" q='s/[][\.*^$/+?(){}|]/\\&/g' end='[^A-Za-z0-9._-]'
   pre="$(sed "$q" <<<"$pre")"; post="$(sed "$q" <<<"$post")"
-  grep -oE "${pre}[0-9][0-9A-Za-z.]*${post}" | sed -E "s/^${pre}//; s/${post}\$//" | sort -u
+  grep -oE "${pre}[0-9][0-9A-Za-z.]*${post}(${end}|\$)" | sed -E "s/^${pre}//; s/${post}${end}?\$//" | sort -u
 }
 
 # The Tor Project and Yubico sign every release file with a detached

@@ -31,6 +31,7 @@ t "every version of the pattern, once, .sig and desktop builds left out" '[ "$(v
 t "the highest by version order, not by text"   '[ "$(direct_versions "v-{version}-android.apk" <<<"$listing" | sort -V | tail -1)" = 7.10.0 ]'
 t "a dot in the pattern matches only a dot"      '! vers | grep -q 8.0'
 t "a version starts with a digit"                '! vers | grep -q "\.\."'
+t "a version with only its .sig left is not offered" '[ "$(direct_versions "v-{version}-android.apk" <<<"<a href=\"v-7.11.0-android.apk.sig\">s</a> v-7.4.1-android.apk")" = 7.4.1 ]'
 t "nothing offered: nothing, not an error"       '[ -z "$(direct_versions "v-{version}-android.apk" <<<"empty")" ]'
 
 # --- verify_detached_sig ---------------------------------------------------
