@@ -156,6 +156,14 @@ t "no updater: the upgrade names no installer, but still a user" '[ $? = 0 ] && 
 t "no install anywhere in 10-apps.sh or 00-profiles.sh without --user" \
   '! grep -nE "adb_ install" "$root/provision/10-apps.sh" "$root/provision/00-profiles.sh" | grep -v -- "--user"'
 
+echo "what the updater says"
+fresh; run 'updater_state 15'
+t "a zone without the updater is not asked: no provider of that name is trusted" '[ $? != 0 ] && ! grep -q "unexpected" "$tmp/out"'
+st='{"apps":[{"pkg":"a\u001b[2Jx","state":"failed","error":"bad\u001b]0;x\u0007"},{"pkg":"b","state":"current"}],"lock":{"generated":"2026-10-09T11:56:22Z","freshness":"fresh","lastError":"e\u001b[31m"},"exemption":"granted"}'
+fresh; run "updater_summary <<<'$st'; updater_attention <<<'$st'"
+t "control characters from the phone never reach the terminal" '! grep -q $'"'"'\x1b\|\x07'"'"' "$tmp/out" && grep -q "a?\[2Jx failed" "$tmp/out"'
+t "the summary groups fine, pending and attention"  'grep -q "^1 current, 1 FAILED | lock 2026-10-09 (fresh) ERROR" "$tmp/out"'
+
 echo "who is managed"
 fresh; run 'ensure_updater_device; for s in obtainium fdroid torproject direct play-sandboxed accrescent system manual; do updater_manages $s && printf "%s " $s; done; echo'
 t "the lock-covered sources, once the updater runs" 'grep -qx "obtainium fdroid torproject direct " "$tmp/out"'
