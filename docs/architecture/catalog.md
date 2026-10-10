@@ -121,7 +121,9 @@ fetch from. That list is a decision, not a summary of the lock. `make check`
 http, or with a user or port in the address — so the daily lock refresh, which
 commits without a person, can never widen where a phone connects. A new source
 that needs a new host is a one-line pull request to that list. A fork points
-`lock.url` at its own lock; nothing else needs to change.
+`lock.url` and `lock.heartbeatUrl` at its own lock and heartbeat (the
+updater counts a heartbeat only when it names the lock it holds) and adds
+their host to `allowedHosts`.
 
 Everything the catalog cannot install ends up in the generated `MANUAL.md`, by
 name, from the queue that `10-apps.sh` writes during the run — so the list
