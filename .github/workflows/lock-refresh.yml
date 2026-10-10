@@ -21,6 +21,18 @@ name: lock refresh
 # fail - opens or updates the same kind of issue. So the maintainer is
 # involved exactly when something is unusual, and otherwise never.
 #
+# A run that confirmed the lock - unchanged, or safe and committed - also
+# force-pushes the branch lock-heartbeat: one file, heartbeat.json,
+# {checked, lockSha256, mainCommit}. The andashi updater reads it to tell a
+# lock that is old because nothing changed upstream from a lock that is old
+# because nobody is checking (andashi/updater, docs/design.md §11). It is a
+# separate branch and a single commit, never main: a daily commit to main
+# would put every open pull request behind its base, and bin/pr-gate refuses
+# those. A run that ends in review, or fails before a lock is confirmed,
+# leaves the heartbeat as it was, so its age is the time since the lock was
+# last known current. A safe lock that reached the target is confirmed even
+# if dispatching verify fails afterwards: the lock itself was checked.
+#
 # Everything uses GITHUB_TOKEN: pushing and opening issues need no extra
 # token and no repository setting. A push with GITHUB_TOKEN starts no
 # workflows, so the job dispatches `verify` on the new head itself -
@@ -98,7 +110,11 @@ jobs:
           verdict="$(cat "$RUNNER_TEMP/verdict")"
           day="$(date -u +%Y-%m-%d)"
           echo "verdict: $verdict"
-          [ "$verdict" != unchanged ] || { echo "The lock is current - nothing to do."; exit 0; }
+          if [ "$verdict" = unchanged ]; then
+            echo "The lock is current - nothing to do."
+            echo "CONFIRMED=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+            exit 0
+          fi
 
           make check
           git config user.name "andashi lock refresh"
@@ -121,6 +137,7 @@ jobs:
                 # From here on something WAS changed; a failure report must
                 # say so (see the failure step).
                 echo "PUSHED=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+                echo "CONFIRMED=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
                 for try in 1 2 3; do
                   gh workflow run verify --ref "$TARGET" && exit 0
                   sleep $((try * 10))
@@ -151,11 +168,26 @@ jobs:
           echo "ISSUE_TITLE=Lock refresh $day needs a look" >> "$GITHUB_ENV"
           echo "ISSUE_FILE=$RUNNER_TEMP/issue.md" >> "$GITHUB_ENV"
 
+      - name: Heartbeat
+        id: heartbeat
+        # For the commit this run checked, not for whatever the target holds
+        # by now (apks/heartbeat.sh). On `always()` so a confirmed lock gets
+        # its heartbeat even when the verify dispatch after a safe push fails;
+        # without CONFIRMED - review, or a failure before - nothing is written.
+        if: always() && env.CONFIRMED != ''
+        run: apks/heartbeat.sh "$CONFIRMED" "$TARGET"
+
       - name: A failed run is an issue too
         if: failure()
+        env:
+          HEARTBEAT: ${{ steps.heartbeat.outcome }}
         run: |
           {
-            if [ -n "${PUSHED:-}" ]; then
+            if [ "$HEARTBEAT" = failure ]; then
+              echo "The scheduled lock refresh confirmed the lock (${CONFIRMED:0:12}), but could not push its heartbeat."
+              echo
+              echo "Phones see the lock age without it and report it as stale once maxAgeDays pass; the next run writes it again. The reason is in the Heartbeat step's log."
+            elif [ -n "${PUSHED:-}" ]; then
               echo "The scheduled lock refresh committed the new lock to \`$TARGET\` (${PUSHED:0:12}), but could not start \`verify\` for it."
               echo
               echo "The next run dispatches it by itself. Until verify has run green on that commit, bin/pr-gate refuses merges; to clear it at once: \`gh workflow run verify --ref $TARGET\`."
