@@ -79,7 +79,7 @@ jobs:
         # always be traced to the tools that checked it.
         run: |
           set -euo pipefail
-          bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          bt="$(printf '%s\n' "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
           echo "$bt" >> "$GITHUB_PATH"
           "$bt/aapt2" version
           "$bt/apksigner" --version
@@ -115,7 +115,7 @@ jobs:
             # commit goes on top of theirs; it touches apks/ only, so a
             # conflict means somebody else changed the lock - then a person
             # decides, and main stays as it is.
-            for attempt in 1 2 3; do
+            for _ in 1 2 3; do
               if git push -q origin "HEAD:$TARGET"; then
                 echo "committed to $TARGET: $(git rev-parse --short HEAD)"
                 # From here on something WAS changed; a failure report must

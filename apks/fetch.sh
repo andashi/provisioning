@@ -10,7 +10,8 @@
 #
 # Universal APKs are preferred, because they run on the device AND the emulator.
 set -uo pipefail
-cd "$(dirname "$0")"
+# No set -e here, so a failed cd would go on in the wrong directory.
+cd "$(dirname "$0")" || exit 1
 # Overridable, so you can work against a test catalog without touching
 # the real one:  CAT=/path/apps.json ./fetch.sh <id>
 : "${CAT:=../config/apps.json}"
@@ -88,6 +89,17 @@ verify_detached_sig() {  # $1 = local file, $2 = signature URL, $3 = expected ke
   rm -rf "$home"
   [ "$rc" = 0 ] || { bad "GPG signature does NOT verify - discarding the download"; return 1; }
   ok "GPG signature verified against $fpr"
+}
+
+# The package names of the APKs in one inventory directory, once each: the
+# part of the file name before its FIRST dash (fetch.sh names files
+# <package>-<version>.apk, and a package name cannot contain a dash).
+pkgs_in() {   # $1=dir
+  local f b
+  for f in "$1"/*.apk; do
+    [ -e "$f" ] || continue
+    b="${f##*/}"; printf '%s\n' "${b%%-*}"
+  done | sort -u
 }
 
 # Checks whether something usable already exists for the REQUESTED ABI. Only
@@ -169,7 +181,7 @@ prune_inventory() {
     [ -d "$d" ] || continue
     # The package name is everything before the FIRST dash: Android package
     # names cannot contain one, versions frequently do (im.molly.app-8.19.2-4).
-    for pkg in $(ls -1 "$d"/*.apk 2>/dev/null | xargs -r -n1 basename | sed 's/-.*//' | sort -u); do
+    for pkg in $(pkgs_in "$d"); do
       mapfile -t versions < <(ls -1 "$d/$pkg-"*.apk 2>/dev/null | sort -V)
       [ "${#versions[@]}" -le 1 ] && continue
       keep="${versions[-1]}"
@@ -199,7 +211,7 @@ warn_abi_skew() {
   declare -A best=()
   for d in universal arm64-v8a x86_64; do
     [ -d "$d" ] || continue
-    for pkg in $(ls -1 "$d"/*.apk 2>/dev/null | xargs -r -n1 basename | sed 's/-.*//' | sort -u); do
+    for pkg in $(pkgs_in "$d"); do
       newest="$(ls -1 "$d/$pkg-"*.apk 2>/dev/null | sort -V | tail -1)"
       newest="$(basename "$newest")"; newest="${newest#"$pkg-"}"; newest="${newest%.apk}"
       if [ -n "${best[$pkg]:-}" ]; then

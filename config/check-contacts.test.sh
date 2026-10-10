@@ -4,7 +4,7 @@
 # nothing here (andashi/home#140), so this check is the guarantee - and a
 # guarantee without a case where it must fail is a guess.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 cp theming.json apps.json "$tmp/"; mkdir -p "$tmp/launcher"
 pass=0; fail=0
