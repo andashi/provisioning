@@ -164,6 +164,16 @@ fresh; run "updater_summary <<<'$st'; updater_attention <<<'$st'"
 t "control characters from the phone never reach the terminal" '! grep -q $'"'"'\x1b\|\x07'"'"' "$tmp/out" && grep -q "a?\[2Jx failed" "$tmp/out"'
 t "the summary groups fine, pending and attention"  'grep -q "^1 current, 1 FAILED | lock 2026-10-09 (fresh) ERROR" "$tmp/out"'
 
+st='{"apps":[{"pkg":"b","state":"current"}],"lock":{"generated":"2026-10-09T11:56:22Z","freshness":"fresh"},"exemption":"granted","foreign":[{"pkg":"m.teams","installer":"com.android.vending"},{"pkg":"s.side","installer":null},{"pkg":"o.obt","installer":"dev.imranr.obtainium"},{"pkg":"a.ver","installer":"app.accrescent.client"}]}'
+fresh; run "updater_summary <<<'$st'; updater_attention <<<'$st'"
+t "foreign apps counted by who keeps them current"   'grep -q "foreign 4: 1 Accrescent, 1 Obtainium, 1 Play, 1 nobody" "$tmp/out"'
+t "one that nobody updates is named"                 'grep -q "^s.side FOREIGN, installed by nobody" "$tmp/out"'
+t "... and one under Obtainium too, which updates only what it tracks" 'grep -q "^o.obt FOREIGN, installer dev.imranr.obtainium" "$tmp/out"'
+t "a store app is not called a problem"              '! grep -q "^m.teams\|^a.ver" "$tmp/out"'
+st2='{"apps":[],"lock":{},"exemption":"granted","foreign":[{"pkg":"t.tor","installer":"'$U'"}]}'
+fresh; run "updater_summary <<<'$st2'; updater_attention <<<'$st2'"
+t "an app the updater keeps current from another zone is not a problem" 'grep -q "foreign 1: 1 the updater, from another zone" "$tmp/out" && ! grep -q "^t.tor FOREIGN" "$tmp/out"'
+
 echo "who is managed"
 fresh; run 'ensure_updater_device; for s in obtainium fdroid torproject direct play-sandboxed accrescent system manual; do updater_manages $s && printf "%s " $s; done; echo'
 t "the lock-covered sources, once the updater runs" 'grep -qx "obtainium fdroid torproject direct " "$tmp/out"'
