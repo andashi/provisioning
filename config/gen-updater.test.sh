@@ -71,6 +71,13 @@ fresh; jq 'del(.allowedHosts)' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp
 t "a distribution without allowedHosts: refused, never copied as null" '[ $? != 0 ] && grep -q "lacks a valid allowedHosts" "$tmp/log" && [ -z "$(ls "$tmp/out" 2>/dev/null)" ]'
 fresh; jq '.lock.url = "http://raw.githubusercontent.com/x/lock.json"' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
 t "a lock URL over http: refused"                       '[ $? != 0 ] && grep -q "lacks a valid" "$tmp/log"'
+fresh; jq '.lock.url = "https://lock.example.org/andashi/lock.json"' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "a fork's lock on a host it did not allow: refused, not written for the phone to reject" '[ $? != 0 ] && grep -q "on an allowed host" "$tmp/log"'
+fresh; jq '.lock.url = "https://lock.example.org/andashi/lock.json" | .allowedHosts += ["lock.example.org"]' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "... and accepted once the host is on the list" '[ $? = 0 ] && [ "$(jq -r .lock.url "$tmp/out/home.json")" = "https://lock.example.org/andashi/lock.json" ]'
+fresh; jq '.lock.heartbeatUrl = "https://raw.githubusercontent.com:8443/h.json"' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "a heartbeat with a port: refused" '[ $? != 0 ]'
+
 fresh; : > "$tmp/certs/y.yub.cert"; gen
 t "an empty pin file: refused, not passed on as signer \"\"" '[ $? != 0 ] && grep -q "y.yub.cert is not a SHA-256 fingerprint" "$tmp/log"'
 fresh; gen; jq '.profiles |= map(.type = "managed")' "$tmp/c/profiles.json" > "$tmp/p" && mv "$tmp/p" "$tmp/c/profiles.json"; gen

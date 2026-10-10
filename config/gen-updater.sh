@@ -39,12 +39,19 @@ done
 jq -e '
   def host: type == "string" and test("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$");
   def url: type == "string" and startswith("https://") and (explode | all(. > 32 and . != 127));
-  (.allowedHosts | type == "array" and length > 0 and all(.[]; host))
+  # The host of an https URL, or null when the authority carries a user or a port.
+  def urlhost: ltrimstr("https://") | split("/")[0] | split("?")[0] | split("#")[0]
+               | if test("[@:]") then null else . end;
+  .allowedHosts as $allowed
+  | (.allowedHosts | type == "array" and length > 0 and all(.[]; host))
   and (.lock | type == "object") and (.lock.url | url) and (.lock.heartbeatUrl | url)
+  # The lock and heartbeat must be fetchable under the rule of the phone:
+  # a host outside the list would be refused there, silently, for good.
+  and ([.lock.url, .lock.heartbeatUrl] | all(.[]; urlhost as $h | $h != null and ($allowed | index($h))))
   and (.lock.maxAgeDays | type == "number" and . > 0)
   and (.updater.schedule | type == "object") and (.updater.policy | type == "object")' \
   "$CONFIG_DIR/distribution.json" >/dev/null \
-  || { echo "gen-updater: $CONFIG_DIR/distribution.json lacks a valid allowedHosts, lock.url, lock.heartbeatUrl (https), lock.maxAgeDays or updater.schedule/policy - nothing written" >&2; exit 1; }
+  || { echo "gen-updater: $CONFIG_DIR/distribution.json lacks a valid allowedHosts, lock.url, lock.heartbeatUrl (https, on an allowed host), lock.maxAgeDays or updater.schedule/policy - nothing written" >&2; exit 1; }
 
 # The pins, as one JSON object pkg -> fingerprint, read once. A pin is a
 # SHA-256 in lower-case hex and nothing else: an empty or damaged file would
