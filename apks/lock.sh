@@ -20,7 +20,7 @@
 # matches by the SHA-256 digest GitHub publishes for it (or, for an asset
 # older than those digests, like the Codeberg case below), a Codeberg asset by
 # its size and then its bytes (and nothing is locked when two could match),
-# an F-Droid or Tor Browser URL is fetched and hashed. No record of where
+# an F-Droid, Tor Browser or vendor-directory URL is fetched and hashed. No record of where
 # fetch.sh once downloaded from is needed, and none could be trusted more
 # than the hash anyway.
 #
@@ -87,6 +87,13 @@ resolve_urls() {   # $1=file $2=sha256 $3=catalog row
       code="$(version_code "$file")"; [ -n "$code" ] || return 0
       proven "https://f-droid.org/repo/${pkg}_${code}.apk" "https://f-droid.org/archive/${pkg}_${code}.apk"
       return 0;;
+    direct)
+      # The vendor's directory and file name from the catalog, the version
+      # from the file name fetch.sh gave it.
+      url="$(jq -r '.download.index // empty' <<<"$row")$(jq -r '.download.file // empty' <<<"$row")"
+      [[ "$url" == https://*"{version}"* ]] || return 0
+      proven "${url//\{version\}/$ver}"
+      return 0;;
   esac
 
   # GitHub publishes each asset's digest, so the match needs no download.
@@ -123,7 +130,7 @@ resolve_urls() {   # $1=file $2=sha256 $3=catalog row
 # The catalog is read before anything else, with its status checked. Read
 # through a process substitution, a missing or broken catalog yielded no rows,
 # and the lock was replaced by a valid-looking empty one.
-rows="$(jq -c '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject")' "$CAT")" \
+rows="$(jq -c '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject" or .source == "direct")' "$CAT")" \
   || { bad "could not read the catalog $CAT - lock.json left as it was"; exit 1; }
 [ -n "$rows" ] || { bad "the catalog $CAT names no app to lock - lock.json left as it was"; exit 1; }
 

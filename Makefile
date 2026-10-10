@@ -18,6 +18,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@lib/andashi.test.sh > /dev/null && echo "ok: andashi decisions (cases)"
 	@lib/apk-version-lock.test.sh > /dev/null && echo "ok: versionCode without aapt2 (cases)"
 	@tests/from-lock.test.sh > /dev/null && echo "ok: downloads from the lock (cases)"
+	@tests/fetch-direct.test.sh > /dev/null && echo "ok: vendor directory and signature (cases)"
 	@tests/lock.test.sh > /dev/null && echo "ok: writing the lock (cases)"
 	@tests/refresh-lock.test.sh > /dev/null && echo "ok: lock refresh routine (cases)"
 	@apks/check-lock.test.sh > /dev/null && echo "ok: lock consistency (cases)"

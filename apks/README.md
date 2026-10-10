@@ -132,13 +132,37 @@ device-ABI directory is searched first, so the older copy wins on the device. Th
 when an app changes its packaging (ABI-specific to universal or back), and it needs a human
 to delete the obsolete one.
 
+## A vendor's own download directory: `source: direct`
+
+Some vendors publish the Android APK nowhere `fetch.sh` has an API for. Yubico's GitHub
+releases carry no APK; `developers.yubico.com` lists each one next to a detached GPG
+signature. The catalog entry names the directory, the file name and the key:
+
+```json
+"source": "direct",
+"download": {
+  "index": "https://developers.yubico.com/yubioath-flutter/Releases/",
+  "file": "yubico-authenticator-{version}-android.apk",
+  "gpg": "20EE325B86A81BCBD3E56798F04367096FBA95E8"
+}
+```
+
+`fetch.sh` takes the highest `{version}` the listing offers, downloads the file and
+`<file>.sig`, and keeps the APK only if the signature verifies against `keys/<id>.asc` -
+a committed key that must be exactly the key named in `gpg`, so a key file carrying a
+second key is refused rather than trusted. A directory listing without a signature to
+check is no source: the fields are all required. The APK's signer is then pinned like
+any other (`certs/<pkg>.cert`), and `lock.sh` proves the vendor URL by its bytes.
+
+The key in `keys/yubioath.asc` is on Yubico's published list of release signing keys
+(`developers.yubico.com/Software_Projects/Software_Signing.html`). F-Droid also builds
+the app, but signs it with its own key; the vendor's file carries Yubico's.
+
 ## What can NOT be automated
 
 - **sandboxed Play** (the work stack behind `microsoft_365` or `google_workspace`, plus
   the vendor apps of your own devices in Gadgets) — needs
   Play Services in the profile and a Google login. Manual by design, see MANUAL.md.
-- **Yubico Authenticator** — the GitHub releases contain no APK asset (as of 7.4.2);
-  get it via yubico.com or Play. Hence `source: manual` in the catalog.
 - **Accrescent / GrapheneOS App Store** — bootstrap runs through the respective store app.
 
 ## Directory structure: one inventory for device AND emulator
