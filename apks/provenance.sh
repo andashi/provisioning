@@ -26,7 +26,7 @@
 # A witness that is also our download source proves nothing - it would be
 # comparing the source against itself. Those are marked "=source".
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 : "${CAT:=../config/apps.json}"
 : "${OUT:=certs/PROVENANCE.tsv}"
 

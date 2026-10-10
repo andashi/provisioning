@@ -294,6 +294,9 @@ clear_stale_lock() {
 # holds the instance. LOCK_FORCE=1 overrides, for cleaning up after a session
 # that is really gone; it prints who is being walked past.
 lock_holder() {
+  # SINCE is set by the lock file sourced below, along with HOLDER; it is
+  # declared local only so the file cannot leak it into the caller.
+  # shellcheck disable=SC2034
   local f=".provision-state/device-${SERIAL}.lock" HOLDER="" SINCE="" SERIAL=""
   [ -f "$REPO_ROOT/$f" ] || return 1
   # shellcheck disable=SC1090

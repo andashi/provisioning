@@ -91,6 +91,9 @@ update: ## Fetch newer APKs, verify them, bring every zone to them
 	@apks/verify.sh
 	@provision/run.sh
 
+lint: ## bash -n, shellcheck and actionlint over every script and workflow (needs both tools on PATH)
+	@tests/lint.sh
+
 apks: ## Verify APK hashes + signer certs (offline)
 	@apks/verify.sh
 
@@ -106,4 +109,4 @@ provenance: ## Re-audit where each pinned signer comes from (needs network)
 emulator: ## Check emulator prerequisites
 	@emulator/build.sh prereqs
 
-.PHONY: help check todo obtainium launcher-config updater-config manual update apks lock from-lock provenance emulator
+.PHONY: help check lint todo obtainium launcher-config updater-config manual update apks lock from-lock provenance emulator
