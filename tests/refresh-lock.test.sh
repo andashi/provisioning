@@ -22,7 +22,10 @@ printf '#!/usr/bin/env bash\necho verify >> "$CALLS"\n' > "$tmp/fake/verify"
 printf '#!/usr/bin/env bash\necho lock >> "$CALLS"\ncp "$FAKE_LOCK" lock.json\n' > "$tmp/fake/lock"
 chmod +x "$tmp/fake/"*
 
-e() { jq -n --arg p "$1" --arg v "$2" --arg s "$3" '{pkg: $p, label: $p, abi: "universal", version: $v, sha256: $s, urls: ["https://x/\($p)"]}'; }
+# The versionCode follows the version ("1.1" -> 11) unless a fourth argument names one.
+e() { jq -n --arg p "$1" --arg v "$2" --arg s "$3" --arg c "${4:-}" \
+  '{pkg: $p, label: $p, abi: "universal", version: $v, sha256: $s, urls: ["https://x/\($p)"],
+    versionCode: (if $c != "" then ($c | tonumber) else ($v | gsub("[.]"; "") | tonumber) end)}'; }
 lockof() { jq -s '{lockVersion: 1, generated: "g", entries: .}'; }
 setup() {   # stdin: the lock as it is before
   rm -rf "$tmp/inv"; mkdir -p "$tmp/inv/certs"; echo a > "$tmp/inv/certs/app.a.cert"
@@ -77,6 +80,19 @@ t "a new signer with an unchanged lock: still review" '[ "$(cat "$tmp/verdict")"
 { e app.a 1.0 aa; e app.b 2.0 bb; } | lockof | setup
 { e app.a 1.1 ab; e app.b 2.1 bc; } | lockof | run env
 t "several plain version moves: safe"             '[ "$(cat "$tmp/verdict")" = safe ]'
+
+{ e app.a 1.1 ab; } | lockof | setup
+{ e app.a 1.0 aa; } | lockof | run env
+t "a version that goes back: review, never safe"  '[ "$(cat "$tmp/verdict")" = review ]'
+t "... and the summary says so first"             '[ "$(grep -m1 "^## " "$tmp/summary.md")" = "## ⚠ Versions that go back - review before merging" ] && grep -qF "| app.a | universal | 1.1 (11) | 1.0 (10) |" "$tmp/summary.md"'
+
+{ e app.a 1.0 aa 5; } | lockof | setup
+{ e app.a 1.0-fix ab 5; } | lockof | run env
+t "a new version name on the same versionCode: review"  '[ "$(cat "$tmp/verdict")" = review ]'
+
+{ e app.a 1.0 aa; } | lockof | setup
+{ e app.a 1.1 ab | jq 'del(.versionCode)'; } | lockof | run env
+t "a versionCode the lock cannot compare: review" '[ "$(cat "$tmp/verdict")" = review ]'
 
 { e app.a 1.0 aa; } | lockof | setup
 { e app.a 1.0 aa; } | lockof | run env
