@@ -64,18 +64,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - name: bash -n
-        # Same collector, same reason: this loop reported only the last file,
-        # so a syntax error in any other script was green here while `make
-        # check` caught it locally. The gate that runs on every push was the
-        # weaker of the two.
+      - name: Pinned shellcheck and actionlint
+        # Fixed versions with their sha256, not whatever the runner image
+        # carries: a new rule in a floating version would turn every pull
+        # request red overnight, and an unpinned download is a script nobody
+        # checked running in CI.
         run: |
-          fail=0
-          for f in $(find . -name '*.sh'); do bash -n "$f" || { echo "syntax error: $f"; fail=1; }; done
-          exit $fail
-      - name: shellcheck
-        run: shellcheck -S warning $(find . -name '*.sh') || true
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin"; mkdir -p "$bin"; cd "$RUNNER_TEMP"
+          curl -fsSL -o sc.tar.xz https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
+          echo "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198  sc.tar.xz" | sha256sum -c
+          tar -xJf sc.tar.xz && mv shellcheck-v0.11.0/shellcheck "$bin/"
+          curl -fsSL -o al.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  al.tar.gz" | sha256sum -c
+          tar -xzf al.tar.gz actionlint && mv actionlint "$bin/"
+          echo "$bin" >> "$GITHUB_PATH"
+      - name: bash -n, shellcheck, actionlint
+        # Every tracked script, found by its first line - bin/pr-gate,
+        # bin/andashi and the commit-msg hook have no .sh and were never
+        # checked by the *.sh glob this replaces. Blocking: a warning is a
+        # failed check, not a line in a log nobody reads.
+        run: tests/lint.sh
 
   # The binaries are deliberately not in git, so hashes and signer certificates
   # cannot be verified here - apks/verify.sh would find nothing and exit 0,
@@ -100,5 +109,6 @@ jobs:
             jq -e --arg p "$p" '.apps[]|select(.pkg==$p)' config/apps.json >/dev/null \
               || { echo "orphaned hash: $p is not in config/apps.json"; fail=1; }
           done < <(awk '{print $2}' apks/SHA256SUMS | sed 's|.*/||; s|-[0-9].*||' | sort -u)
-          [ "$fail" = "0" ] && echo "pins consistent: $(ls apks/certs/*.cert | wc -l) certificates"
+          certs=(apks/certs/*.cert)
+          [ "$fail" = "0" ] && echo "pins consistent: ${#certs[@]} certificates"
           exit $fail

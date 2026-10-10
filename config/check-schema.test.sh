@@ -8,7 +8,7 @@
 # object read as open, and the unknown-key check - the whole reason the script
 # exists - passed a config carrying home.dock without a word.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/launcher"
 pass=0; fail=0

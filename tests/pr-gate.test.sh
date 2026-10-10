@@ -10,6 +10,8 @@ pass=0; fail=0
 t() { if eval "$2"; then printf '  ok    %s\n' "$1"; pass=$((pass+1)); else printf '  FAIL  %s\n' "$1"; sed 's/^/        | /' "$tmp/out"; fail=$((fail+1)); fi; }
 eval "$(sed -n '/^delete_merged_branch() {/,/^}/p' "$root/bin/pr-gate")"
 declare -F delete_merged_branch >/dev/null || { echo "delete_merged_branch not found in bin/pr-gate" >&2; exit 1; }
+# Read by delete_merged_branch, which is eval-ed from bin/pr-gate.
+# shellcheck disable=SC2034
 REPO=andashi/provisioning
 
 # The model: $tmp/base/<n> holds each open PR's base; $tmp/branches the

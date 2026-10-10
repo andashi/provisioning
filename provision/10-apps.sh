@@ -109,7 +109,6 @@ while read -r key; do
 
   while read -r app; do
     [ -n "$app" ] || continue
-    id="$(jq -r '.id'     <<<"$app")"
     pkg="$(jq -r '.pkg'   <<<"$app")"
     src="$(jq -r '.source'<<<"$app")"
     lbl="$(jq -r '.label' <<<"$app")"
