@@ -31,20 +31,32 @@ hosts="$(jq -r '.allowedHosts
 # A URL with a control character or a space in it is refused before anything
 # else: the lines below are split on tabs, and a tab inside a URL would let
 # the host check see only the part before it.
-weird="$(jq -r '[.lock.url, .lock.heartbeatUrl][] | select(type != "string" or (explode | any(. <= 32 or . == 127)))
-                | "  config/distribution.json: a lock URL that is not a plain string: \(tojson)"' "$DIST")
-$(jq -r '.entries[] | .file as $f | .urls[] | select(type != "string" or (explode | any(. <= 32 or . == 127)))
-                | "  \($f): a URL with a control character or space: \(tojson)"' "$LOCK")" \
-  || { echo "check-hosts: could not read the URLs" >&2; exit 1; }
+# Each read is checked on its own: in x="$(a)$(b)" only the last
+# substitution's status survives, and a distribution.json jq could not read
+# would have dropped the lock URL and heartbeat from the check unnoticed.
+# A URL with a control character or a space in it is refused before anything
+# else: the lines below are split on tabs, and a tab inside a URL would let
+# the host check see only the part before it.
+ctl='select(type != "string" or (explode | any(. <= 32 or . == 127)))'
+weird_dist="$(jq -r '.lock | if type != "object" then error("lock is not an object") else . end
+                     | [.url, .heartbeatUrl][] | '"$ctl"'
+                     | "  config/distribution.json: a lock URL that is not a plain string: \(tojson)"' "$DIST")" \
+  || { echo "check-hosts: could not read the lock URLs in $DIST" >&2; exit 1; }
+weird_lock="$(jq -r '.entries[] | .file as $f | .urls[] | '"$ctl"'
+                     | "  \($f): a URL with a control character or space: \(tojson)"' "$LOCK")" \
+  || { echo "check-hosts: could not read the URLs in $LOCK" >&2; exit 1; }
+weird="$weird_dist$weird_lock"
 if [ -n "$(tr -d '[:space:]' <<<"$weird")" ]; then
   printf 'URLs a phone could not be held to a host by:\n%s\n' "$weird" >&2
   exit 1
 fi
 
 # url<TAB>where, for every URL a phone gets from this distribution.
-urls="$( { jq -r '.lock.url, .lock.heartbeatUrl | "\(.)\tconfig/distribution.json"' "$DIST"
-           jq -r '.entries[] | .file as $f | .urls[] | "\(.)\t\($f)"' "$LOCK"; } )" \
-  || { echo "check-hosts: could not read the URLs" >&2; exit 1; }
+urls_dist="$(jq -r '.lock.url, .lock.heartbeatUrl | "\(.)\tconfig/distribution.json"' "$DIST")" \
+  || { echo "check-hosts: could not read the lock URLs in $DIST" >&2; exit 1; }
+urls_lock="$(jq -r '.entries[] | .file as $f | .urls[] | "\(.)\t\($f)"' "$LOCK")" \
+  || { echo "check-hosts: could not read the URLs in $LOCK" >&2; exit 1; }
+urls="$urls_dist"$'\n'"$urls_lock"
 
 bad=""
 while IFS=$'\t' read -r url where; do
@@ -57,7 +69,7 @@ while IFS=$'\t' read -r url where; do
     bad="$bad  $where: a user or port in the address: $url"$'\n'; continue
   fi
   grep -qxF "$auth" <<<"$hosts" || bad="$bad  $where: $auth is not in allowedHosts ($url)"$'\n'
-done <<<"$urls"
+done < <(grep -v '^$' <<<"$urls")
 
 if [ -n "$bad" ]; then
   printf 'URLs outside the hosts this distribution allows:\n%s  add the host to allowedHosts in config/distribution.json, in a pull request, if it belongs there\n' "$bad" >&2

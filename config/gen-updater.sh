@@ -32,11 +32,29 @@ for f in apps.json profiles.json features.json distribution.json; do
   [ -f "$CONFIG_DIR/$f" ] || { echo "gen-updater: $CONFIG_DIR/$f missing" >&2; exit 1; }
 done
 
-# The pins, as one JSON object pkg -> fingerprint, read once.
+# What reaches every phone from distribution.json is checked here, not only
+# by config/check-hosts.sh in `make check`: a private catalog runs this
+# generator directly, and a missing allowedHosts copied as null would leave
+# the phone's host restriction with nothing to restrict to.
+jq -e '
+  def host: type == "string" and test("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$");
+  def url: type == "string" and startswith("https://") and (explode | all(. > 32 and . != 127));
+  (.allowedHosts | type == "array" and length > 0 and all(.[]; host))
+  and (.lock | type == "object") and (.lock.url | url) and (.lock.heartbeatUrl | url)
+  and (.lock.maxAgeDays | type == "number" and . > 0)
+  and (.updater.schedule | type == "object") and (.updater.policy | type == "object")' \
+  "$CONFIG_DIR/distribution.json" >/dev/null \
+  || { echo "gen-updater: $CONFIG_DIR/distribution.json lacks a valid allowedHosts, lock.url, lock.heartbeatUrl (https), lock.maxAgeDays or updater.schedule/policy - nothing written" >&2; exit 1; }
+
+# The pins, as one JSON object pkg -> fingerprint, read once. A pin is a
+# SHA-256 in lower-case hex and nothing else: an empty or damaged file would
+# otherwise pass as "pinned" and reach the phone as a signer nothing matches.
 pins="{}"
 for c in "$CERTS_DIR"/*.cert; do
   [ -f "$c" ] || continue
-  pins="$(jq -c --arg p "$(basename "$c" .cert)" --arg s "$(tr -d '[:space:]' < "$c")" '. + {($p): $s}' <<<"$pins")"
+  pin="$(tr -d '[:space:]' < "$c")"
+  [[ "$pin" =~ ^[0-9a-f]{64}$ ]] || { echo "gen-updater: $c is not a SHA-256 fingerprint - nothing written" >&2; exit 1; }
+  pins="$(jq -c --arg p "$(basename "$c" .cert)" --arg s "$pin" '. + {($p): $s}' <<<"$pins")"
 done
 
 # Same zone selection as gen-launcher.sh: non-managed, feature (if any) on.
@@ -98,7 +116,7 @@ for f in "$OUT_DIR"/*.json; do
   [ -f "$f" ] || continue
   [ -f "$stage/$(basename "$f")" ] || rm -f "$f"
 done
-for f in "$stage"/*.json; do mv "$f" "$OUT_DIR/"; done
+for f in "$stage"/*.json; do [ -f "$f" ] && mv "$f" "$OUT_DIR/"; done
 for z in $zones; do
   printf '%s: %s managed, %s net:false\n' "$z" "$(jq '.managed | length' "$OUT_DIR/$z.json")" "$(jq '.checks.netFalse | length' "$OUT_DIR/$z.json")"
 done

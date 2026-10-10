@@ -46,6 +46,8 @@ fresh; edit lock.json '(.entries[0].urls) = ["https://github.com /x.apk"]'
 t "a space in a URL" "a URL with a control character or space"
 fresh; edit distribution.json '.lock.url = "https://raw.githubusercontent.com/\n/lock.json"'
 t "a newline in the lock URL" "a lock URL that is not a plain string"
+fresh; edit distribution.json '.lock = "https://raw.githubusercontent.com/x/lock.json"'
+t "a lock that is not an object: refused, not skipped" "could not read the lock URLs"
 fresh; edit distribution.json '.allowedHosts += ["*.example.org"]'
 t "a wildcard in the list" "is not a plain lower-case host name"
 fresh; edit distribution.json '.allowedHosts = []'

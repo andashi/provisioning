@@ -67,6 +67,15 @@ t "an enabled that is a string, not a boolean: refused" '[ $? != 0 ] && grep -q 
 fresh; jq '.features.eid.enabled = null' "$tmp/c/features.json" > "$tmp/f" && mv "$tmp/f" "$tmp/c/features.json"; gen
 t "a missing enabled on an app's feature: refused, not off" '[ $? != 0 ] && grep -q "eid.enabled is neither true nor false" "$tmp/log"'
 
+fresh; jq 'del(.allowedHosts)' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "a distribution without allowedHosts: refused, never copied as null" '[ $? != 0 ] && grep -q "lacks a valid allowedHosts" "$tmp/log" && [ -z "$(ls "$tmp/out" 2>/dev/null)" ]'
+fresh; jq '.lock.url = "http://raw.githubusercontent.com/x/lock.json"' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "a lock URL over http: refused"                       '[ $? != 0 ] && grep -q "lacks a valid" "$tmp/log"'
+fresh; : > "$tmp/certs/y.yub.cert"; gen
+t "an empty pin file: refused, not passed on as signer \"\"" '[ $? != 0 ] && grep -q "y.yub.cert is not a SHA-256 fingerprint" "$tmp/log"'
+fresh; gen; jq '.profiles |= map(.type = "managed")' "$tmp/c/profiles.json" > "$tmp/p" && mv "$tmp/p" "$tmp/c/profiles.json"; gen
+t "no zone left to configure: succeeds, and the old files go" '[ $? = 0 ] && [ -z "$(ls "$tmp/out")" ]'
+
 fresh; jq '.apps[0].feature = "nope"' "$tmp/c/apps.json" > "$tmp/a" && mv "$tmp/a" "$tmp/c/apps.json"; gen
 t "an unknown feature in the catalog: refused"          '[ $? != 0 ] && grep -q "unknown feature" "$tmp/log"'
 
