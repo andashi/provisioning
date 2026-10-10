@@ -229,7 +229,10 @@ delete_merged_branch() {   # $1=pr $2=head sha (for the message)
     echo "head branch lives in $headrepo, not here - nothing deleted"
     return 0
   fi
-  if ! n="$(gh pr list --repo "$REPO" --base "$headref" --state open --json number -q '.[].number')"; then
+  # --limit: gh lists 30 by default. And the list is asked again after the
+  # moves - the branch goes only when it comes back empty, whatever a first
+  # answer may have left out.
+  if ! n="$(gh pr list --repo "$REPO" --base "$headref" --state open --limit 1000 --json number -q '.[].number')"; then
     echo "pr-gate: merged, but could not list the pull requests based on $headref - branch kept" >&2
     return 0
   fi
@@ -238,6 +241,13 @@ delete_merged_branch() {   # $1=pr $2=head sha (for the message)
     got="$(gh pr view "$n" --repo "$REPO" --json baseRefName -q .baseRefName 2>/dev/null || true)"
     if [ "$got" = main ]; then echo "retargeted #$n from $headref to main"; else left="$left #$n"; fi
   done
+  if [ -z "$left" ]; then
+    if n="$(gh pr list --repo "$REPO" --base "$headref" --state open --limit 1000 --json number -q '.[].number')"; then
+      for n in $n; do left="$left #$n"; done
+    else
+      left=" (pull requests the second list could not show)"
+    fi
+  fi
   if [ -n "$left" ]; then
     echo "pr-gate: merged, but$left still build on $headref - branch kept, so they stay open; retarget them, then delete it" >&2
   elif gh api -X DELETE "repos/$REPO/git/refs/heads/$headref" >/dev/null 2>&1; then

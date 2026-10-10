@@ -24,7 +24,13 @@ gh() {
       esac;;
     "pr list")
       [ "${LIST_FAILS:-0}" = 1 ] && return 1
-      for f in "$tmp"/base/*; do [ -f "$f" ] && [ "$(cat "$f")" = layer-1 ] && basename "$f"; done; return 0;;
+      case "$*" in *"--limit 1000"*) ;; *) echo "pr list without --limit" >&2; return 97;; esac
+      # A first answer that leaves one out, as a capped list would.
+      n=0; for f in "$tmp"/base/*; do
+        [ -f "$f" ] && [ "$(cat "$f")" = layer-1 ] || continue
+        n=$((n+1)); [ "${HIDE_ONE_FIRST:-0}" = 1 ] && [ ! -f "$tmp/listed" ] && [ "$n" = 2 ] && continue
+        basename "$f"
+      done; touch "$tmp/listed"; return 0;;
     "pr edit")
       [ "${EDIT_NOOP:-0}" = 1 ] && return 0          # says nothing, changes nothing
       echo main > "$tmp/base/$3";;
@@ -33,7 +39,7 @@ gh() {
     *) echo "unexpected gh $*" >&2; return 97;;
   esac
 }
-fresh() { rm -rf "$tmp/base"; mkdir -p "$tmp/base"; printf 'main\nlayer-1\nlayer-2\n' > "$tmp/branches"; : > "$tmp/log"; }
+fresh() { rm -rf "$tmp/base" "$tmp/listed"; mkdir -p "$tmp/base"; printf 'main\nlayer-1\nlayer-2\n' > "$tmp/branches"; : > "$tmp/log"; }
 run() { delete_merged_branch 27 abcdef > "$tmp/out" 2>&1; }
 has() { grep -qx "$1" "$tmp/branches"; }
 
@@ -47,6 +53,9 @@ fresh; echo layer-1 > "$tmp/base/28"; EDIT_NOOP=1 run
 t "a retarget that did not take: branch kept, PR named"  'has layer-1 && grep -q "#28 still build on layer-1 - branch kept" "$tmp/out" && [ ! -s "$tmp/log" ]'
 fresh; echo layer-1 > "$tmp/base/28"; LIST_FAILS=1 run
 t "the dependents cannot be listed: branch kept"         'has layer-1 && grep -q "could not list" "$tmp/out"'
+fresh; echo layer-1 > "$tmp/base/28"; echo layer-1 > "$tmp/base/29"; EDIT_NOOP=0 HIDE_ONE_FIRST=1 run
+t "one the first list left out: asked again, branch kept, named" 'has layer-1 && grep -q "#29 still build on layer-1" "$tmp/out"'
+
 fresh; HEADREPO=someone/fork run
 t "a fork's branch: nothing deleted here"                'has layer-1 && grep -q "lives in someone/fork" "$tmp/out"'
 
