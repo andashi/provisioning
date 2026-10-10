@@ -99,6 +99,26 @@ t "a digest that does not match: not locked"        '[ $? != 0 ] && grep -q "Dig
 setup; printf 'vc=11\nreplaced after verify\n' > "$tmp/inv/universal/a.dig-1.0.apk"; run
 t "a file whose bytes are not its SHA256SUMS line: refused, kept" '[ $? != 0 ] && grep -q "does not hash to its SHA256SUMS line" "$tmp/out" && kept'
 
+# A vendor directory (source direct): the URL is the catalog's directory and
+# file name with the version fetch.sh put into the file name, proven by bytes.
+direct() {   # $1 = what the vendor URL serves
+  setup
+  printf 'vc=40\nvendor build\n' > "$tmp/inv/universal/c.direct-7.4.1.apk"
+  (cd "$tmp/inv" && sha256sum universal/*.apk arm64-v8a/*.apk > SHA256SUMS)
+  echo cert-c.direct > "$tmp/inv/certs/c.direct.cert"
+  jq '.apps += [{"id": "vend", "label": "Vend", "pkg": "c.direct", "source": "direct", "profiles": ["home"],
+       "download": {"index": "https://vendor.example/Releases/", "file": "vend-{version}-android.apk", "gpg": "F00"}}]' \
+    "$tmp/apps.json" > "$tmp/a2" && mv "$tmp/a2" "$tmp/apps.json"
+  [ -z "$1" ] || serve https://vendor.example/Releases/vend-7.4.1-android.apk "$1"
+}
+direct ""; serve https://vendor.example/Releases/vend-7.4.1-android.apk "$tmp/inv/universal/c.direct-7.4.1.apk"; run
+t "direct: the vendor URL with the version filled in" '[ $? = 0 ] && [ "$(urls c.direct)" = "https://vendor.example/Releases/vend-7.4.1-android.apk" ]'
+printf 'other bytes' > "$tmp/x"; direct "$tmp/x"; run
+t "direct: a vendor URL serving other bytes is not locked" '[ $? != 0 ] && grep -q "Vend: no URL serves" "$tmp/out" && kept'
+direct ""; jq '(.apps[] | select(.id == "vend") | .download.file) = "vend-android.apk"' "$tmp/apps.json" > "$tmp/a2" && mv "$tmp/a2" "$tmp/apps.json"
+serve https://vendor.example/Releases/vend-android.apk "$tmp/inv/universal/c.direct-7.4.1.apk"; run
+t "direct: a file name without {version} names no URL" '[ $? != 0 ] && grep -q "Vend: no URL serves" "$tmp/out" && kept'
+
 setup; printf '{ broken' > "$tmp/apps.json"; run
 t "a broken catalog: refused, the old lock kept"    '[ $? != 0 ] && grep -q "could not read the catalog" "$tmp/out" && kept'
 setup; echo '{"apps": []}' > "$tmp/apps.json"; run

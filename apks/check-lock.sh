@@ -32,7 +32,7 @@ rows="$(jq -r '.entries[]
   || { echo "check-lock: $LOCK has a malformed entry - see above" >&2; exit 1; }
 cat_pkgs="$(jq -r '.apps[] | "\(.pkg) \((.release_tag // "") | ltrimstr("v"))"' "$CAT")" \
   || { echo "check-lock: could not read the catalog $CAT" >&2; exit 1; }
-fetched="$(jq -r '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject")
+fetched="$(jq -r '.apps[] | select(.source == "obtainium" or .source == "fdroid" or .source == "torproject" or .source == "direct")
                   | "\(.pkg) \((.release_tag // "") | ltrimstr("v"))"' "$CAT")" \
   || { echo "check-lock: could not read the catalog $CAT" >&2; exit 1; }
 

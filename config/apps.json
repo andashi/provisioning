@@ -248,14 +248,19 @@
       "label": "Yubico Authenticator",
       "pkg": "com.yubico.yubioath",
       "pkg_status": "verified",
-      "source": "manual",
+      "source": "direct",
       "upstream": "https://github.com/Yubico/yubioath-flutter",
+      "download": {
+        "index": "https://developers.yubico.com/yubioath-flutter/Releases/",
+        "file": "yubico-authenticator-{version}-android.apk",
+        "gpg": "20EE325B86A81BCBD3E56798F04367096FBA95E8"
+      },
       "profiles": [
         "home",
         "cloud"
       ],
       "net": false,
-      "notes": "GitHub releases contain no APK asset (as of 7.4.2) - get it via yubico.com or Play. Manual."
+      "notes": "GitHub releases carry no Android APK; Yubico publishes it on developers.yubico.com with a detached GPG signature. Fetched from there and verified against keys/yubioath.asc, a key on Yubico's published list of release signing keys (developers.yubico.com/Software_Projects/Software_Signing.html). The APK itself is signed by Yubico, not by F-Droid, whose rebuild would carry F-Droid's key."
     },
     {
       "id": "pocketpal",

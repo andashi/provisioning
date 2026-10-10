@@ -131,6 +131,16 @@
       "pinned": false
     },
     {
+      "id": "com.yubico.yubioath",
+      "url": "https://developers.yubico.com/yubioath-flutter/Releases/",
+      "author": "Yubico",
+      "name": "Yubico Authenticator",
+      "preferredApkIndex": 0,
+      "additionalSettings": "{\"versionDetection\":true,\"apkFilterRegEx\":\"^yubico-authenticator-.+-android\\\\.apk$\"}",
+      "lastUpdateCheck": null,
+      "pinned": false
+    },
+    {
       "id": "com.pocketpalai",
       "url": "https://github.com/a-ghorbani/pocketpal-ai",
       "author": "a-ghorbani",

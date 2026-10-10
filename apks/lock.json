@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-09T11:56:22Z",
+  "generated": "2026-10-10T01:10:30Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -196,6 +196,20 @@
       "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90",
       "urls": [
         "https://github.com/bitwarden/android/releases/download/v2026.9.1-bwpm/com.x8bit.bitwarden-fdroid.apk"
+      ]
+    },
+    {
+      "pkg": "com.yubico.yubioath",
+      "label": "Yubico Authenticator",
+      "version": "7.4.1",
+      "versionCode": 703080,
+      "abi": "universal",
+      "file": "universal/com.yubico.yubioath-7.4.1.apk",
+      "sha256": "a6fe404c875216880e912b5f1c77bc0ea00e503c73e748db0365a469ddcc41b8",
+      "size": 74613517,
+      "signer": "3e21da5acaa8d49ce515b1c6d2a1903bae298d0911432c55e75a196199f2b9a0",
+      "urls": [
+        "https://developers.yubico.com/yubioath-flutter/Releases/yubico-authenticator-7.4.1-android.apk"
       ]
     },
     {

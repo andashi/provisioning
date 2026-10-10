@@ -46,25 +46,38 @@ classify_abi() {   # $1 = apk file
   else echo x86_64; fi
 }
 
-# The Tor Project signs every release file with a detached .asc. That is the
-# only source in this catalog where we can check an UPSTREAM SIGNATURE instead
-# of merely pinning whatever arrived first - worth the extra code for the app
-# whose entire purpose is anonymity.
-# The key is committed (keys/torbrowser.asc) so the check does not depend on a
-# keyserver being reachable or honest; its fingerprint is verified before use.
+# Every version a directory listing offers for a file name pattern, one per
+# line. The pattern is literal except for {version}, so a dot in it is a dot.
+# A version starts with a digit and holds only what release numbers hold.
+direct_versions() {  # $1 = file name with {version}; stdin = the listing
+  local pre="${1%%\{version\}*}" post="${1#*\{version\}}" q='s/[][\.*^$/+?(){}|]/\\&/g'
+  pre="$(sed "$q" <<<"$pre")"; post="$(sed "$q" <<<"$post")"
+  grep -oE "${pre}[0-9][0-9A-Za-z.]*${post}" | sed -E "s/^${pre}//; s/${post}\$//" | sort -u
+}
+
+# The Tor Project and Yubico sign every release file with a detached
+# signature. Those are the sources in this catalog where we can check an
+# UPSTREAM SIGNATURE instead of merely pinning whatever arrived first - worth
+# the extra code for the app whose entire purpose is anonymity and for the one
+# that holds second factors.
+# The keys are committed (keys/<id>.asc) so the check does not depend on a
+# keyserver being reachable or honest; the fingerprint is verified before use.
 TORBROWSER_FPR="EF6E286DDA85EA2A4BA7DE684E2C6E8793298290"
-verify_detached_sig() {  # $1 = local file, $2 = signature URL, $3 = expected key fingerprint
-  local file="$1" sigurl="$2" fpr="$3" home sig rc=0
-  [ -f keys/torbrowser.asc ] || { bad "keys/torbrowser.asc missing"; return 1; }
+verify_detached_sig() {  # $1 = local file, $2 = signature URL, $3 = expected key fingerprint, $4 = key file
+  local file="$1" sigurl="$2" fpr="$3" key="$4" home sig rc=0
+  [ -f "$key" ] || { bad "$key missing"; return 1; }
   home="$(mktemp -d)"; sig="$home/sig.asc"
   chmod 700 "$home"
-  if ! gpg --homedir "$home" --batch --quiet --import keys/torbrowser.asc 2>/dev/null; then
+  if ! gpg --homedir "$home" --batch --quiet --import "$key" 2>/dev/null; then
     bad "signing key could not be imported"; rm -rf "$home"; return 1
   fi
   # The committed file must be the key we think it is, not just any key.
-  if ! gpg --homedir "$home" --batch --with-colons --fingerprint 2>/dev/null \
-       | awk -F: '$1=="fpr"{print $10}' | grep -qx "$fpr"; then
-    bad "keys/torbrowser.asc does not carry fingerprint $fpr"; rm -rf "$home"; return 1
+  # --verify accepts a signature by ANY key in the keyring, so a key file that
+  # carried a second key would let that one sign too: exactly one primary key.
+  if [ "$(gpg --homedir "$home" --batch --with-colons --list-keys 2>/dev/null | grep -c '^pub:')" != 1 ] \
+     || ! gpg --homedir "$home" --batch --with-colons --fingerprint 2>/dev/null \
+       | awk -F: '$1=="fpr"{print $10}' | head -1 | grep -qx "$fpr"; then
+    bad "$key is not exactly the key $fpr"; rm -rf "$home"; return 1
   fi
   if ! curl -fsSL --max-time 120 "$sigurl" -o "$sig"; then
     bad "signature not downloadable: $sigurl"; rm -rf "$home"; return 1
@@ -200,7 +213,7 @@ warn_abi_skew() {
 
 ids=("$@")
 if [ ${#ids[@]} -eq 0 ]; then
-  mapfile -t ids < <(jq -r '.apps[]|select((.source=="obtainium" and (.upstream|test("github.com|codeberg.org"))) or .source=="fdroid" or .source=="torproject")|.id' "$CAT")
+  mapfile -t ids < <(jq -r '.apps[]|select((.source=="obtainium" and (.upstream|test("github.com|codeberg.org"))) or .source=="fdroid" or .source=="torproject" or .source=="direct")|.id' "$CAT")
 fi
 
 mkdir -p certs
@@ -210,7 +223,7 @@ for id in "${ids[@]}"; do
   [ -z "$row" ] && { warn "$id: not in the catalog"; continue; }
   pkg=$(jq -r '.pkg' <<<"$row"); label=$(jq -r '.label' <<<"$row"); up=$(jq -r '.upstream' <<<"$row")
   src=$(jq -r '.source' <<<"$row")
-  sigurl=""
+  sigurl=""; sigfpr=""; sigkey=""
   # Per-app asset filters: which flavour of a release is the real build is an
   # upstream idiosyncrasy, so the catalog decides and pick_asset only obeys.
   ASSET_EXCLUDE="$(jq -r 'if has("asset_exclude") then .asset_exclude else "" end' <<<"$row")"
@@ -233,7 +246,23 @@ for id in "${ids[@]}"; do
           | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?/' | tr -d '/' | sort -V | tail -1)
     [ -z "$ver" ] && { bad "$label: could not read the version index"; fail=1; continue; }
     url="https://dist.torproject.org/torbrowser/$ver/tor-browser-android-$tabi-$ver.apk"
-    sigurl="$url.asc"
+    sigurl="$url.asc"; sigfpr="$TORBROWSER_FPR"; sigkey="keys/torbrowser.asc"
+  elif [ "$src" = "direct" ]; then
+    # A vendor's own download directory (Yubico publishes no Android APK on
+    # GitHub). The catalog names the directory, the file name with {version}
+    # in it, and the key that signs each file: without a signature to check,
+    # a directory listing is no source this script accepts.
+    index=$(jq -r '.download.index // empty' <<<"$row")
+    file=$(jq -r '.download.file // empty' <<<"$row")
+    sigfpr=$(jq -r '.download.gpg // empty' <<<"$row")
+    if [ -z "$index" ] || [[ "$file" != *"{version}"* ]] || [ -z "$sigfpr" ]; then
+      bad "$label: source direct needs download.index, download.file with {version} and download.gpg"; fail=1; continue
+    fi
+    log "$label (${index#https://})"
+    ver=$(curl -fsSL --max-time 60 "$index" 2>/dev/null | direct_versions "$file" | sort -V | tail -1)
+    [ -z "$ver" ] && { bad "$label: no ${file//\{version\}/*} in $index"; fail=1; continue; }
+    url="$index${file//\{version\}/$ver}"
+    sigurl="$url.sig"; sigkey="keys/$id.asc"
   elif [ "$src" = "fdroid" ]; then
     log "$label (F-Droid)"
     idx=$(curl -fsSL "https://f-droid.org/api/v1/packages/$pkg" 2>/dev/null)
@@ -294,7 +323,7 @@ for id in "${ids[@]}"; do
   if have=$(find_existing "$name"); then ok "$label $ver already present ($have)"; continue; fi
   curl -fsSL -o ".$name.part" "$url" || { bad "$label: download failed"; rm -f ".$name.part"; fail=1; continue; }
   if [ -n "$sigurl" ]; then
-    verify_detached_sig ".$name.part" "$sigurl" "$TORBROWSER_FPR" \
+    verify_detached_sig ".$name.part" "$sigurl" "$sigfpr" "$sigkey" \
       || { rm -f ".$name.part"; fail=1; continue; }
   fi
   # The ABI can only be determined after the download, so sort it in now.

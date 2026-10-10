@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generates config/obtainium.json (import file) from the app catalog.
-# Apps with source=obtainium and a set upstream URL, plus source=fdroid and
-# source=torproject.
+# Apps with source=obtainium and a set upstream URL, plus source=fdroid,
+# source=torproject and source=direct.
 # fdroid apps get an f-droid.org URL instead of their upstream: Obtainium
 # tracks them through the F-Droid repo, and for Shelter the GitHub releases
 # carry no APK at all. Without this they would never be updated on device.
@@ -12,6 +12,9 @@
 # certificate. Same key means the update installs over ours instead of failing
 # with a signature mismatch. Without an entry here, Tor Browser would be
 # installed once and never updated - the worst outcome for the Anon zone.
+# direct apps (a vendor's own download directory) are tracked on that same
+# directory, which Obtainium reads as an HTML source; the filter keeps it to
+# the Android file among the desktop builds listed next to it.
 #
 # WARNING: Obtainium's import schema isn't documented with versioning.
 # Before the first real import, cross-check once against a REAL export
@@ -30,18 +33,22 @@ cd "$(dirname "$0")"
 jq '{
   apps: [
     .apps[]
-    | select((.source == "obtainium" and (.upstream // "") != "") or .source == "fdroid" or .source == "torproject")
+    | select((.source == "obtainium" and (.upstream // "") != "") or .source == "fdroid" or .source == "torproject" or .source == "direct")
     | {
         id: .pkg,
         url: (if .source == "fdroid" then "https://f-droid.org/packages/" + .pkg
               elif .source == "torproject" then "https://guardianproject.info/fdroid/repo/" + .pkg
+              elif .source == "direct" then .download.index
               else .upstream end),
         author: (if .source == "fdroid" then "F-Droid"
                  elif .source == "torproject" then "Guardian Project"
                  else (.upstream | capture("(?:github\\.com|codeberg\\.org|gitlab\\.com)/(?<a>[^/]+)/").a? // "unknown") end),
         name: .label,
         preferredApkIndex: 0,
-        additionalSettings: "{\"versionDetection\":true,\"apkFilterRegEx\":\"\"}",
+        additionalSettings: ({versionDetection: true,
+                              apkFilterRegEx: (if .source == "direct"
+                                               then .download.file | gsub("[.]"; "\\.") | sub("[{]version[}]"; ".+") | "^" + . + "$"
+                                               else "" end)} | tojson),
         lastUpdateCheck: null,
         pinned: false
       }
