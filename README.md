@@ -207,6 +207,7 @@ Both live side by side. `CONFIG_DIR` picks which one applies:
 CONFIG_DIR=~/andashi-private/config provision/run.sh
 CONFIG_DIR=~/andashi-private/config config/gen-launcher.sh
 CONFIG_DIR=~/andashi-private/config config/gen-obtainium.sh
+CONFIG_DIR=~/andashi-private/config config/gen-updater.sh
 CAT=~/andashi-private/config/apps.json apks/fetch.sh
 ```
 

@@ -100,13 +100,28 @@ in the catalog; the app runs fine on the device it was built for.
 
 ## Generated from the same source
 
-Two files are generated from the catalog and checked in, with `make check`
+Three sets of files are generated from the catalog and checked in, with `make check`
 enforcing that they are in sync:
 
 - **`config/obtainium.json`** — an import file for Obtainium, so the apps that
   update themselves are set up in one import per profile rather than app by app.
 - **`config/launcher/<zone>.json`** — the home screen per zone, which also
   resolves favorites against this catalog. See [launcher.md](launcher.md).
+- **`config/updater/<zone>.json`** — the andashi updater's config per zone
+  (`config/gen-updater.sh`): every app of the zone whose source the lock covers
+  (`obtainium`, `fdroid`, `torproject`, `direct`) with its pinned signer, the
+  zone's `net: false` apps, and where the lock lives. A managed app without a pin
+  fails generation: the updater could never verify it, and a config that names an
+  app it cannot update would report work it will not do.
+
+`config/distribution.json` says where this distribution's phones look for updates:
+the lock URL and its heartbeat, and **`allowedHosts`**, the only hosts a phone may
+fetch from. That list is a decision, not a summary of the lock. `make check`
+(`config/check-hosts.sh`) refuses a lock with a URL on any other host — or over
+http, or with a user or port in the address — so the daily lock refresh, which
+commits without a person, can never widen where a phone connects. A new source
+that needs a new host is a one-line pull request to that list. A fork points
+`lock.url` at its own lock; nothing else needs to change.
 
 Everything the catalog cannot install ends up in the generated `MANUAL.md`, by
 name, from the queue that `10-apps.sh` writes during the run — so the list

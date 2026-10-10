@@ -1,0 +1,151 @@
+{
+  "checks": {
+    "netFalse": [
+      "app.grapheneos.camera",
+      "app.lawnchair.lawnicons",
+      "com.Vali98.ChatterUI",
+      "com.pocketpalai",
+      "com.yubico.yubioath",
+      "dev.soupslurpr.appverifier",
+      "helium314.keyboard",
+      "moe.shizuku.privileged.api",
+      "net.sourceforge.opencamera",
+      "net.typeblog.shelter",
+      "org.andashi.home"
+    ]
+  },
+  "lock": {
+    "allowedHosts": [
+      "raw.githubusercontent.com",
+      "github.com",
+      "objects.githubusercontent.com",
+      "release-assets.githubusercontent.com",
+      "codeberg.org",
+      "f-droid.org",
+      "dist.torproject.org",
+      "archive.torproject.org",
+      "developers.yubico.com"
+    ],
+    "heartbeatUrl": "https://raw.githubusercontent.com/andashi/provisioning/lock-heartbeat/heartbeat.json",
+    "maxAgeDays": 14,
+    "mode": "fetch",
+    "url": "https://raw.githubusercontent.com/andashi/provisioning/main/apks/lock.json"
+  },
+  "managed": [
+    {
+      "label": "Accrescent",
+      "pkg": "app.accrescent.client",
+      "signer": "067a40c4193aad51ac87f9ddfdebb15e24a1850babfa4821c28c5c25c3fdc071"
+    },
+    {
+      "label": "Immich",
+      "pkg": "app.alextran.immich",
+      "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020"
+    },
+    {
+      "label": "CoMaps",
+      "pkg": "app.comaps",
+      "signer": "4894e8e6963627ef660031d8593fe77297f835acb4e23810003e926135023b4c"
+    },
+    {
+      "label": "Lawnicons",
+      "pkg": "app.lawnchair.lawnicons",
+      "signer": "747c3645b357258b2e23e851e53c96747fe0add007e5ba2cd97e8c85572e4dc5"
+    },
+    {
+      "label": "DAVx5",
+      "pkg": "at.bitfire.davdroid",
+      "signer": "b39e7b77ec853483646b21b4a3e3ca540ba094ef8daa18e87e0be1fa4638d321"
+    },
+    {
+      "label": "ChatterUI",
+      "pkg": "com.Vali98.ChatterUI",
+      "signer": "1b4b4ac99a24cb9569bdbc37cfbde916a4f538de55c1f802fa19bc99e33b7e3b"
+    },
+    {
+      "label": "PocketPal AI",
+      "pkg": "com.pocketpalai",
+      "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614"
+    },
+    {
+      "label": "Tailscale",
+      "pkg": "com.tailscale.ipn",
+      "signer": "5cdb295551bfe1a087fed6acda07141c6c929fa7c29bd273a7092813acc434bf"
+    },
+    {
+      "label": "Bitwarden",
+      "pkg": "com.x8bit.bitwarden",
+      "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90"
+    },
+    {
+      "label": "Yubico Authenticator",
+      "pkg": "com.yubico.yubioath",
+      "signer": "3e21da5acaa8d49ce515b1c6d2a1903bae298d0911432c55e75a196199f2b9a0"
+    },
+    {
+      "label": "Obtainium",
+      "pkg": "dev.imranr.obtainium",
+      "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362"
+    },
+    {
+      "label": "Inter Profile Sharing",
+      "pkg": "digital.ventral.ips",
+      "signer": "03243d0c0d44b6e0b41e3cb245b1dc269be4c3ffe177f843fc005bc4ea0c7426"
+    },
+    {
+      "label": "HeliBoard",
+      "pkg": "helium314.keyboard",
+      "signer": "5ec0a5313aa43558ee75b20b58ccd8194cdbf066df94a43ba288d933d60b86ce"
+    },
+    {
+      "label": "Home Assistant",
+      "pkg": "io.homeassistant.companion.android",
+      "signer": "11194ba809b42ddf0e1a7dec6842a59c7ff1119c5482e95febffd5c6014daa5a"
+    },
+    {
+      "label": "Shizuku",
+      "pkg": "moe.shizuku.privileged.api",
+      "signer": "268b5590e868fb08bae7e0ac413564cd1ff88f5ccff74af9dbd0dc918e30db30"
+    },
+    {
+      "label": "Open Camera",
+      "pkg": "net.sourceforge.opencamera",
+      "signer": "438991c968e8d308ca34078d37511c90c502d596baf9f0d0c5fbd1c9bf67df6d"
+    },
+    {
+      "label": "Shelter",
+      "pkg": "net.typeblog.shelter",
+      "signer": "2d4837134f3519a11d104630ed42a4a795f4ab2327e1c9899cbebfbf89aba483"
+    },
+    {
+      "label": "Andashi Home",
+      "pkg": "org.andashi.home",
+      "signer": "e42da3c2cf9e682d67b96f3655b2adf1bb22488a064b6ff833520b3c43f2a5ee"
+    },
+    {
+      "label": "Tubular",
+      "pkg": "org.polymorphicshade.tubular",
+      "signer": "8ad7025a8c911454e2a7b4515e360c52ca63ec0410a042ff46e9ad05b509e187"
+    },
+    {
+      "label": "Signal",
+      "pkg": "org.thoughtcrime.securesms",
+      "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8"
+    }
+  ],
+  "policy": {
+    "constraints": {
+      "boundHours": 24,
+      "notForeground": true,
+      "notInCall": true
+    },
+    "minimumAgeHours": 0
+  },
+  "schedule": {
+    "checkEveryHours": 6,
+    "requireCharging": false,
+    "requireUnmetered": false
+  },
+  "schemaVersion": 1,
+  "zone": "home"
+}
