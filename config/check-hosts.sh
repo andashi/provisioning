@@ -28,6 +28,19 @@ hosts="$(jq -r '.allowedHosts
     then . else error("allowedHosts: \(tojson) is not a plain lower-case host name") end' "$DIST")" \
   || { echo "check-hosts: $DIST: allowedHosts is malformed - see above" >&2; exit 1; }
 
+# A URL with a control character or a space in it is refused before anything
+# else: the lines below are split on tabs, and a tab inside a URL would let
+# the host check see only the part before it.
+weird="$(jq -r '[.lock.url, .lock.heartbeatUrl][] | select(type != "string" or (explode | any(. <= 32 or . == 127)))
+                | "  config/distribution.json: a lock URL that is not a plain string: \(tojson)"' "$DIST")
+$(jq -r '.entries[] | .file as $f | .urls[] | select(type != "string" or (explode | any(. <= 32 or . == 127)))
+                | "  \($f): a URL with a control character or space: \(tojson)"' "$LOCK")" \
+  || { echo "check-hosts: could not read the URLs" >&2; exit 1; }
+if [ -n "$(tr -d '[:space:]' <<<"$weird")" ]; then
+  printf 'URLs a phone could not be held to a host by:\n%s\n' "$weird" >&2
+  exit 1
+fi
+
 # url<TAB>where, for every URL a phone gets from this distribution.
 urls="$( { jq -r '.lock.url, .lock.heartbeatUrl | "\(.)\tconfig/distribution.json"' "$DIST"
            jq -r '.entries[] | .file as $f | .urls[] | "\(.)\t\($f)"' "$LOCK"; } )" \

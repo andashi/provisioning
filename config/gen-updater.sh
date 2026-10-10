@@ -47,6 +47,8 @@ zones="$(jq -r --slurpfile feat "$CONFIG_DIR/features.json" '
   | if $f == "" then .key
     elif ($feat[0].features | has($f)) | not
       then error("profiles.json references unknown feature \"\($f)\"")
+    elif ($feat[0].features[$f].enabled | type) != "boolean"
+      then error("features.json: \($f).enabled is neither true nor false")
     elif $feat[0].features[$f].enabled then .key
     else empty end' "$CONFIG_DIR/profiles.json")"
 
@@ -60,6 +62,8 @@ gen_zone() {   # $1=zone
                  | if $f == "" then true
                    elif ($feat[0].features | has($f)) | not
                      then error("apps.json: \(.id) references unknown feature \"\($f)\"")
+                   elif ($feat[0].features[$f].enabled | type) != "boolean"
+                     then error("features.json: \($f).enabled is neither true nor false")
                    else $feat[0].features[$f].enabled end) ] as $apps
     | {
         schemaVersion: 1,

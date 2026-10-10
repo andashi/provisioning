@@ -40,6 +40,12 @@ fresh; edit distribution.json '.lock.url = "https://lock.example.org/lock.json"'
 t "the lock URL itself on a new host" "lock.example.org is not in allowedHosts"
 fresh; edit distribution.json '.lock.heartbeatUrl = "http://raw.githubusercontent.com/h.json"'
 t "a heartbeat over http" "not https"
+fresh; edit lock.json '(.entries[0].urls) = ["https://github.com\t:8443/x.apk"]'
+t "a tab in a URL, which would split the host check" "a URL with a control character or space"
+fresh; edit lock.json '(.entries[0].urls) = ["https://github.com /x.apk"]'
+t "a space in a URL" "a URL with a control character or space"
+fresh; edit distribution.json '.lock.url = "https://raw.githubusercontent.com/\n/lock.json"'
+t "a newline in the lock URL" "a lock URL that is not a plain string"
 fresh; edit distribution.json '.allowedHosts += ["*.example.org"]'
 t "a wildcard in the list" "is not a plain lower-case host name"
 fresh; edit distribution.json '.allowedHosts = []'

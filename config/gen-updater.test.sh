@@ -62,6 +62,11 @@ t "a zone whose feature is switched on gets its file"   '[ -f "$tmp/out/vault.js
 jq '(.features.vaults.enabled) = false' "$tmp/c/features.json" > "$tmp/f" && mv "$tmp/f" "$tmp/c/features.json"; gen
 t "... and loses it when the feature goes off again"    '[ $? = 0 ] && [ ! -f "$tmp/out/vault.json" ]'
 
+fresh; jq '.features.vaults.enabled = "false"' "$tmp/c/features.json" > "$tmp/f" && mv "$tmp/f" "$tmp/c/features.json"; gen
+t "an enabled that is a string, not a boolean: refused" '[ $? != 0 ] && grep -q "vaults.enabled is neither true nor false" "$tmp/log"'
+fresh; jq '.features.eid.enabled = null' "$tmp/c/features.json" > "$tmp/f" && mv "$tmp/f" "$tmp/c/features.json"; gen
+t "a missing enabled on an app's feature: refused, not off" '[ $? != 0 ] && grep -q "eid.enabled is neither true nor false" "$tmp/log"'
+
 fresh; jq '.apps[0].feature = "nope"' "$tmp/c/apps.json" > "$tmp/a" && mv "$tmp/a" "$tmp/c/apps.json"; gen
 t "an unknown feature in the catalog: refused"          '[ $? != 0 ] && grep -q "unknown feature" "$tmp/log"'
 
