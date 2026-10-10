@@ -7,34 +7,34 @@ help:  ## This overview
 check: ## Check JSON + bash syntax + catalog consistency locally
 	@for f in config/*.json; do jq -e . $$f >/dev/null && echo "ok: $$f"; done
 	@for f in $$(find . -name '*.sh'); do bash -n $$f || exit 1; done; echo "ok: bash -n"
-	@tests/commit-msg.test.sh > /dev/null && echo "ok: commit-msg hook (cases)"
-	@tests/theming.test.sh > /dev/null && echo "ok: theming keeps failed zones pending (cases)"
-	@tests/pr-gate.test.sh > /dev/null && echo "ok: pr-gate branch deletion (cases)"
-	@tests/identity.test.sh > /dev/null && echo "ok: e2e shell identity (cases)"
-	@lib/readback-compare.test.sh > /dev/null && echo "ok: read-back comparison (cases)"
-	@lib/report-moved.test.sh > /dev/null && echo "ok: report-moved condition (cases)"
-	@lib/wallpaper-drifted.test.sh > /dev/null && echo "ok: wallpaper-drift condition (cases)"
-	@lib/zones.test.sh > /dev/null && echo "ok: zone selection (cases)"
-	@lib/launcher-plan.test.sh > /dev/null && echo "ok: launcher push decision (cases)"
-	@lib/andashi.test.sh > /dev/null && echo "ok: andashi decisions (cases)"
-	@lib/apk-version-lock.test.sh > /dev/null && echo "ok: versionCode without aapt2 (cases)"
-	@tests/from-lock.test.sh > /dev/null && echo "ok: downloads from the lock (cases)"
-	@tests/fetch-direct.test.sh > /dev/null && echo "ok: vendor directory and signature (cases)"
-	@tests/updater.test.sh > /dev/null && echo "ok: the updater on the device (cases)"
-	@tests/updater-config.test.sh > /dev/null && echo "ok: updater config push (cases)"
-	@tests/lock.test.sh > /dev/null && echo "ok: writing the lock (cases)"
-	@tests/refresh-lock.test.sh > /dev/null && echo "ok: lock refresh routine (cases)"
-	@tests/heartbeat.test.sh > /dev/null && echo "ok: lock heartbeat (cases)"
-	@apks/check-lock.test.sh > /dev/null && echo "ok: lock consistency (cases)"
+	@out="$$(tests/commit-msg.test.sh 2>&1)" && echo "ok: commit-msg hook (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/theming.test.sh 2>&1)" && echo "ok: theming keeps failed zones pending (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/pr-gate.test.sh 2>&1)" && echo "ok: pr-gate branch deletion (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/identity.test.sh 2>&1)" && echo "ok: e2e shell identity (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/readback-compare.test.sh 2>&1)" && echo "ok: read-back comparison (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/report-moved.test.sh 2>&1)" && echo "ok: report-moved condition (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/wallpaper-drifted.test.sh 2>&1)" && echo "ok: wallpaper-drift condition (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/zones.test.sh 2>&1)" && echo "ok: zone selection (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/launcher-plan.test.sh 2>&1)" && echo "ok: launcher push decision (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/andashi.test.sh 2>&1)" && echo "ok: andashi decisions (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(lib/apk-version-lock.test.sh 2>&1)" && echo "ok: versionCode without aapt2 (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/from-lock.test.sh 2>&1)" && echo "ok: downloads from the lock (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/fetch-direct.test.sh 2>&1)" && echo "ok: vendor directory and signature (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/updater.test.sh 2>&1)" && echo "ok: the updater on the device (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/updater-config.test.sh 2>&1)" && echo "ok: updater config push (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/lock.test.sh 2>&1)" && echo "ok: writing the lock (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/refresh-lock.test.sh 2>&1)" && echo "ok: lock refresh routine (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/heartbeat.test.sh 2>&1)" && echo "ok: lock heartbeat (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(apks/check-lock.test.sh 2>&1)" && echo "ok: lock consistency (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@apks/check-lock.sh
-	@config/check-schema.test.sh > /dev/null && echo "ok: schema check (cases)"
-	@config/check-contacts.test.sh > /dev/null && echo "ok: contact rule (cases)"
-	@config/check-appwidgets.test.sh > /dev/null && echo "ok: appwidget tripwire (cases)"
-	@config/check-invariants.test.sh > /dev/null && echo "ok: catalog invariants (cases)"
-	@config/check-hosts.test.sh > /dev/null && echo "ok: allowed hosts (cases)"
-	@config/gen-updater.test.sh > /dev/null && echo "ok: updater config generation (cases)"
-	@config/gen-obtainium.test.sh > /dev/null && echo "ok: obtainium import (cases)"
-	@tests/andashi-catalog.test.sh > /dev/null && echo "ok: andashi catalog commands (cases)"
+	@out="$$(config/check-schema.test.sh 2>&1)" && echo "ok: schema check (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(config/check-contacts.test.sh 2>&1)" && echo "ok: contact rule (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(config/check-appwidgets.test.sh 2>&1)" && echo "ok: appwidget tripwire (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(config/check-invariants.test.sh 2>&1)" && echo "ok: catalog invariants (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(config/check-hosts.test.sh 2>&1)" && echo "ok: allowed hosts (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(config/gen-updater.test.sh 2>&1)" && echo "ok: updater config generation (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(config/gen-obtainium.test.sh 2>&1)" && echo "ok: obtainium import (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/andashi-catalog.test.sh 2>&1)" && echo "ok: andashi catalog commands (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@config/check-schema.sh
 	@config/check-contacts.sh
 	@config/check-appwidgets.sh
