@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "Where the phones of this distribution look for updates, and what they may contact.",
+    "A fork or a private catalog points lock.url and lock.heartbeatUrl at its own lock.",
+    "allowedHosts is a decision, not a summary of the lock: make check refuses a lock",
+    "with a URL outside it, so the daily refresh cannot widen where a phone connects.",
+    "Add a host here, in a pull request, when a source needs it."
+  ],
+  "lock": {
+    "url": "https://raw.githubusercontent.com/andashi/provisioning/main/apks/lock.json",
+    "heartbeatUrl": "https://raw.githubusercontent.com/andashi/provisioning/lock-heartbeat/heartbeat.json",
+    "maxAgeDays": 14
+  },
+  "allowedHosts": [
+    "raw.githubusercontent.com",
+    "github.com",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+    "codeberg.org",
+    "f-droid.org",
+    "dist.torproject.org",
+    "archive.torproject.org",
+    "developers.yubico.com"
+  ],
+  "updater": {
+    "schedule": { "checkEveryHours": 6, "requireUnmetered": false, "requireCharging": false },
+    "policy": {
+      "minimumAgeHours": 0,
+      "constraints": { "notInCall": true, "notForeground": true, "boundHours": 24 }
+    }
+  }
+}
