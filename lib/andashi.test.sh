@@ -65,7 +65,10 @@ ut="$(mktemp -d)"
 ( REPO_ROOT="$root" STATE_DIR="$ut/state" CONFIG_DIR="$root/config" APKS_DIR="$ut/apks"
   mkdir -p "$ut/apks"; cp -r "$root/apks/certs" "$ut/apks/certs"
   a="$(updater_generated_dir)"
-  c="$(ls "$ut/apks/certs" | head -1)"; mv "$ut/apks/certs/$c" "$ut/apks/certs/renamed.$c"
+  # A pin file explicitly: ls sorts by locale, and under C the first entry
+  # is PROVENANCE.tsv, whose name is no input (found when CI disagreed).
+  for c in "$ut/apks/certs"/*.cert; do break; done; c="${c##*/}"
+  mv "$ut/apks/certs/$c" "$ut/apks/certs/renamed.$c"
   b="$(updater_generated_dir)"
   [ "$a" != "$b" ] && echo differs || echo same ) > "$ut/res" 2>&1
 t "a pin renamed, its bytes unchanged: a new generation, not the cached one" "$(cat "$ut/res")" "differs"
