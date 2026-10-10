@@ -144,7 +144,8 @@ regenerate() {
   OUT_DIR="$out" "$ROOT/config/gen-launcher.sh" >/dev/null \
     && OUT_DIR="$out" "$ROOT/config/check-schema.sh" >/dev/null \
     && OUT_DIR="$out" "$ROOT/config/check-contacts.sh" >/dev/null \
-    && OUT_DIR="$out" "$ROOT/config/check-appwidgets.sh" >/dev/null
+    && OUT_DIR="$out" "$ROOT/config/check-appwidgets.sh" >/dev/null \
+    && OUT_DIR="$CONFIG_DIR/updater" CERTS_DIR="$APKS_DIR/certs" "$ROOT/config/gen-updater.sh" >/dev/null
 }
 
 private_catalog() {

@@ -41,6 +41,7 @@ run alone.
 | `35-vpn` | the always-on VPN slot per zone, with lockdown where the zone demands it |
 | `40-theming` | Monet palette, dark mode, status bar, the HOME role, the keyboard |
 | `45-launcher-config` | pushes the launcher config per profile, reloads it, reads it back |
+| `50-updater-config` | hands each zone's updater its config, reads back the hash it loaded, starts a check |
 | `90-manual` | generates `MANUAL.md` from what is deliberately not scriptable |
 | `99-finalize` | brings each zone to its declared runtime state, stopping what must be stopped |
 

@@ -53,6 +53,7 @@ docs/        architecture, decisions, explorations, guides
 | `35-vpn.sh` | always-on VPN and lockdown per zone, with the VPN consent appop |
 | `40-theming.sh` | Monet palette, dark mode, status bar, HOME role, default keyboard |
 | `45-launcher-config.sh` | push the launcher config per profile, reload it, verify by read-back |
+| `50-updater-config.sh` | hand each zone's updater its config, verify by the hash it reports, start a check |
 | `90-manual.sh` | generate `MANUAL.md` from what is deliberately not scriptable |
 | `99-finalize.sh` | bring each zone to its target runtime state, stopping what must be stopped |
 
