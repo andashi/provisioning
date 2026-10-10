@@ -130,7 +130,20 @@ ensure_pinned_version() {   # $1=pkg $2=label $3=source
   log "$lbl: $cur -> $want ($why)"
   adb_ install "${iargs[@]}" --user "$holder" -r "$apk" >/dev/null \
     && ok "$lbl upgraded to $want from $(basename "$apk")" \
-    || warn "$lbl: upgrade to $want FAILED - device stays on $cur"
+    || { warn "$lbl: upgrade to $want FAILED - device stays on $cur"; return 0; }
+  # The same read-back as the hand-over: -i names the updater only where the
+  # updater is installed, and no zone holding the app may have it.
+  if [ "${#iargs[@]}" -gt 0 ] && [ "$DRY_RUN" != "1" ]; then
+    inst="$(installer_of "$pkg" "$holder")"
+    if [ "$inst" != "$UPDATER_PKG" ]; then
+      if pkg_installed_for_user "$UPDATER_PKG" "$holder"; then
+        warn "$lbl: upgraded, but the installer of record reads '${inst:-null}'"
+        UPDATER_FAILED+=("$lbl: installer of record is ${inst:-null} after the upgrade, not the updater")
+      else
+        warn "$lbl: no zone that holds it runs the updater - stays with installer '${inst:-null}'"
+      fi
+    fi
+  fi
 }
 
 # A user that holds the package, or nothing (and status 1) when none does.

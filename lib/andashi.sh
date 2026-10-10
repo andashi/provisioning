@@ -73,6 +73,25 @@ steps_for_sections() {   # $@=sections -> step names in STEP_ORDER
 #
 # `wallpapers` hashes the bytes of the zone's image in both aspect variants;
 # which one a device gets is the device's to say.
+# The updater configs as the catalog makes them NOW, not as the last
+# regenerate left them in $CONFIG_DIR/updater: apply decides what changed
+# before it regenerates, and a hand-edited apps.json would otherwise hash the
+# stale file, never schedule the updater step, and be recorded as applied.
+# Generated into a directory named by the hash of every input, so a run
+# generates once however many zones it looks at.
+updater_generated_dir() {
+  local key d certs="${APKS_DIR:-$REPO_ROOT/apks}/certs"
+  key="$( { cat "$CONFIG_DIR"/{apps,profiles,features,distribution}.json 2>/dev/null
+            cat "$certs"/*.cert 2>/dev/null; } | sha256sum | cut -d' ' -f1)"
+  d="$STATE_DIR/updater-gen/$key"
+  if [ ! -d "$d" ]; then
+    rm -rf "$d.tmp"; mkdir -p "$d.tmp"
+    OUT_DIR="$d.tmp" CERTS_DIR="$certs" CONFIG_DIR="$CONFIG_DIR" "$REPO_ROOT/config/gen-updater.sh" >/dev/null 2>&1 \
+      && mv "$d.tmp" "$d" || { rm -rf "$d.tmp"; return 1; }
+  fi
+  printf '%s' "$d"
+}
+
 zone_snapshot() {   # $1=zone
   local z="$1" w a f
   printf 'profiles.json %s\n' "$(jq -cS --arg z "$z" '.profiles[] | select(.key == $z)' "$CONFIG_DIR/profiles.json" | sha256sum | cut -d' ' -f1)"
@@ -81,7 +100,9 @@ zone_snapshot() {   # $1=zone
   printf 'theming.json %s\n' "$(jq -cS --arg z "$z" '{g: .global, k: .keyboard_pkg, l: .launcher, ls: .launchers, a: .all_profiles, p: .per_profile[$z]}' "$CONFIG_DIR/theming.json" | sha256sum | cut -d' ' -f1)"
   printf 'features.json %s\n' "$(jq -cS . "$CONFIG_DIR/features.json" | sha256sum | cut -d' ' -f1)"
   w="$(jq -r --arg z "$z" '((.all_profiles // {}) * (.per_profile[$z] // {})).wallpaper // empty' "$CONFIG_DIR/theming.json")"
-  printf 'updater.json %s\n' "$( { [ -f "$CONFIG_DIR/updater/$z.json" ] && cat "$CONFIG_DIR/updater/$z.json"; } | sha256sum | cut -d' ' -f1)"
+  # A catalog that does not generate hashes as "ungenerated", which differs
+  # from any record and so schedules the step - where it then fails loudly.
+  printf 'updater.json %s\n' "$( { d="$(updater_generated_dir)" && [ -f "$d/$z.json" ] && cat "$d/$z.json" || echo ungenerated; } | sha256sum | cut -d' ' -f1)"
   printf 'wallpapers %s\n' "$(
     for a in tall square; do
       f="$REPO_ROOT/${w//\{aspect\}/$a}"

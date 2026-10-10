@@ -37,6 +37,25 @@ t "the zone's updater config"           "$(changed_sections "$old" "${old/u1/u2}
 t "a record from before the updater: owes it" "$(changed_sections "${old/$'\nupdater.json u1'/}" "$old" | j)" "updater"
 t "an input the record lacks counts"  "$(changed_sections "${old/$'\nwallpapers w1'/}" "$old" | j)" "launcher"
 
+echo "the updater's snapshot follows the catalog, not the last regenerate"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ut="$(mktemp -d)"
+( REPO_ROOT="$root" STATE_DIR="$ut/state" APKS_DIR="$root/apks" CONFIG_DIR="$ut/config"
+  cp -r "$root/config" "$CONFIG_DIR"
+  before="$(zone_snapshot home | awk '$1 == "updater.json" {print $2}')"
+  # A hand edit: take a lock-covered app out of Home, without regenerating.
+  jq '(.apps[] | select(.pkg == "at.bitfire.davdroid") | .profiles) -= ["home"]' "$CONFIG_DIR/apps.json" > "$ut/a" && mv "$ut/a" "$CONFIG_DIR/apps.json"
+  after="$(zone_snapshot home | awk '$1 == "updater.json" {print $2}')"
+  stale="$(cmp -s "$CONFIG_DIR/updater/home.json" "$root/config/updater/home.json" && echo untouched)"
+  printf '%s|%s|%s\n' "$([ -n "$before" ] && [ "$before" != "$after" ] && echo changed || echo same)" "$stale" \
+    "$(changed_sections "updater.json $before" "updater.json $after" | tr '\n' ' ')"
+) > "$ut/res" 2>&1
+IFS='|' read -r moved stale secs < "$ut/res"
+t "a hand-edited apps.json moves the updater hash" "$moved" "changed"
+t "... though config/updater was not regenerated"  "$stale" "untouched"
+t "... and schedules the updater section"          "$secs" "updater "
+rm -rf "$ut"
+
 echo "reconcile"
 t "nothing changed"                   "$(reconcile_plan a a a)" none
 t "host changed"                      "$(reconcile_plan b a a)" push

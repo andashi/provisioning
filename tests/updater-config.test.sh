@@ -13,11 +13,13 @@ pass=0; fail=0
 t() { if eval "$2"; then printf '  ok    %s\n' "$1"; pass=$((pass+1))
       else printf '  FAIL  %s\n' "$1"; sed 's/^/        | /' "$tmp/out"; fail=$((fail+1)); fi; }
 
-export ADB="$root/tests/fixtures/fake-pm" ADB_SERIAL="$dev" FAKE_DEV="$tmp/dev" CONFIG_DIR="$tmp/config" UPDATER_POLL=0 DRY_RUN=0
+# The configs come from a fixture directory, not $CONFIG_DIR/updater: the step
+# regenerates only its default directory, and these cases are about the push.
+export ADB="$root/tests/fixtures/fake-pm" ADB_SERIAL="$dev" FAKE_DEV="$tmp/dev" CONFIG_DIR="$tmp/config" UPDATER_POLL=0 DRY_RUN=0 UPDATER_CFG_DIR="$tmp/cfgs"
 U=org.andashi.updater
 fresh() {
   rm -rf "$tmp/dev" "$CONFIG_DIR" "$root/.provision-state/updater/$dev" "$root/.provision-state/pending/$dev"
-  mkdir -p "$tmp/dev/pkg" "$CONFIG_DIR/updater"
+  rm -rf "$tmp/cfgs"; mkdir -p "$tmp/dev/pkg" "$CONFIG_DIR" "$tmp/cfgs"
   printf '0\n10\n15\n' > "$tmp/dev/users"; : > "$tmp/dev/log"; : > "$tmp/dev/running"
   cat > "$CONFIG_DIR/profiles.json" <<'JSON'
 {"profiles": [
@@ -28,11 +30,11 @@ fresh() {
 JSON
   echo '{"features": {}}' > "$CONFIG_DIR/features.json"
   echo '{"apps": [{"id": "updater", "label": "Andashi Updater", "pkg": "'$U'", "role": "updater", "source": "obtainium", "profiles": ["home", "anon"]}]}' > "$CONFIG_DIR/apps.json"
-  for z in home anon; do echo "{\"zone\": \"$z\"}" > "$CONFIG_DIR/updater/$z.json"; done
+  for z in home anon; do echo "{\"zone\": \"$z\"}" > "$tmp/cfgs/$z.json"; done
   mkdir -p "$tmp/dev/pkg/$U"; printf '0\n15\n' > "$tmp/dev/pkg/$U/users"; echo 1 > "$tmp/dev/pkg/$U/vc"; echo "$U" > "$tmp/dev/pkg/$U/installer"
 }
 run() { "$root/provision/50-updater-config.sh" > "$tmp/out" 2>&1; }
-sha() { sha256sum "$CONFIG_DIR/updater/$1.json" | cut -d' ' -f1; }
+sha() { sha256sum "$tmp/cfgs/$1.json" | cut -d' ' -f1; }
 writes() { grep -c "^content write" "$tmp/dev/log"; }
 
 fresh; echo 15 >> "$tmp/dev/running"; run
@@ -68,7 +70,7 @@ fresh; echo 15 >> "$tmp/dev/running"; echo 15 > "$tmp/dev/locked"; run
 t "a locked zone: fails, says unlock it"             '[ $? != 0 ] && grep -q "U15: profile locked" "$tmp/out"'
 fresh; echo 15 >> "$tmp/dev/running"; echo 0 > "$tmp/dev/pkg/$U/users"; run
 t "the updater missing in a zone: fails, says run 10-apps" '[ $? != 0 ] && grep -q "not installed (user 15)" "$tmp/out"'
-fresh; echo 15 >> "$tmp/dev/running"; rm "$CONFIG_DIR/updater/anon.json"; run
+fresh; echo 15 >> "$tmp/dev/running"; rm "$tmp/cfgs/anon.json"; run
 t "a zone without a generated config: fails, says generate" '[ $? != 0 ] && grep -q "run config/gen-updater.sh" "$tmp/out"'
 fresh; jq '.apps = []' "$CONFIG_DIR/apps.json" > "$tmp/a" && mv "$tmp/a" "$CONFIG_DIR/apps.json"; run
 t "no updater in the catalog: nothing to do, success" '[ $? = 0 ] && grep -q "nothing to configure" "$tmp/out" && [ ! -s "$tmp/dev/log" ]'

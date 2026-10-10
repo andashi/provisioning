@@ -23,6 +23,13 @@ if [ -z "$UPDATER_PKG" ]; then
   exit 0
 fi
 : "${UPDATER_CFG_DIR:=$CONFIG_DIR/updater}"
+# The files pushed are the catalog's as it stands, regenerated here: a step
+# that pushed whatever an earlier regenerate left would push a stale config
+# and report it loaded. A catalog that does not generate stops the step.
+if [ "$DRY_RUN" != "1" ] && [ "$UPDATER_CFG_DIR" = "$CONFIG_DIR/updater" ]; then
+  OUT_DIR="$UPDATER_CFG_DIR" CERTS_DIR="$APKS_DIR/certs" "$REPO_ROOT/config/gen-updater.sh" >/dev/null \
+    || die "config/gen-updater.sh failed - the updater configs cannot be generated from this catalog"
+fi
 
 FAILED=()
 PENDING=()
