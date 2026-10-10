@@ -105,6 +105,7 @@ jobs:
         run: apks/refresh-lock.sh --summary "$RUNNER_TEMP/summary.md" --verdict "$RUNNER_TEMP/verdict"
 
       - name: Act on the verdict
+        id: act
         run: |
           set -euo pipefail
           verdict="$(cat "$RUNNER_TEMP/verdict")"
@@ -181,17 +182,28 @@ jobs:
         if: failure()
         env:
           HEARTBEAT: ${{ steps.heartbeat.outcome }}
+          ACT: ${{ steps.act.outcome }}
         run: |
+          # Each failure that happened is reported, not only the first one
+          # checked: a lock pushed without verify AND without its heartbeat
+          # needs both recoveries.
           {
+            said=0
+            if [ -n "${PUSHED:-}" ] && [ "$ACT" = failure ]; then
+              echo "The scheduled lock refresh committed the new lock to \`$TARGET\` (${PUSHED:0:12}), but could not start \`verify\` for it."
+              echo
+              echo "The next run dispatches it by itself. Until verify has run green on that commit, bin/pr-gate refuses merges; to clear it at once: \`gh workflow run verify --ref $TARGET\`."
+              echo
+              said=1
+            fi
             if [ "$HEARTBEAT" = failure ]; then
               echo "The scheduled lock refresh confirmed the lock (${CONFIRMED:0:12}), but could not push its heartbeat."
               echo
               echo "Phones see the lock age without it and report it as stale once maxAgeDays pass; the next run writes it again. The reason is in the Heartbeat step's log."
-            elif [ -n "${PUSHED:-}" ]; then
-              echo "The scheduled lock refresh committed the new lock to \`$TARGET\` (${PUSHED:0:12}), but could not start \`verify\` for it."
               echo
-              echo "The next run dispatches it by itself. Until verify has run green on that commit, bin/pr-gate refuses merges; to clear it at once: \`gh workflow run verify --ref $TARGET\`."
-            else
+              said=1
+            fi
+            if [ "$said" = 0 ]; then
               echo "The scheduled lock refresh failed, and nothing was changed."
               echo
               echo "The usual cause is a signer that changed upstream: fetch.sh rejects that build and says which app in the log line starting with \`x\`. An upstream that was briefly unreachable is the other one; the next run tries again."

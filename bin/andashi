@@ -253,18 +253,28 @@ updates_report() {
 
 cmd_update() {
   [ -n "$UPDATER_PKG" ] || die "the catalog has no updater (an app with role updater) - nothing to ask"
-  local z uid before now
+  local z uid before now failed=()
   while read -r z; do
     zone_has_updater "$z" || continue
     uid="$(uid_of "$z")"
     [ "$(state_of "$uid")" = running ] || { skip "$z: not running - its updater checks when it runs"; continue; }
-    before="$(updater_state "$uid" | jq -r '.lastCheck // empty' 2>/dev/null || true)"
+    # The check before the request must be read, or a check that had already
+    # happened would pass for the requested one.
+    local base="" _try
+    for _try in 1 2 3; do
+      base="$(updater_state "$uid")" && break
+      base=""; sleep 2
+    done
+    if [ -z "$base" ]; then
+      warn "$z: the updater does not answer - no check requested"; failed+=("$z"); continue
+    fi
+    before="$(jq -r '.lastCheck // ""' <<<"$base")"
     if [ "${DRY_RUN:-0}" = 1 ]; then
       printf '   [dry-run] am broadcast --user %s -n %s/%s -a %s.action.CHECK_NOW\n' "$uid" "$UPDATER_PKG" "$UPDATER_RECEIVER_CLASS" "$UPDATER_PKG"
       continue
     fi
     ash am broadcast --user "$uid" -n "$UPDATER_PKG/$UPDATER_RECEIVER_CLASS" -a "$UPDATER_PKG.action.CHECK_NOW" >/dev/null \
-      || { warn "$z: CHECK_NOW could not be sent"; continue; }
+      || { warn "$z: CHECK_NOW could not be sent"; failed+=("$z"); continue; }
     # The check runs in the background; its lastCheck moves when it is done.
     # A zone whose updater stops answering is given up after five tries in a
     # row, not after the full two minutes.
@@ -281,11 +291,17 @@ cmd_update() {
     done
     if [ -z "$now" ] || [ "$now" = "$before" ]; then
       warn "$z: no new check within 2 minutes - the updater may be waiting for a network"
+      failed+=("$z")
     else
       ok "$z: checked at $now"
     fi
   done < <(selected_zones)
   updates_report
+  # Every zone is reported first; then a check that did not complete makes
+  # the command fail, so a caller that tests the status is not told it did.
+  if [ "${#failed[@]}" -gt 0 ]; then
+    warn "no completed check in: ${failed[*]}"; return 1
+  fi
 }
 
 # ---- pull ------------------------------------------------------------------------
