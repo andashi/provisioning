@@ -137,6 +137,10 @@ run 'ensure_updater_device; ensure_updater_in_zones; ensure_pinned_version t.tor
 t "the updater reaches all its zones before any app: a hand-over through any of them takes" \
   '[ $? = 0 ] && [ "$(users $U)" = "0 15 " ] && [ "$(inst t.tor)" = "$U" ] && ! grep -q "pm install-existing --user 10 $U" "$tmp/dev/log"'
 
+fresh; dev_has "$U" 10 "$U" 0 15; dev_has t.tor 150 null 10; echo "user,$U,10201" > "$tmp/dev/idle"
+run 'ensure_updater_device; ensure_pinned_version t.tor Tor torproject'
+t "an app only a zone without the updater holds: said, not failed, nothing installed" '[ $? = 0 ] && grep -q "no zone that holds it runs the updater" "$tmp/out" && grep -qx "FAILED=0" "$tmp/out" && [ "$(installs)" = 0 ]'
+
 fresh; dev_has p.play 1 com.android.vending 0
 run 'ensure_updater_device; ensure_pinned_version p.play Play play-sandboxed'
 t "a Play app is never taken from Play"          '[ "$(inst p.play)" = com.android.vending ] && ! grep -q "p.play" "$tmp/dev/log"'

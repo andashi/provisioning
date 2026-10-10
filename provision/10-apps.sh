@@ -77,6 +77,14 @@ ensure_pinned_version() {   # $1=pkg $2=label $3=source
     updater_manages "$src" || return 0
     inst="$(installer_of "$pkg" "$holder")"
     [ "$inst" = "$UPDATER_PKG" ] && return 0
+    # No zone holds both: only a managed profile has the app, and no updater
+    # runs there. -i would not take, and failing every run over it would
+    # block the rest of the phone; config/gen-obtainium.sh keeps such an app
+    # in Obtainium's import instead.
+    if ! pkg_installed_for_user "$UPDATER_PKG" "$holder"; then
+      warn "$lbl: no zone that holds it runs the updater - stays with installer '${inst:-null}'"
+      return 0
+    fi
     [ "$DRY_RUN" = "1" ] && { printf '   [dry-run] %s: installer %s -> %s\n' "$lbl" "${inst:-?}" "$UPDATER_PKG"; return 0; }
     if adb_ install "${iargs[@]}" --user "$holder" -r "$apk" >/dev/null \
        && [ "$(installer_of "$pkg" "$holder")" = "$UPDATER_PKG" ]; then
