@@ -21,6 +21,8 @@ D="$FAKE"; [ "$1" = -s ] && shift 2
 [ "$1" = devices ] && { printf 'List of devices attached\nfake\tdevice\n'; exit 0; }
 [ "$1" = shell ] || exit 97; shift; set -- $*
 deny() { case " ${FAKE_DENY:-} " in *" $1 "*) return 0;; esac; return 1; }
+# FAKE_NOOP: accepts the change with exit 0 and keeps nothing.
+noop() { case " ${FAKE_NOOP:-} " in *" $1 "*) return 0;; esac; return 1; }
 case "$1 $2" in
   "am get-current-user") echo 0;;
   "pm list") case "$3" in
@@ -30,13 +32,13 @@ case "$1 $2" in
   "settings --user")
     u="$3"; op="$4"; ns="$5"; k="$6"
     if [ "$op" = get ]; then awk -v p="$u $ns $k=" 'index($0,p)==1{print substr($0,length(p)+1)}' "$D/settings" 2>/dev/null
-    else deny "$k" && exit 1; grep -v "^$u $ns $k=" "$D/settings" > "$D/s.new" 2>/dev/null; echo "$u $ns $k=$7" >> "$D/s.new"; mv "$D/s.new" "$D/settings"; fi;;
+    else deny "$k" && exit 1; noop "$k" && exit 0; grep -v "^$u $ns $k=" "$D/settings" > "$D/s.new" 2>/dev/null; echo "$u $ns $k=$7" >> "$D/s.new"; mv "$D/s.new" "$D/settings"; fi;;
   "cmd role")
     if [ "$3" = get-role-holders ]; then awk -v u="$5" -v r="$6" '$1==u && $2==r {print $3}' "$D/roles" 2>/dev/null
     else deny home || echo "$5 $6 $7" >> "$D/roles"; fi;;
   "ime list") echo "helium314.keyboard/.LatinIME";;
   "ime enable") :;;
-  "ime set") deny ime && exit 1; echo "0 secure default_input_method=$5" >> "$D/settings";;
+  "ime set") deny ime && exit 1; noop ime && exit 0; echo "0 secure default_input_method=$5" >> "$D/settings";;
   "cmd uimode"|"am force-stop"|"am start-user") :;;
   *) echo "fake adb: unexpected: $*" >&2; exit 97;;
 esac
@@ -71,6 +73,11 @@ t "the keyboard refused: fails, stays owed"                 '[ $? != 0 ] && owed
 fresh; FAKE_DENY=window_animation_scale run
 t "a device-wide setting refused: fails, named as such"     '[ $? != 0 ] && grep -q "device-wide animation scales" "$tmp/out"'
 t "... and every zone keeps its theme owed, so the next apply retries it" 'owed'
+
+fresh; FAKE_NOOP=ui_night_mode run
+t "a setting that exits 0 and does not take: fails, stays owed" '[ $? != 0 ] && owed && grep -q "ui_night_mode reads" "$tmp/out"'
+fresh; FAKE_NOOP=ime run
+t "a keyboard that exits 0 and does not take: fails, stays owed" '[ $? != 0 ] && owed && grep -q "does not read back" "$tmp/out"'
 
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]

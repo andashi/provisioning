@@ -60,7 +60,7 @@ fresh; run
 t "a stopped zone is started to take a new config"   '[ $? = 0 ] && grep -q "am start-user -w 15" "$tmp/dev/log"'
 run_stop() { : > "$tmp/dev/running"; }
 run_stop; : > "$tmp/dev/log"; run
-t "a stopped zone whose config did not change stays stopped" '[ $? = 0 ] && ! grep -q "start-user" "$tmp/dev/log" && grep -q "unchanged since the last push - not started" "$tmp/out"'
+t "a stopped zone is asked again, not skipped on the host's record" '[ $? = 0 ] && grep -q "start-user -w 15" "$tmp/dev/log" && grep -q "U15: already holds this config" "$tmp/out"'
 fresh; NO_START=1 run
 t "NO_START: a stopped zone's change is left pending on the host" '[ $? = 0 ] && ! grep -q "start-user" "$tmp/dev/log" && grep -qx "anon updater" "$root/.provision-state/pending/$dev"'
 fresh; DRY_RUN=1 run

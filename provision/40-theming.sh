@@ -34,9 +34,15 @@ put_setting() {   # $1=uid $2=ns $3=key $4=put-value $5=target-value(raw)
     skip "$2/$3 = $want"
     return 0
   fi
-  ash settings --user "$1" put "$2" "$3" "$4" >/dev/null \
-    && { ok "$2/$3: ${cur:-<unset>} -> $want"; PUT_CHANGED=1; } \
-    || failed "$2/$3 could not be set"
+  if ! ash settings --user "$1" put "$2" "$3" "$4" >/dev/null; then
+    failed "$2/$3 could not be set"; return 0
+  fi
+  # settings put can exit 0 and change nothing; the value read back counts.
+  if [ "$DRY_RUN" != "1" ]; then
+    cur="$(ash_ro settings --user "$1" get "$2" "$3" 2>/dev/null | tr -d '\r')" || cur=""
+    [ "$cur" = "$want" ] || { failed "$2/$3 reads '${cur:-<unset>}' after setting it to $want"; return 0; }
+  fi
+  ok "$2/$3 -> $want"; PUT_CHANGED=1
 }
 
 # A part of the theme that did not take. Every zone is still attempted, but a
@@ -192,9 +198,14 @@ while read -r key; do
           skip "IME = $ime_id"
         else
           ash ime enable --user "$uid" "$ime_id" >/dev/null || true
-          ash ime set --user "$uid" "$ime_id" >/dev/null \
-            && ok "IME: ${cur_ime:-<unset>} -> $ime_id" \
-            || failed "IME could not be set"
+          if ! ash ime set --user "$uid" "$ime_id" >/dev/null; then
+            failed "IME could not be set"
+          elif [ "$DRY_RUN" != "1" ] \
+               && [ "$(ash_ro settings --user "$uid" get secure default_input_method 2>/dev/null | tr -d '\r')" != "$ime_id" ]; then
+            failed "IME set to $ime_id, but default_input_method does not read back as it"
+          else
+            ok "IME: ${cur_ime:-<unset>} -> $ime_id"
+          fi
         fi
       fi
     else

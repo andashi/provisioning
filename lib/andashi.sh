@@ -81,8 +81,12 @@ steps_for_sections() {   # $@=sections -> step names in STEP_ORDER
 # generates once however many zones it looks at.
 updater_generated_dir() {
   local key d certs="${APKS_DIR:-$REPO_ROOT/apks}/certs"
-  key="$( { cat "$CONFIG_DIR"/{apps,profiles,features,distribution}.json 2>/dev/null
-            cat "$certs"/*.cert 2>/dev/null; } | sha256sum | cut -d' ' -f1)"
+  # Everything the output depends on: the inputs, the generator itself, and
+  # each pin with its file name (the name is the package it pins).
+  local c
+  key="$( { cat "$REPO_ROOT/config/gen-updater.sh" "$CONFIG_DIR"/{apps,profiles,features,distribution}.json 2>/dev/null
+            for c in "$certs"/*.cert; do [ -f "$c" ] && printf '\n%s\n' "${c##*/}" && cat "$c"; done; } \
+          | sha256sum | cut -d' ' -f1)"
   d="$STATE_DIR/updater-gen/$key"
   if [ ! -d "$d" ]; then
     # A staging directory of this process alone, moved into place in one

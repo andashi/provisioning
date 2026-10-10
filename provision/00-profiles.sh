@@ -78,10 +78,18 @@ while read -r key; do
         if [ -n "$po_apk" ]; then
           # The first app this chain installs on a fresh device, so the
           # updater goes on first, to be named as its installer (lib/updater.sh).
-          ensure_updater_device
+          # In a subshell: an updater that cannot be set up costs the owner its
+          # installer of record, not the run - the work profile comes first.
+          # 10-apps.sh sets the updater up again and fails loudly there.
           po_args=()
-          updater_manages "$(jq -r --arg p "$popkg" '[.apps[] | select(.pkg == $p) | .source][0] // ""' "$CONFIG_DIR/apps.json")" \
-            && po_args=("${INSTALLER_ARGS[@]}")
+          if [ -n "$UPDATER_PKG" ]; then
+            if ( ensure_updater_device ); then
+              updater_manages_any_source="$(jq -r --arg p "$popkg" '[.apps[] | select(.pkg == $p) | .source][0] // ""' "$CONFIG_DIR/apps.json")"
+              case "$updater_manages_any_source" in obtainium|fdroid|torproject|direct) po_args=(-i "$UPDATER_PKG");; esac
+            else
+              warn "$label: the updater could not be set up - $popkg is installed without it"
+            fi
+          fi
           adb_ install "${po_args[@]}" --user 0 -r "$po_apk" >/dev/null 2>&1 \
             && ok "$label: profile owner $popkg installed from $(basename "$po_apk")" \
             || warn "$label: could not install $popkg from $(basename "$po_apk")"

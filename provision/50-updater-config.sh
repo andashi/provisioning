@@ -26,7 +26,12 @@ fi
 # The files pushed are the catalog's as it stands, regenerated here: a step
 # that pushed whatever an earlier regenerate left would push a stale config
 # and report it loaded. A catalog that does not generate stops the step.
-if [ "$DRY_RUN" != "1" ] && [ "$UPDATER_CFG_DIR" = "$CONFIG_DIR/updater" ]; then
+# A dry run generates into a directory of its own, so the preview shows the
+# catalog as it is without writing into it.
+if [ "$UPDATER_CFG_DIR" = "$CONFIG_DIR/updater" ]; then
+  if [ "$DRY_RUN" = "1" ]; then
+    UPDATER_CFG_DIR="$(mktemp -d)"; trap 'rm -rf "$UPDATER_CFG_DIR"' EXIT
+  fi
   OUT_DIR="$UPDATER_CFG_DIR" CERTS_DIR="$APKS_DIR/certs" "$REPO_ROOT/config/gen-updater.sh" >/dev/null \
     || die "config/gen-updater.sh failed - the updater configs cannot be generated from this catalog"
 fi
@@ -88,12 +93,11 @@ configure_zone() {   # $1=zone
   printf '\n'
   log "$label (user $uid): $(basename "$cfg"), sha256 ${want:0:12}..."
 
+  # No shortcut for a stopped zone on the host's word: what this host last
+  # pushed says nothing once the updater was reinstalled, its data cleared or
+  # the phone restored. A stopped zone is started and asked - or, under
+  # NO_START, left pending.
   if ! user_running_uid "$uid"; then
-    if [ "$(cat "$rec" 2>/dev/null)" = "$want" ]; then
-      skip "$label: unchanged since the last push - not started"
-      pending_clear "$key" updater
-      return 0
-    fi
     if [ "${NO_START:-0}" = "1" ]; then
       PENDING+=("$label"); pending_add "$key" updater
       warn "$label: stopped - the config stays pending here until $label runs (or apply --all)"

@@ -82,8 +82,12 @@ rebuilt="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
 back="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
   ($o[0].entries | map({key: "\(.pkg) \(.abi)", value: .}) | from_entries) as $ov
   | $n[0].entries[] | ($ov["\(.pkg) \(.abi)"] // null) as $was
-  | select($was != null and $was.version != .version)
-  | select(((.versionCode | type) != "number") or (($was.versionCode | type) != "number") or .versionCode <= $was.versionCode)
+  | select($was != null and $was != .)
+  # Every changed entry, a same-name rebuild included; only an equal code
+  # under an equal name is left to the "same version" section above.
+  | select(((.versionCode | type) != "number") or (($was.versionCode | type) != "number")
+           or .versionCode < $was.versionCode
+           or (.versionCode == $was.versionCode and $was.version != .version))
   | "| \(.label) | \(.abi) | \($was.version) (\($was.versionCode // "?")) | \(.version) (\(.versionCode // "?")) |"')"
 gone="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
   ($n[0].entries | map("\(.pkg) \(.abi)")) as $keep

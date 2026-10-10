@@ -86,6 +86,10 @@ t "several plain version moves: safe"             '[ "$(cat "$tmp/verdict")" = s
 t "a version that goes back: review, never safe"  '[ "$(cat "$tmp/verdict")" = review ]'
 t "... and the summary says so first"             '[ "$(grep -m1 "^## " "$tmp/summary.md")" = "## ⚠ Versions that go back - review before merging" ] && grep -qF "| app.a | universal | 1.1 (11) | 1.0 (10) |" "$tmp/summary.md"'
 
+{ e app.a 1.0 aa 7; } | lockof | setup
+{ e app.a 1.0 ab 6; } | lockof | run env
+t "a same-name rebuild with a lower versionCode: listed as going back too" 'grep -qF "| app.a | universal | 1.0 (7) | 1.0 (6) |" "$tmp/summary.md" && [ "$(cat "$tmp/verdict")" = review ]'
+
 { e app.a 1.0 aa 5; } | lockof | setup
 { e app.a 1.0-fix ab 5; } | lockof | run env
 t "a new version name on the same versionCode: review"  '[ "$(cat "$tmp/verdict")" = review ]'

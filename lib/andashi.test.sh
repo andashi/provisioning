@@ -58,6 +58,17 @@ t "a hand-edited apps.json moves the updater hash" "$moved" "changed"
 t "... though config/updater was not regenerated"  "$stale" "untouched"
 t "... and schedules the updater section"          "$secs" "updater "
 t "only the generation of the current catalog is kept" "$kept" "1"
+
+ut="$(mktemp -d)"
+# shellcheck disable=SC2034
+( REPO_ROOT="$root" STATE_DIR="$ut/state" CONFIG_DIR="$root/config" APKS_DIR="$ut/apks"
+  mkdir -p "$ut/apks"; cp -r "$root/apks/certs" "$ut/apks/certs"
+  a="$(updater_generated_dir)"
+  c="$(ls "$ut/apks/certs" | head -1)"; mv "$ut/apks/certs/$c" "$ut/apks/certs/renamed.$c"
+  b="$(updater_generated_dir)"
+  [ "$a" != "$b" ] && echo differs || echo same ) > "$ut/res" 2>&1
+t "a pin renamed, its bytes unchanged: a new generation, not the cached one" "$(cat "$ut/res")" "differs"
+rm -rf "$ut"
 rm -rf "$ut"
 
 echo "reconcile"

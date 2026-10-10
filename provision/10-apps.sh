@@ -248,9 +248,19 @@ while read -r key; do
     if [ -n "$apk" ]; then
       iargs=()
       updater_manages "$src" && iargs=("${INSTALLER_ARGS[@]}")
-      adb_ install "${iargs[@]}" --user "$uid" -r "$apk" >/dev/null \
-        && ok "$lbl from $(basename "$apk")" \
-        || { warn "$lbl: install failed"; printf '%s\t%s\t%s\t%s\n' "$label" "$lbl" "$pkg" "$src" >> "$MANUAL_QUEUE"; }
+      if adb_ install "${iargs[@]}" --user "$uid" -r "$apk" >/dev/null; then
+        ok "$lbl from $(basename "$apk")"
+        # The same read-back as upgrade and hand-over: -i only takes where
+        # the updater is installed.
+        if [ "${#iargs[@]}" -gt 0 ] && [ "$DRY_RUN" != "1" ]; then
+          inst="$(installer_of "$pkg" "$uid")"
+          [ "$inst" = "$UPDATER_PKG" ] || {
+            warn "$lbl: installed, but the installer of record reads '${inst:-null}'"
+            UPDATER_FAILED+=("$lbl: installer of record is ${inst:-null} after the install, not the updater"); }
+        fi
+      else
+        warn "$lbl: install failed"; printf '%s\t%s\t%s\t%s\n' "$label" "$lbl" "$pkg" "$src" >> "$MANUAL_QUEUE"
+      fi
       continue
     fi
 
