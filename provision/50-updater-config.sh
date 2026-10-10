@@ -46,7 +46,9 @@ diagnostics() {   # $1=uid
 # One field of a diagnostics answer as text; empty for no answer at all. Not
 # `// empty`: jq treats false as absent there, and success=false is the
 # answer that matters most.
-dfield() { jq -r "$1 | if . == null then empty else tostring end" <<<"${2:-null}" 2>/dev/null; }
+# Control characters are replaced: the text comes from the phone and goes to
+# a terminal.
+dfield() { jq -r "$1"' | if . == null then empty else tostring | explode | map(if . < 32 or (. >= 127 and . < 160) then 63 else . end) | implode end' <<<"${2:-null}" 2>/dev/null; }
 
 # A provider is reachable a moment after the user starts, not at once; the
 # same race the launcher step retries.

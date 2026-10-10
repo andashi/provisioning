@@ -197,3 +197,66 @@ updater_manages() {   # $1=source
   case "$1" in obtainium|fdroid|torproject|direct) return 0;; esac
   return 1
 }
+
+# ---- What the updater says --------------------------------------------------
+# The zone's state as JSON (andashi/updater design §9.2), or status 1 when the
+# zone's updater does not answer - not installed, zone stopped, provider gone.
+# Asked only where the updater IS installed: a provider authority belongs to
+# whichever package claimed it, and with the updater absent any app could
+# claim "<updater>.state" and report every app current. With it installed,
+# Android refuses a second package with the same authority.
+updater_state() {   # $1=uid
+  local out
+  pkg_installed_for_user "$UPDATER_PKG" "$1" || return 1
+  out="$(ash_ro content query --user "$1" --uri "content://$UPDATER_PKG.state/state" 2>/dev/null | tr -d '\r')" || return 1
+  out="${out#Row: 0 json=}"
+  jq -e .apps >/dev/null 2>&1 <<<"$out" || return 1
+  printf '%s' "$out"
+}
+
+# One line for a person, from a state document on stdin: what is fine, what is
+# on its way, what needs somebody - and the lock it was all measured against.
+# The groups are the design's: an app is fine only when the package manager
+# confirmed the lock's build with the updater as its installer.
+# Installers that keep their own apps current. A foreign app under any other
+# installer - none at all after an adb or browser install, a file manager -
+# is one nobody updates, and status names it. Obtainium is not on the list:
+# it updates only what a person set it to track, and its background updates
+# do not run on this platform (Obtainium#1550, measured 2026-09-30).
+UPDATER_STORES='{"com.android.vending": "Play", "app.accrescent.client": "Accrescent", "app.grapheneos.apps": "GrapheneOS store"}'
+
+# Text from the phone is data, and a terminal acts on control characters in
+# it: every string the updater reports is printed with them replaced.
+UPDATER_JQ_CLEAN='def clean: tostring | explode | map(if . < 32 or (. >= 127 and . < 160) then 63 else . end) | implode;'
+updater_summary() {
+  jq -r --argjson stores "$UPDATER_STORES" --arg updater "$UPDATER_PKG" "$UPDATER_JQ_CLEAN"'
+    def grp: if . == "current" or . == "ahead" then "ok"
+             elif . == "behind" or . == "downloading" or . == "verifying" or . == "installing"
+                  or . == "waiting-constraints" then "pending"
+             else "attention" end;
+    . as $st
+    | ([.apps[] | .state] | group_by(.) | map({s: .[0], n: length})) as $c
+    | [ ($c[] | select(.s | grp == "ok")        | "\(.n) \(.s | clean)"),
+        ($c[] | select(.s | grp == "pending")   | "\(.n) \(.s | clean)"),
+        ($c[] | select(.s | grp == "attention") | "\(.n) \(.s | clean | ascii_upcase)") ] | join(", ")
+    | . + " | lock \(($st.lock.generated // "none") | clean | .[:10]) (\($st.lock.freshness // "?" | clean))"
+        + (if $st.lock.lastError then " ERROR \($st.lock.lastError | clean)" else "" end)
+        + (if $st.exemption == "granted" then "" else " | battery exemption \($st.exemption // "?" | clean)" end)
+        + (($st.foreign // []) as $f | if ($f | length) == 0 then "" else
+            " | foreign \($f | length): " + ([$f[] | (.installer // "null") as $i
+              | ($stores[$i] // (if $i == "null" then "nobody" elif $i == "dev.imranr.obtainium" then "Obtainium"
+                                 elif $i == $updater then "the updater, from another zone" else ($i | clean) end))]
+              | group_by(.) | map("\(length) \(.[0])") | join(", ")) end)'
+}
+
+# The packages that need somebody, one "pkg state" per line.
+updater_attention() {
+  jq -r --argjson stores "$UPDATER_STORES" --arg updater "$UPDATER_PKG" "$UPDATER_JQ_CLEAN"'
+    (.apps[] | select(.state as $s | ["current","ahead","behind","downloading","verifying","installing","waiting-constraints"] | index($s) | not)
+     | "\(.pkg | clean) \(.state | clean)\(if .error then " (\(.error | clean))" else "" end)"),
+    ((.foreign // [])[] | (.installer // "null") as $i
+     | select(($stores | has($i)) | not)
+     # The updater itself: a package another zone manages, present here too.
+     | select($i != $updater)
+     | "\(.pkg | clean) FOREIGN, \(if $i == "null" then "installed by nobody" else "installer \($i | clean)" end) - only this zone'"'"'s owner keeps it current")'
+}

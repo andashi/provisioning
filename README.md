@@ -99,11 +99,17 @@ andashi apply --zone current     # the zone on the screen - edit, apply, look, a
 andashi apply                    # everything that changed, in every running zone
 andashi apply --zone ops --all   # a stopped zone gets started for its pending change
 andashi watch                    # apply to the zone in front on every save
+andashi update                   # every running zone's updater checks the lock now
 
 andashi app add signal --zone lab            # edit the catalog, no phone needed
 andashi app rm opencamera --zone home        # the next apply removes it there
 andashi theme set glass.tint 0.3 --zone lab  # without --zone: every zone
 ```
+
+With the andashi updater in the catalog, `status` ends with what each zone's
+updater says: how many apps are current, on their way or need somebody, and the
+lock they were measured against. It asks the updater rather than guessing, and a
+stopped zone is named as stopped, not started to be asked.
 
 The catalog commands run the same checks as `make check` and take a change
 back when one refuses it. They are what `.claude/skills/andashi` tells an agent
