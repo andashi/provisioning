@@ -52,7 +52,10 @@ while read -r line; do
   [ -z "$line" ] && continue
   put_setting 0 global "${line%%=*}" "${line#*=}"
 done < <(jq -r '.global // {} | to_entries[] | "\(.key)=\(.value)"' "$THEME_FILE")
-[ "$ZONE_FAILED" = 0 ] || FAILED_ZONES+=("device-wide animation scales")
+# A device-wide setting belongs to no zone's snapshot, so it is retried only
+# while some zone still owes its theme: every zone keeps it pending.
+GLOBAL_FAILED="$ZONE_FAILED"
+[ "$GLOBAL_FAILED" = 0 ] || FAILED_ZONES+=("device-wide animation scales")
 
 while read -r key; do
   label="$(profile_label "$key")"
@@ -61,7 +64,7 @@ while read -r key; do
 
   printf '\n'
   log "Profile $label (user $uid)"
-  ZONE_FAILED=0
+  ZONE_FAILED="$GLOBAL_FAILED"
 
   # Start stopped users ourselves - same eviction trap as in 10-apps.sh:
   # role/ime need a running user. Unless NO_START asks not to (the

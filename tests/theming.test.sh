@@ -70,6 +70,7 @@ fresh; FAKE_DENY=ime run
 t "the keyboard refused: fails, stays owed"                 '[ $? != 0 ] && owed && grep -q "IME could not be set" "$tmp/out"'
 fresh; FAKE_DENY=window_animation_scale run
 t "a device-wide setting refused: fails, named as such"     '[ $? != 0 ] && grep -q "device-wide animation scales" "$tmp/out"'
+t "... and every zone keeps its theme owed, so the next apply retries it" 'owed'
 
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]

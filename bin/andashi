@@ -266,10 +266,17 @@ cmd_update() {
     ash am broadcast --user "$uid" -n "$UPDATER_PKG/$UPDATER_RECEIVER_CLASS" -a "$UPDATER_PKG.action.CHECK_NOW" >/dev/null \
       || { warn "$z: CHECK_NOW could not be sent"; continue; }
     # The check runs in the background; its lastCheck moves when it is done.
-    now="$before"
+    # A zone whose updater stops answering is given up after five tries in a
+    # row, not after the full two minutes.
+    now="$before"; local silent=0 st
     for _ in $(seq 1 60); do
-      now="$(updater_state "$uid" | jq -r '.lastCheck // empty' 2>/dev/null || true)"
-      [ -n "$now" ] && [ "$now" != "$before" ] && break
+      if st="$(updater_state "$uid")"; then
+        silent=0
+        now="$(jq -r '.lastCheck // empty' <<<"$st" 2>/dev/null || true)"
+        [ -n "$now" ] && [ "$now" != "$before" ] && break
+      else
+        silent=$((silent + 1)); [ "$silent" -ge 5 ] && break
+      fi
       sleep 2
     done
     if [ -z "$now" ] || [ "$now" = "$before" ]; then

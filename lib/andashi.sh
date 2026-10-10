@@ -85,10 +85,22 @@ updater_generated_dir() {
             cat "$certs"/*.cert 2>/dev/null; } | sha256sum | cut -d' ' -f1)"
   d="$STATE_DIR/updater-gen/$key"
   if [ ! -d "$d" ]; then
-    rm -rf "$d.tmp"; mkdir -p "$d.tmp"
-    OUT_DIR="$d.tmp" CERTS_DIR="$certs" CONFIG_DIR="$CONFIG_DIR" "$REPO_ROOT/config/gen-updater.sh" >/dev/null 2>&1 \
-      && mv "$d.tmp" "$d" || { rm -rf "$d.tmp"; return 1; }
+    # A staging directory of this process alone, moved into place in one
+    # step: two andashi runs at once (watch and an apply) must not wipe or
+    # nest each other's half-written generation. Whoever loses the move
+    # drops its copy; the winner's is the same bytes.
+    local stage
+    mkdir -p "$STATE_DIR/updater-gen"
+    stage="$(mktemp -d "$STATE_DIR/updater-gen/.stage.XXXXXX")" || return 1
+    if OUT_DIR="$stage" CERTS_DIR="$certs" CONFIG_DIR="$CONFIG_DIR" "$REPO_ROOT/config/gen-updater.sh" >/dev/null 2>&1; then
+      mv -T "$stage" "$d" 2>/dev/null || rm -rf "$stage"
+    else
+      rm -rf "$stage"; return 1
+    fi
+    # Only the generation for the catalog as it is now is worth keeping.
+    find "$STATE_DIR/updater-gen" -mindepth 1 -maxdepth 1 -type d ! -name "$key" ! -name '.stage.*' -exec rm -rf {} + 2>/dev/null || true
   fi
+  [ -d "$d" ] || return 1
   printf '%s' "$d"
 }
 

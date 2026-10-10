@@ -49,13 +49,15 @@ ut="$(mktemp -d)"
   jq '(.apps[] | select(.pkg == "at.bitfire.davdroid") | .profiles) -= ["home"]' "$CONFIG_DIR/apps.json" > "$ut/a" && mv "$ut/a" "$CONFIG_DIR/apps.json"
   after="$(zone_snapshot home | awk '$1 == "updater.json" {print $2}')"
   stale="$(cmp -s "$CONFIG_DIR/updater/home.json" "$root/config/updater/home.json" && echo untouched)"
-  printf '%s|%s|%s\n' "$([ -n "$before" ] && [ "$before" != "$after" ] && echo changed || echo same)" "$stale" \
-    "$(changed_sections "updater.json $before" "updater.json $after" | tr '\n' ' ')"
+  printf '%s|%s|%s|%s\n' "$([ -n "$before" ] && [ "$before" != "$after" ] && echo changed || echo same)" "$stale" \
+    "$(changed_sections "updater.json $before" "updater.json $after" | tr '\n' ' ')" \
+    "$(find "$STATE_DIR/updater-gen" -mindepth 1 -maxdepth 1 | wc -l)"
 ) > "$ut/res" 2>&1
-IFS='|' read -r moved stale secs < "$ut/res"
+IFS='|' read -r moved stale secs kept < "$ut/res"
 t "a hand-edited apps.json moves the updater hash" "$moved" "changed"
 t "... though config/updater was not regenerated"  "$stale" "untouched"
 t "... and schedules the updater section"          "$secs" "updater "
+t "only the generation of the current catalog is kept" "$kept" "1"
 rm -rf "$ut"
 
 echo "reconcile"
