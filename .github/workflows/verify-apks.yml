@@ -8,6 +8,10 @@ on:
   # (.github/workflows/lock-refresh.yml).
   workflow_dispatch:
 
+# Every job here reads and checks; none writes.
+permissions:
+  contents: read
+
 jobs:
   config:
     runs-on: ubuntu-latest

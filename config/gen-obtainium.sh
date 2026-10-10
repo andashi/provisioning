@@ -79,6 +79,7 @@ jq --slurpfile prof "$CONFIG_DIR/profiles.json" '
 }' "$CONFIG_DIR/apps.json" > "$OUT"
 
 echo "$OUT: $(jq '.apps|length' "$OUT") apps"
-jq -e '[.apps[] | select(.role == "updater")] | length > 0' "$CONFIG_DIR/apps.json" >/dev/null \
-  && echo "  (apps the andashi updater keeps current are left out on purpose)"
+if jq -e '[.apps[] | select(.role == "updater")] | length > 0' "$CONFIG_DIR/apps.json" >/dev/null; then
+  echo "  (apps the andashi updater keeps current are left out on purpose)"
+fi
 jq -r '.apps[] | "  \(.name)  ->  \(.url)"' "$OUT"

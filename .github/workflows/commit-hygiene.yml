@@ -10,6 +10,10 @@ name: Commit hygiene
 on:
   pull_request:
 
+# It reads commit messages and nothing else.
+permissions:
+  contents: read
+
 jobs:
   no-ai-attribution:
     runs-on: ubuntu-latest
