@@ -36,14 +36,23 @@ put_setting() {   # $1=uid $2=ns $3=key $4=put-value $5=target-value(raw)
   fi
   ash settings --user "$1" put "$2" "$3" "$4" >/dev/null \
     && { ok "$2/$3: ${cur:-<unset>} -> $want"; PUT_CHANGED=1; } \
-    || warn "$2/$3 could not be set"
+    || failed "$2/$3 could not be set"
 }
 
+# A part of the theme that did not take. Every zone is still attempted, but a
+# zone with a failure keeps its theme pending and the step fails at the end:
+# clearing the pending entry for a zone whose role or setting was refused
+# recorded it as themed, and the next `andashi apply` saw nothing to do.
+FAILED_ZONES=()
+failed() { warn "$*"; ZONE_FAILED=1; }
+
 log "Global animation scales (device-wide)"
+ZONE_FAILED=0
 while read -r line; do
   [ -z "$line" ] && continue
   put_setting 0 global "${line%%=*}" "${line#*=}"
 done < <(jq -r '.global // {} | to_entries[] | "\(.key)=\(.value)"' "$THEME_FILE")
+[ "$ZONE_FAILED" = 0 ] || FAILED_ZONES+=("device-wide animation scales")
 
 while read -r key; do
   label="$(profile_label "$key")"
@@ -52,6 +61,7 @@ while read -r key; do
 
   printf '\n'
   log "Profile $label (user $uid)"
+  ZONE_FAILED=0
 
   # Start stopped users ourselves - same eviction trap as in 10-apps.sh:
   # role/ime need a running user. Unless NO_START asks not to (the
@@ -64,7 +74,7 @@ while read -r key; do
   fi
   if ! user_running_uid "$uid"; then
     ash am start-user -w "$uid" >/dev/null && ok "$label started (had been evicted)" \
-      || warn "$label could not be started - theming may fail"
+      || failed "$label could not be started - theming may fail"
   fi
 
   # ---- Monet palette (profile color) ----
@@ -123,11 +133,11 @@ while read -r key; do
           cur_home="$(ash_ro cmd role get-role-holders --user "$uid" android.app.role.HOME 2>/dev/null | tr -d '\r')" || cur_home=""
           [ "$cur_home" = "$LAUNCHER" ] \
             && ok "HOME role: -> $LAUNCHER" \
-            || warn "HOME role could not be set (is: ${cur_home:-<empty>})"
+            || failed "HOME role could not be set (is: ${cur_home:-<empty>})"
         fi
       fi
     else
-      warn "$LAUNCHER not installed (user $uid) - run 10-apps.sh first"
+      failed "$LAUNCHER not installed (user $uid) - run 10-apps.sh first"
     fi
   fi
 
@@ -153,11 +163,11 @@ while read -r key; do
         if [ "$cur_browser" = "$zone_browser" ] && [ "${link_to%%/*}" = "$zone_browser" ]; then
           ok "browser: $zone_browser (role held, links resolve to it)"
         else
-          warn "browser: wanted $zone_browser, role is ${cur_browser:-<empty>}, a link resolves to ${link_to:-<nothing>}"
+          failed "browser: wanted $zone_browser, role is ${cur_browser:-<empty>}, a link resolves to ${link_to:-<nothing>}"
         fi
       fi
     else
-      warn "browser $zone_browser not installed (user $uid) - run 10-apps.sh first"
+      failed "browser $zone_browser not installed (user $uid) - run 10-apps.sh first"
     fi
   fi
 
@@ -172,7 +182,7 @@ while read -r key; do
         case "$l" in "$KEYBOARD/"*) ime_id="$l"; break;; esac
       done <<<"$imes"
       if [ -z "$ime_id" ]; then
-        warn "$KEYBOARD installed, but no IME id found"
+        failed "$KEYBOARD installed, but no IME id found"
       else
         cur_ime="$(ash_ro settings --user "$uid" get secure default_input_method 2>/dev/null | tr -d '\r')" || cur_ime=""
         if [ "$cur_ime" = "$ime_id" ]; then
@@ -181,11 +191,11 @@ while read -r key; do
           ash ime enable --user "$uid" "$ime_id" >/dev/null || true
           ash ime set --user "$uid" "$ime_id" >/dev/null \
             && ok "IME: ${cur_ime:-<unset>} -> $ime_id" \
-            || warn "IME could not be set"
+            || failed "IME could not be set"
         fi
       fi
     else
-      warn "$KEYBOARD not installed (user $uid) - run 10-apps.sh first"
+      failed "$KEYBOARD not installed (user $uid) - run 10-apps.sh first"
     fi
   fi
 
@@ -202,5 +212,15 @@ while read -r key; do
     ash am force-stop --user "$uid" "$LAUNCHER" >/dev/null \
       && ok "Launcher restarted (palette changed)" || true
   fi
-  pending_clear "$key" theme
+  if [ "$ZONE_FAILED" = 0 ]; then
+    pending_clear "$key" theme
+  else
+    pending_add "$key" theme
+    FAILED_ZONES+=("$label")
+  fi
 done < <(profile_keys)
+
+if [ "${#FAILED_ZONES[@]}" -gt 0 ]; then
+  printf '\n'
+  die "theming did not fully take in: ${FAILED_ZONES[*]} - see above; their theme stays pending"
+fi
