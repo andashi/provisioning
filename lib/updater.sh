@@ -218,11 +218,18 @@ updater_state() {   # $1=uid
 # on its way, what needs somebody - and the lock it was all measured against.
 # The groups are the design's: an app is fine only when the package manager
 # confirmed the lock's build with the updater as its installer.
+# Installers that keep their own apps current. A foreign app under any other
+# installer - none at all after an adb or browser install, a file manager -
+# is one nobody updates, and status names it. Obtainium is not on the list:
+# it updates only what a person set it to track, and its background updates
+# do not run on this platform (Obtainium#1550, measured 2026-09-30).
+UPDATER_STORES='{"com.android.vending": "Play", "app.accrescent.client": "Accrescent", "app.grapheneos.apps": "GrapheneOS store"}'
+
 # Text from the phone is data, and a terminal acts on control characters in
 # it: every string the updater reports is printed with them replaced.
 UPDATER_JQ_CLEAN='def clean: tostring | explode | map(if . < 32 or (. >= 127 and . < 160) then 63 else . end) | implode;'
 updater_summary() {
-  jq -r "$UPDATER_JQ_CLEAN"'
+  jq -r --argjson stores "$UPDATER_STORES" --arg updater "$UPDATER_PKG" "$UPDATER_JQ_CLEAN"'
     def grp: if . == "current" or . == "ahead" then "ok"
              elif . == "behind" or . == "downloading" or . == "verifying" or . == "installing"
                   or . == "waiting-constraints" then "pending"
@@ -234,11 +241,22 @@ updater_summary() {
         ($c[] | select(.s | grp == "attention") | "\(.n) \(.s | clean | ascii_upcase)") ] | join(", ")
     | . + " | lock \(($st.lock.generated // "none") | clean | .[:10]) (\($st.lock.freshness // "?" | clean))"
         + (if $st.lock.lastError then " ERROR \($st.lock.lastError | clean)" else "" end)
-        + (if $st.exemption == "granted" then "" else " | battery exemption \($st.exemption // "?" | clean)" end)'
+        + (if $st.exemption == "granted" then "" else " | battery exemption \($st.exemption // "?" | clean)" end)
+        + (($st.foreign // []) as $f | if ($f | length) == 0 then "" else
+            " | foreign \($f | length): " + ([$f[] | (.installer // "null") as $i
+              | ($stores[$i] // (if $i == "null" then "nobody" elif $i == "dev.imranr.obtainium" then "Obtainium"
+                                 elif $i == $updater then "the updater, from another zone" else ($i | clean) end))]
+              | group_by(.) | map("\(length) \(.[0])") | join(", ")) end)'
 }
 
 # The packages that need somebody, one "pkg state" per line.
 updater_attention() {
-  jq -r "$UPDATER_JQ_CLEAN"'.apps[] | select(.state as $s | ["current","ahead","behind","downloading","verifying","installing","waiting-constraints"] | index($s) | not)
-         | "\(.pkg | clean) \(.state | clean)\(if .error then " (\(.error | clean))" else "" end)"'
+  jq -r --argjson stores "$UPDATER_STORES" --arg updater "$UPDATER_PKG" "$UPDATER_JQ_CLEAN"'
+    (.apps[] | select(.state as $s | ["current","ahead","behind","downloading","verifying","installing","waiting-constraints"] | index($s) | not)
+     | "\(.pkg | clean) \(.state | clean)\(if .error then " (\(.error | clean))" else "" end)"),
+    ((.foreign // [])[] | (.installer // "null") as $i
+     | select(($stores | has($i)) | not)
+     # The updater itself: a package another zone manages, present here too.
+     | select($i != $updater)
+     | "\(.pkg | clean) FOREIGN, \(if $i == "null" then "installed by nobody" else "installer \($i | clean)" end) - only this zone'"'"'s owner keeps it current")'
 }

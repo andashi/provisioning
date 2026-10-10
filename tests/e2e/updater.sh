@@ -157,6 +157,24 @@ check "andashi status names every zone's updater" \
 check "... and no app in Home it reports as not the updater's" '! sed -n "/^updates/,\$p" "$LOG/status" | grep -q "not-owner"'
 sed -n '/^updates/,$p' "$LOG/status" | sed 's/^/        /'
 
+section "foreign apps"
+# Tor Browser sits in Home on this snapshot, which the catalog keeps it out
+# of: foreign there, but the updater keeps its code current from Anon, so it
+# is no problem. FOREIGN_APK, if given, is sideloaded into Home from the
+# shell with no installer - an app nobody updates, which status must name.
+if [ -n "${FOREIGN_APK:-}" ]; then
+  foreign_pkg="$(aapt2 dump badging "$FOREIGN_APK" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
+  A install -r --user 0 "$FOREIGN_APK" >/dev/null 2>&1
+fi
+run update-f "$ROOT/bin/andashi" update --zone home
+sed -n '/^updates/,$p' "$LOG/update-f" | sed 's/^/        /'
+check "Home: foreign apps are counted by who keeps them current" 'grep -q "^  home .*| foreign [0-9]" "$LOG/update-f"'
+check "Home: Tor Browser, kept current by the updater, is not called a problem" '! grep -q "org.torproject.torbrowser FOREIGN" "$LOG/update-f"'
+if [ -n "${FOREIGN_APK:-}" ]; then
+  check "Home: the sideloaded $foreign_pkg is named as updated by nobody" 'grep -q "$foreign_pkg FOREIGN, installed by nobody" "$LOG/update-f"'
+  A shell pm uninstall --user 0 "$foreign_pkg" >/dev/null 2>&1
+fi
+
 printf '\n  %d ok, %d failed   (instance %s, snapshot %s, updater %s %s, adb as shell)\n' \
   "$pass" "$fail" "$SERIAL" "$SNAPSHOT" "$UPD" "$UVER"
 [ "$fail" = 0 ] || { printf '  failed: %s\n' "${FAILED[@]}"; printf '  logs in %s\n' "$LOG"; exit 1; }
