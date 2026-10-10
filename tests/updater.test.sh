@@ -88,6 +88,17 @@ t "no APK for the updater: refused, nothing installed" '[ $? != 0 ] && grep -q "
 fresh; FAKE_IDLE_NOOP=1 run ensure_updater_device
 t "an allowlist entry that does not read back: refused" '[ $? != 0 ] && grep -q "does not list it" "$tmp/out"'
 
+fresh; DRY_RUN=1 run ensure_updater_device
+t "dry run on a fresh device: says install and allowlist, changes nothing" '[ $? = 0 ] && [ ! -s "$tmp/dev/log" ] && grep -q "dry-run\] updater: install" "$tmp/out" && grep -q "deviceidle whitelist" "$tmp/out"'
+fresh; dev_has "$U" 10 "$U" 0; echo "user,$U,10201" > "$tmp/dev/idle"; DRY_RUN=1 run ensure_updater_device
+t "dry run on a converged device: says nothing"       '[ $? = 0 ] && ! grep -q "dry-run" "$tmp/out"'
+fresh; rm "$APKS_DIR/universal/$U-1.0.apk"; DRY_RUN=1 run ensure_updater_device
+t "dry run without the APK: refused all the same"     '[ $? != 0 ] && grep -q "no APK" "$tmp/out"'
+fresh; dev_has "$U" 10 "$U" 0; DRY_RUN=1 run 'ensure_updater_zone 15 Anon'
+t "dry run for a zone: names the three missing steps, changes nothing" '[ ! -s "$tmp/dev/log" ] && [ "$(grep -c "dry-run\] Anon" "$tmp/out")" = 3 ]'
+fresh; jq '.apps += [.apps[0] | .pkg = "org.other.updater" | .id = "u2"]' "$CONFIG_DIR/apps.json" > "$tmp/a" && mv "$tmp/a" "$CONFIG_DIR/apps.json"; run true
+t "two apps with role updater: refused before anything" '[ $? != 0 ] && grep -q "more than one app with role updater" "$tmp/out" && [ ! -s "$tmp/dev/log" ]'
+
 echo "a zone"
 fresh; dev_has "$U" 10 "$U" 0; run 'ensure_updater_zone 15 Anon'
 t "the updater carried into the zone, installer kept" '[ $? = 0 ] && [ "$(users $U)" = "0 15 " ] && [ "$(inst $U)" = "$U" ]'

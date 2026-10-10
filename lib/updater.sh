@@ -23,8 +23,10 @@
 #   such install. With --user N the code updates for every user that has the
 #   package and no other user gains it. So every install here names a user.
 
-UPDATER_PKG="$(jq -r '[.apps[] | select(.role == "updater") | .pkg][0] // empty' "$CONFIG_DIR/apps.json")" \
-  || die "could not read $CONFIG_DIR/apps.json"
+UPDATER_PKG="$(jq -r '[.apps[] | select(.role == "updater") | .pkg]
+                      | if length > 1 then error("more than one app with role updater: \(join(", "))") else .[0] // empty end' \
+               "$CONFIG_DIR/apps.json")" \
+  || die "could not read the updater from $CONFIG_DIR/apps.json (config/check-invariants.sh says why)"
 # The receiver's class lives in the app's code namespace, which a debug build's
 # application id suffix does not change.
 UPDATER_RECEIVER_CLASS="org.andashi.updater.host.ControlReceiver"
@@ -61,25 +63,32 @@ updater_exempt() {
 # exempt from battery restrictions. Afterwards INSTALLER_ARGS names it.
 # A step that cannot get there stops: the catalog says the updater manages
 # these apps, and installing them without it would hand them to nobody.
+#
+# A dry run reads everything and changes nothing: what it would do is said
+# for exactly the steps the device still needs, and a missing APK is still
+# a refusal.
 ensure_updater_device() {
   [ -n "$UPDATER_PKG" ] || return 0
   local apk inst
   apk="$(apk_for_pkg "$UPDATER_PKG" || true)"
-  if [ "$DRY_RUN" = "1" ]; then
-    printf '   [dry-run] updater %s: install for user 0 if missing, again with -i itself, deviceidle whitelist +%s\n' "$UPDATER_PKG" "$UPDATER_PKG"
-    INSTALLER_ARGS=(-i "$UPDATER_PKG")
-    return 0
-  fi
 
   inst="$(installer_of "$UPDATER_PKG" 0)" || die "updater: could not read the packages of user 0"
   if [ -z "$inst" ]; then
     [ -n "$apk" ] || die "updater: the catalog names $UPDATER_PKG but there is no APK for it - make from-lock"
-    adb_ install -r --user 0 "$apk" >/dev/null \
-      || die "updater: installing $(basename "$apk") failed"
-    ok "updater installed from $(basename "$apk")"
-    inst="$(installer_of "$UPDATER_PKG" 0)"
+    if [ "$DRY_RUN" = "1" ]; then
+      printf '   [dry-run] updater: install %s for user 0, then again naming itself\n' "$(basename "$apk")"
+      inst="$UPDATER_PKG"
+    else
+      adb_ install -r --user 0 "$apk" >/dev/null \
+        || die "updater: installing $(basename "$apk") failed"
+      ok "updater installed from $(basename "$apk")"
+      inst="$(installer_of "$UPDATER_PKG" 0)"
+    fi
   fi
-  if [ "$inst" != "$UPDATER_PKG" ]; then
+  if [ "$inst" != "$UPDATER_PKG" ] && [ "$DRY_RUN" = "1" ]; then
+    [ -n "$apk" ] || die "updater: installer of record is '${inst:-?}', and there is no APK to repair it with - make from-lock"
+    printf '   [dry-run] updater: installer of record is %s - install %s again naming itself\n' "${inst:-null}" "$(basename "$apk")"
+  elif [ "$inst" != "$UPDATER_PKG" ]; then
     [ -n "$apk" ] || die "updater: installer of record is '${inst:-?}', and there is no APK to repair it with - make from-lock"
     # The same build again, naming itself. If the device runs a newer build
     # (it updated itself) than the host has, the replace is refused as a
@@ -92,7 +101,9 @@ ensure_updater_device() {
     ok "updater is its own installer of record"
   fi
 
-  if ! updater_exempt; then
+  if ! updater_exempt && [ "$DRY_RUN" = "1" ]; then
+    printf '   [dry-run] updater: cmd deviceidle whitelist +%s\n' "$UPDATER_PKG"
+  elif ! updater_exempt; then
     ash cmd deviceidle whitelist "+$UPDATER_PKG" >/dev/null \
       || die "updater: cmd deviceidle whitelist +$UPDATER_PKG failed"
     updater_exempt || die "updater: added to the device-idle allowlist, but dumpsys deviceidle does not list it"
@@ -115,7 +126,9 @@ ensure_updater_in_zones() {
     uid="$(resolve_uid "$key")"; label="$(profile_label "$key")"
     [ -n "$uid" ] || continue                     # 00-profiles has not made it yet
     pkg_installed_for_user "$UPDATER_PKG" "$uid" && continue
-    if ash pm install-existing --user "$uid" "$UPDATER_PKG" >/dev/null; then
+    if [ "$DRY_RUN" = "1" ]; then
+      printf '   [dry-run] %s: pm install-existing %s\n' "$label" "$UPDATER_PKG"
+    elif ash pm install-existing --user "$uid" "$UPDATER_PKG" >/dev/null; then
       ok "$label: updater added"
     else
       warn "$label: pm install-existing $UPDATER_PKG failed"; bad=1
@@ -132,12 +145,15 @@ ensure_updater_in_zones() {
 ensure_updater_zone() {   # $1=uid $2=label
   [ -n "$UPDATER_PKG" ] || return 0
   local uid="$1" label="$2" out inst bad=0
+  inst="$(installer_of "$UPDATER_PKG" "$uid")" || { warn "$label: could not read its packages"; return 1; }
   if [ "$DRY_RUN" = "1" ]; then
-    printf '   [dry-run] updater in %s: install-existing, appops REQUEST_INSTALL_PACKAGES allow, grant POST_NOTIFICATIONS\n' "$label"
+    [ -n "$inst" ] || printf '   [dry-run] %s: pm install-existing %s\n' "$label" "$UPDATER_PKG"
+    out="$(ash_ro appops get --user "$uid" "$UPDATER_PKG" REQUEST_INSTALL_PACKAGES 2>/dev/null | tr -d '\r')" || out=""
+    case $'\n'"$out" in *$'\n'"REQUEST_INSTALL_PACKAGES: allow"*) ;;
+      *) printf '   [dry-run] %s: appops set REQUEST_INSTALL_PACKAGES allow\n' "$label";; esac
+    notifications_granted "$uid" || printf '   [dry-run] %s: pm grant POST_NOTIFICATIONS\n' "$label"
     return 0
   fi
-
-  inst="$(installer_of "$UPDATER_PKG" "$uid")" || { warn "$label: could not read its packages"; return 1; }
   if [ -z "$inst" ]; then
     ash pm install-existing --user "$uid" "$UPDATER_PKG" >/dev/null \
       || { warn "$label: pm install-existing $UPDATER_PKG failed"; return 1; }

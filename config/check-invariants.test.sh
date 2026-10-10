@@ -20,6 +20,16 @@ edit() { jq "$2" "$tmp/$1" > "$tmp/$1.new" && mv "$tmp/$1.new" "$tmp/$1"; }
 
 fresh; t "the real catalog passes" ""
 
+upd='{"id": "updater", "label": "Andashi Updater", "pkg": "org.andashi.updater", "role": "updater", "source": "obtainium", "upstream": "https://github.com/andashi/updater", "profiles": ["home", "cloud", "gadgets", "ops", "lab", "anon"]}'
+fresh; edit apps.json ".apps += [$upd]"
+t "an updater in every zone passes" ""
+fresh; edit apps.json ".apps += [$upd, ($upd | .pkg = \"org.other.updater\" | .id = \"u2\")]"
+t "two updaters" "more than one app with role updater"
+fresh; edit apps.json ".apps += [($upd | .source = \"manual\")]"
+t "an updater the lock cannot carry" "which the lock does not cover"
+fresh; edit apps.json ".apps += [($upd | .profiles -= [\"anon\"])]"
+t "a zone with lock-covered apps but no updater" "anon holds"
+
 fresh; edit apps.json '(.apps[] | select(.source == "play-sandboxed") | .profiles) |= . + ["anon"]'
 t "a Play app placed in Anon" "which has no Play"
 fresh; edit apps.json '(.apps[] | select(.source == "play-sandboxed") | .profiles) |= . + ["home"]'
