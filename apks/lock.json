@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-09T11:56:22Z",
+  "generated": "2026-10-10T11:12:59Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -355,29 +355,29 @@
     {
       "pkg": "org.thoughtcrime.securesms",
       "label": "Signal",
-      "version": "8.28.4",
-      "versionCode": 175501,
+      "version": "8.30.3",
+      "versionCode": 176301,
       "abi": "universal",
-      "file": "universal/org.thoughtcrime.securesms-8.28.4.apk",
-      "sha256": "384606e9a7337b20a6b991840c89510cb6ab8541e68d81fb76e2d375e91412fd",
-      "size": 114193238,
+      "file": "universal/org.thoughtcrime.securesms-8.30.3.apk",
+      "sha256": "9a8ddd9a2f3d7ddc6abca15eb41e5d1515f75d0bd8c45e22074767932a5dde20",
+      "size": 114097843,
       "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8",
       "urls": [
-        "https://github.com/signalapp/Signal-Android/releases/download/v8.28.4/Signal-Android-github-prod-universal-release-8.28.4.apk"
+        "https://github.com/signalapp/Signal-Android/releases/download/v8.30.3/Signal-Android-github-prod-universal-release-8.30.3.apk"
       ]
     },
     {
       "pkg": "org.torproject.android",
       "label": "Orbot",
-      "version": "17.9.7-BETA-1-tor-0.4.9.13.2",
-      "versionCode": 1797200100,
-      "abi": "universal",
-      "file": "universal/org.torproject.android-17.9.7-BETA-1-tor-0.4.9.13.2.apk",
-      "sha256": "623b37c1f7bacfb60340874130f58e3214edd37afa2df83a975bd7d3c81571b0",
-      "size": 79394667,
+      "version": "17.9.7-RC-1-tor-0.4.9.14",
+      "versionCode": 1797300102,
+      "abi": "arm64-v8a",
+      "file": "arm64-v8a/org.torproject.android-17.9.7-RC-1-tor-0.4.9.14.apk",
+      "sha256": "97d3a0a5181394e99fbabdda9fefb73027657cac4c7400c64ebf146a7778860b",
+      "size": 35860127,
       "signer": "a454b87a1847a89ed7f5e70fba6bba96f3ef29c26e0981204fe347bf231dfd5b",
       "urls": [
-        "https://github.com/guardianproject/orbot-android/releases/download/17.9.7-BETA-1-tor-0.4.9.13.2/Orbot-17.9.7-BETA-1-tor-0.4.9.13.2-1-g1bf1722f4-fullperm-universal-release.apk"
+        "https://github.com/guardianproject/orbot-android/releases/download/17.9.7-RC-1-tor-0.4.9.14/Orbot-17.9.7-RC-1-tor-0.4.9.14-1-g0ea112a4d-fullperm-arm64-v8a-release.apk"
       ]
     },
     {
