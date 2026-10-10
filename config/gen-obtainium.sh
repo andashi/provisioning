@@ -16,6 +16,15 @@
 # directory, which Obtainium reads as an HTML source; the filter keeps it to
 # the Android file among the desktop builds listed next to it.
 #
+# With the andashi updater in the catalog (an app with "role": "updater") the
+# import is EMPTY: every app it would list is one the updater keeps current,
+# and an Obtainium that also tracks it offers "Update this app?", whose one
+# tap moves the installer of record to Obtainium and leaves the updater unable
+# to update it silently (andashi/updater design §13, measured 2026-10-02).
+# Obtainium stays for what a person adds by hand. The same catalog change
+# makes 10-apps.sh name the updater as installer, so the apps are not left
+# without one in between.
+#
 # WARNING: Obtainium's import schema isn't documented with versioning.
 # Before the first real import, cross-check once against a REAL export
 # (Obtainium -> Settings -> Export) and adjust the mapping here if needed.
@@ -30,8 +39,9 @@ cd "$(dirname "$0")"
 # the tracked one, instead of writing over it.
 : "${OUT:=$CONFIG_DIR/obtainium.json}"
 
-jq '{
-  apps: [
+jq '([.apps[] | select(.role == "updater")] | length > 0) as $updater
+| {
+  apps: if $updater then [] else [
     .apps[]
     | select((.source == "obtainium" and (.upstream // "") != "") or .source == "fdroid" or .source == "torproject" or .source == "direct")
     | {
@@ -52,8 +62,10 @@ jq '{
         lastUpdateCheck: null,
         pinned: false
       }
-  ]
+  ] end
 }' "$CONFIG_DIR/apps.json" > "$OUT"
 
 echo "$OUT: $(jq '.apps|length' "$OUT") apps"
+jq -e '[.apps[] | select(.role == "updater")] | length > 0' "$CONFIG_DIR/apps.json" >/dev/null \
+  && echo "  (empty on purpose: the andashi updater keeps these apps current)"
 jq -r '.apps[] | "  \(.name)  ->  \(.url)"' "$OUT"

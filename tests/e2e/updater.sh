@@ -148,6 +148,15 @@ check "a second 10-apps run installs nothing" \
 run cfg-2 "$ROOT/provision/50-updater-config.sh"
 check "a second 50-updater-config run writes nothing" '[ $RC = 0 ] && ! grep -q "config loaded" "$LOG/cfg-2"'
 
+section "andashi update and status"
+run update "$ROOT/bin/andashi" update --zone home
+check "andashi update: Home's updater checked again" '[ $RC = 0 ] && grep -q "home: checked at" "$LOG/update"'
+run status "$ROOT/bin/andashi" status
+check "andashi status names every zone's updater" \
+  '[ $RC = 0 ] && grep -q "^updates ($UPD)" "$LOG/status" && [ "$(sed -n "/^updates/,\$p" "$LOG/status" | grep -cE "^  (home|cloud|gadgets|ops|lab|anon) ")" = 6 ]'
+check "... and no app in Home it reports as not the updater's" '! sed -n "/^updates/,\$p" "$LOG/status" | grep -q "not-owner"'
+sed -n '/^updates/,$p' "$LOG/status" | sed 's/^/        /'
+
 printf '\n  %d ok, %d failed   (instance %s, snapshot %s, updater %s %s, adb as shell)\n' \
   "$pass" "$fail" "$SERIAL" "$SNAPSHOT" "$UPD" "$UVER"
 [ "$fail" = 0 ] || { printf '  failed: %s\n' "${FAILED[@]}"; printf '  logs in %s\n' "$LOG"; exit 1; }
