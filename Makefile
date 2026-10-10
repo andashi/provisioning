@@ -27,11 +27,14 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@config/check-contacts.test.sh > /dev/null && echo "ok: contact rule (cases)"
 	@config/check-appwidgets.test.sh > /dev/null && echo "ok: appwidget tripwire (cases)"
 	@config/check-invariants.test.sh > /dev/null && echo "ok: catalog invariants (cases)"
+	@config/check-hosts.test.sh > /dev/null && echo "ok: allowed hosts (cases)"
+	@config/gen-updater.test.sh > /dev/null && echo "ok: updater config generation (cases)"
 	@tests/andashi-catalog.test.sh > /dev/null && echo "ok: andashi catalog commands (cases)"
 	@config/check-schema.sh
 	@config/check-contacts.sh
 	@config/check-appwidgets.sh
 	@config/check-invariants.sh
+	@config/check-hosts.sh
 	@t=$$(mktemp); OUT=$$t config/gen-obtainium.sh >/dev/null; \
 	  if diff -q <(jq -S . $$t) <(jq -S . config/obtainium.json) >/dev/null; then \
 	    echo "ok: obtainium.json in sync"; else \
@@ -41,6 +44,12 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	  if diff -rq -x ".*" config/launcher $$t >/dev/null; then \
 	    echo "ok: launcher/*.json in sync"; else \
 	    echo "config/launcher is stale - run 'make launcher-config'"; diff -r config/launcher $$t | head -20; \
+	    rm -rf $$t; exit 1; fi; rm -rf $$t
+
+	@t=$$(mktemp -d); OUT_DIR=$$t config/gen-updater.sh >/dev/null; \
+	  if diff -rq -x ".*" config/updater $$t >/dev/null; then \
+	    echo "ok: updater/*.json in sync"; else \
+	    echo "config/updater is stale - run 'make updater-config'"; diff -r config/updater $$t | head -20; \
 	    rm -rf $$t; exit 1; fi; rm -rf $$t
 
 schema: ## Refresh config/schema/launcher.schema.json from the newest launcher release
@@ -67,6 +76,9 @@ obtainium: ## Regenerate config/obtainium.json
 launcher-config: ## Regenerate config/launcher/*.json
 	@config/gen-launcher.sh
 
+updater-config: ## Regenerate config/updater/*.json
+	@config/gen-updater.sh
+
 manual: ## Regenerate MANUAL.md
 	@provision/90-manual.sh
 
@@ -90,4 +102,4 @@ provenance: ## Re-audit where each pinned signer comes from (needs network)
 emulator: ## Check emulator prerequisites
 	@emulator/build.sh prereqs
 
-.PHONY: help check todo obtainium launcher-config manual update apks lock from-lock provenance emulator
+.PHONY: help check todo obtainium launcher-config updater-config manual update apks lock from-lock provenance emulator

@@ -127,8 +127,8 @@ make check
 
 validates every config file as JSON, every script with `bash -n`, the catalog for
 duplicate packages, and — the part that matters — that the **generated files are
-in sync with their generators**. `config/obtainium.json` and
-`config/launcher/*.json` are checked in *and* generated; the check regenerates
+in sync with their generators**. `config/obtainium.json`,
+`config/launcher/*.json` and `config/updater/*.json` are checked in *and* generated; the check regenerates
 them into a temporary directory and diffs. A stale generated file is a failed
 check, not a surprise on the device.
 

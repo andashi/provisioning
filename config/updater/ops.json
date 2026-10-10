@@ -1,0 +1,78 @@
+{
+  "checks": {
+    "netFalse": [
+      "app.lawnchair.lawnicons",
+      "helium314.keyboard",
+      "org.andashi.home"
+    ]
+  },
+  "lock": {
+    "allowedHosts": [
+      "raw.githubusercontent.com",
+      "github.com",
+      "objects.githubusercontent.com",
+      "release-assets.githubusercontent.com",
+      "codeberg.org",
+      "f-droid.org",
+      "dist.torproject.org",
+      "archive.torproject.org",
+      "developers.yubico.com"
+    ],
+    "heartbeatUrl": "https://raw.githubusercontent.com/andashi/provisioning/lock-heartbeat/heartbeat.json",
+    "maxAgeDays": 14,
+    "mode": "fetch",
+    "url": "https://raw.githubusercontent.com/andashi/provisioning/main/apks/lock.json"
+  },
+  "managed": [
+    {
+      "label": "Accrescent",
+      "pkg": "app.accrescent.client",
+      "signer": "067a40c4193aad51ac87f9ddfdebb15e24a1850babfa4821c28c5c25c3fdc071"
+    },
+    {
+      "label": "Lawnicons",
+      "pkg": "app.lawnchair.lawnicons",
+      "signer": "747c3645b357258b2e23e851e53c96747fe0add007e5ba2cd97e8c85572e4dc5"
+    },
+    {
+      "label": "Tailscale",
+      "pkg": "com.tailscale.ipn",
+      "signer": "5cdb295551bfe1a087fed6acda07141c6c929fa7c29bd273a7092813acc434bf"
+    },
+    {
+      "label": "Bitwarden",
+      "pkg": "com.x8bit.bitwarden",
+      "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90"
+    },
+    {
+      "label": "Obtainium",
+      "pkg": "dev.imranr.obtainium",
+      "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362"
+    },
+    {
+      "label": "HeliBoard",
+      "pkg": "helium314.keyboard",
+      "signer": "5ec0a5313aa43558ee75b20b58ccd8194cdbf066df94a43ba288d933d60b86ce"
+    },
+    {
+      "label": "Andashi Home",
+      "pkg": "org.andashi.home",
+      "signer": "e42da3c2cf9e682d67b96f3655b2adf1bb22488a064b6ff833520b3c43f2a5ee"
+    }
+  ],
+  "policy": {
+    "constraints": {
+      "boundHours": 24,
+      "notForeground": true,
+      "notInCall": true
+    },
+    "minimumAgeHours": 0
+  },
+  "schedule": {
+    "checkEveryHours": 6,
+    "requireCharging": false,
+    "requireUnmetered": false
+  },
+  "schemaVersion": 1,
+  "zone": "ops"
+}
