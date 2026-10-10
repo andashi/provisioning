@@ -90,9 +90,13 @@ configure_zone() {   # $1=zone
       warn "$label: stopped - the config stays pending here until $label runs (or apply --all)"
       return 0
     fi
-    ash am start-user -w "$uid" >/dev/null \
-      && ok "$label started (had been evicted)" \
-      || { problem "$key" "$label could not be started"; return 1; }
+    if [ "$DRY_RUN" = "1" ]; then
+      printf '   [dry-run] am start-user -w %s (%s is stopped)\n' "$uid" "$label"
+    else
+      ash am start-user -w "$uid" >/dev/null \
+        && ok "$label started (had been evicted)" \
+        || { problem "$key" "$label could not be started"; return 1; }
+    fi
   fi
   if [ "$DRY_RUN" != "1" ] && ! user_unlocked "$uid"; then
     problem "$key" "$label: profile locked - unlock it on the device, then run again"; return 1
@@ -109,11 +113,16 @@ configure_zone() {   # $1=zone
   if [ "$(dfield .configSha256 "$diag")" = "$want" ] && [ "$(dfield .success "$diag")" = true ]; then
     ok "$label: already holds this config"
   else
+    # The answer to THIS write is one stamped after it. A provider reports
+    # asynchronously, so the first read can still be the previous report -
+    # and if that one was a refusal, its error would be pinned on this file.
+    local before_at; before_at="$(dfield .at "$diag")"
     ingest_write "$uid" "$cfg" \
       || { problem "$key" "$label: content write into $UPDATER_PKG.ingest failed: ${WRITE_OUT:-?}"; return 1; }
     sha=""; err=""
     for i in $(seq 1 20); do
       diag="$(diagnostics "$uid" || true)"
+      if [ -n "$before_at" ] && [ "$(dfield .at "$diag")" = "$before_at" ]; then sleep "${UPDATER_POLL:-1}"; continue; fi
       sha="$(dfield .configSha256 "$diag")"
       if [ "$sha" = "$want" ]; then
         [ "$(dfield .success "$diag")" = true ] && break
@@ -123,7 +132,7 @@ configure_zone() {   # $1=zone
       # error for the file it refused.
       [ "$(dfield .success "$diag")" = false ] && err="$(dfield .error "$diag")"
       [ -n "$err" ] && break
-      sleep 1
+      sleep "${UPDATER_POLL:-1}"
     done
     if [ -n "$err" ]; then
       problem "$key" "$label: the updater refused the config: $err"; return 1

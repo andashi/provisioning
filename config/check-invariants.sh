@@ -19,6 +19,13 @@
 #   6. A zone that names a browser has that browser placed in it. Anon's links
 #      open in Tor Browser only because Tor Browser is there; take it out and
 #      they land in Vanadium, outside Tor, without a word.
+#   7. At most one app carries "role": "updater", its source is one the lock
+#      covers, and it is placed in every zone (but a managed profile) that
+#      holds an app it is to keep current. Two would be named as installer by
+#      turns; one with no lock entry could never be installed from the lock;
+#      a zone without it keeps its apps on whatever the last provisioning
+#      run left - while Obtainium's import, emptied for the updater, no
+#      longer offers them either.
 #
 # 4-6 lived inline in the Makefile, where `andashi app rm` could not reach
 # them: removing Tor Browser from Anon passed every check the command ran.
@@ -65,5 +72,24 @@ stray="$(jq -r -n --slurpfile a "$A" --slurpfile p "$P" '
   | "  \($z.label): browser \($z.browser) is not placed in this zone"')"
 [ -z "$stray" ] || bad="${bad}zone browsers the catalog does not install there:"$'\n'"$stray"$'\n'
 
+# 7
+updater="$(jq -r -n --slurpfile a "$A" --slurpfile p "$P" '
+  def covered: . == "obtainium" or . == "fdroid" or . == "torproject" or . == "direct";
+  [ $a[0].apps[] | select(.role == "updater") ] as $u
+  | if ($u | length) == 0 then empty
+    elif ($u | length) > 1 then "  more than one app with role updater: \([$u[].pkg] | join(", "))"
+    else $u[0] as $up
+      | (if ($up.source | covered) then empty else "  the updater \($up.pkg) has source \($up.source), which the lock does not cover" end),
+        ( [ $p[0].profiles[] | select((.type // "") != "managed") | .key ] as $zones
+          | $zones[] as $z
+          | select(($up.profiles // []) | index($z) | not)
+          | [ $a[0].apps[] | select(.pkg != $up.pkg) | select(.source | covered) | select((.profiles // []) | index($z)) | .label ] as $need
+          | select($need | length > 0)
+          | "  \($z) holds \($need | join(", ")) but not the updater \($up.pkg)" )
+    end')"
+[ -z "$updater" ] || bad="${bad}the updater does not cover the catalog:"$'
+'"$updater"$'
+'
+
 if [ -n "$bad" ]; then printf '%s' "$bad" >&2; exit 1; fi
-echo "ok: catalog invariants (Play-free zones, one always-on zone, net: false, unique packages, tailnet, zone browsers)"
+echo "ok: catalog invariants (Play-free zones, one always-on zone, net: false, unique packages, tailnet, zone browsers, updater)"
