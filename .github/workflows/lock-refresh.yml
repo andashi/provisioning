@@ -28,8 +28,10 @@ name: lock refresh
 # because nobody is checking (andashi/updater, docs/design.md §11). It is a
 # separate branch and a single commit, never main: a daily commit to main
 # would put every open pull request behind its base, and bin/pr-gate refuses
-# those. A run that ends in review or fails leaves the heartbeat as it was,
-# so its age is the time since the lock was last known current.
+# those. A run that ends in review, or fails before a lock is confirmed,
+# leaves the heartbeat as it was, so its age is the time since the lock was
+# last known current. A safe lock that reached the target is confirmed even
+# if dispatching verify fails afterwards: the lock itself was checked.
 #
 # Everything uses GITHUB_TOKEN: pushing and opening issues need no extra
 # token and no repository setting. A push with GITHUB_TOKEN starts no
@@ -167,39 +169,25 @@ jobs:
           echo "ISSUE_FILE=$RUNNER_TEMP/issue.md" >> "$GITHUB_ENV"
 
       - name: Heartbeat
-        # Written for the commit this run checked, not for whatever the
-        # target holds by now: a lock that reached main through a pull request
-        # in the meantime was not checked by this run. The updater counts the
-        # heartbeat only while its lockSha256 is the lock it holds.
-        # Before the verify dispatch can fail the job, so after a safe push it
-        # runs on `always()` with CONFIRMED set; on a review or a failure
-        # before the push, CONFIRMED is empty and nothing is written.
+        id: heartbeat
+        # For the commit this run checked, not for whatever the target holds
+        # by now (apks/heartbeat.sh). On `always()` so a confirmed lock gets
+        # its heartbeat even when the verify dispatch after a safe push fails;
+        # without CONFIRMED - review, or a failure before - nothing is written.
         if: always() && env.CONFIRMED != ''
-        run: |
-          set -euo pipefail
-          branch=lock-heartbeat
-          [ "$TARGET" = main ] || branch="lock-heartbeat-$TARGET"
-          lock_sha="$(git show "$CONFIRMED:apks/lock.json" | sha256sum | cut -d' ' -f1)"
-          jq -n --arg checked "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg sha "$lock_sha" --arg commit "$CONFIRMED" \
-            '{checked: $checked, lockSha256: $sha, mainCommit: $commit}' > "$RUNNER_TEMP/heartbeat.json"
-          cat "$RUNNER_TEMP/heartbeat.json"
-          # A commit with no parent and one file, built from objects in this
-          # checkout (whose credentials push it) without touching its work
-          # tree. Replaced every time: the branch carries the latest word and
-          # no history to grow.
-          blob="$(git hash-object -w "$RUNNER_TEMP/heartbeat.json")"
-          tree="$(printf '100644 blob %s\theartbeat.json\n' "$blob" | git mktree)"
-          commit="$(GIT_AUTHOR_NAME="andashi lock refresh" GIT_AUTHOR_EMAIL=lock-refresh@users.noreply.github.com \
-                    GIT_COMMITTER_NAME="andashi lock refresh" GIT_COMMITTER_EMAIL=lock-refresh@users.noreply.github.com \
-                    git commit-tree "$tree" -m "Lock heartbeat $(date -u +%Y-%m-%d)")"
-          git push -q --force origin "$commit:refs/heads/$branch"
-          echo "heartbeat on $branch for ${CONFIRMED:0:12}, lock ${lock_sha:0:12}"
+        run: apks/heartbeat.sh "$CONFIRMED" "$TARGET"
 
       - name: A failed run is an issue too
         if: failure()
+        env:
+          HEARTBEAT: ${{ steps.heartbeat.outcome }}
         run: |
           {
-            if [ -n "${PUSHED:-}" ]; then
+            if [ "$HEARTBEAT" = failure ]; then
+              echo "The scheduled lock refresh confirmed the lock (${CONFIRMED:0:12}), but could not push its heartbeat."
+              echo
+              echo "Phones see the lock age without it and report it as stale once maxAgeDays pass; the next run writes it again. The reason is in the Heartbeat step's log."
+            elif [ -n "${PUSHED:-}" ]; then
               echo "The scheduled lock refresh committed the new lock to \`$TARGET\` (${PUSHED:0:12}), but could not start \`verify\` for it."
               echo
               echo "The next run dispatches it by itself. Until verify has run green on that commit, bin/pr-gate refuses merges; to clear it at once: \`gh workflow run verify --ref $TARGET\`."
