@@ -17,7 +17,13 @@
 # the Android file among the desktop builds listed next to it.
 #
 # With the andashi updater in the catalog (an app with "role": "updater") the
-# import is EMPTY: every app it would list is one the updater keeps current,
+# import leaves out every app the updater keeps current: one that at least one
+# of its zones (a managed profile aside, where no updater runs) shares with
+# the updater - an app's code is one per device, so an update in that zone is
+# an update everywhere. With the catalog as config/check-invariants.sh
+# requires, that is every app, and the import is empty. An app no zone of the
+# updater holds stays, so it is never left with no updater at all. For an app
+# the updater keeps current,
 # and an Obtainium that also tracks it offers "Update this app?", whose one
 # tap moves the installer of record to Obtainium and leaves the updater unable
 # to update it silently (andashi/updater design §13, measured 2026-10-02).
@@ -39,11 +45,18 @@ cd "$(dirname "$0")"
 # the tracked one, instead of writing over it.
 : "${OUT:=$CONFIG_DIR/obtainium.json}"
 
-jq '([.apps[] | select(.role == "updater")] | length > 0) as $updater
-| {
-  apps: if $updater then [] else [
+jq --slurpfile prof "$CONFIG_DIR/profiles.json" '
+  ([ $prof[0].profiles[] | select((.type // "") == "managed") | .key ]) as $managed
+| ([.apps[] | select(.role == "updater") | .profiles // []] | first // null) as $uz
+| def kept_by_updater:
+    $uz != null
+    and ([ (.profiles // [])[] | select(. as $z | $managed | index($z) | not) ] as $z
+         | any($z[]; . as $k | $uz | index($k)));
+{
+  apps: [
     .apps[]
     | select((.source == "obtainium" and (.upstream // "") != "") or .source == "fdroid" or .source == "torproject" or .source == "direct")
+    | select(kept_by_updater | not)
     | {
         id: .pkg,
         url: (if .source == "fdroid" then "https://f-droid.org/packages/" + .pkg
@@ -62,10 +75,10 @@ jq '([.apps[] | select(.role == "updater")] | length > 0) as $updater
         lastUpdateCheck: null,
         pinned: false
       }
-  ] end
+  ]
 }' "$CONFIG_DIR/apps.json" > "$OUT"
 
 echo "$OUT: $(jq '.apps|length' "$OUT") apps"
 jq -e '[.apps[] | select(.role == "updater")] | length > 0' "$CONFIG_DIR/apps.json" >/dev/null \
-  && echo "  (empty on purpose: the andashi updater keeps these apps current)"
+  && echo "  (apps the andashi updater keeps current are left out on purpose)"
 jq -r '.apps[] | "  \(.name)  ->  \(.url)"' "$OUT"
