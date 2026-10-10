@@ -74,6 +74,17 @@ rebuilt="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
   | $n[0].entries[] | ($ov["\(.pkg) \(.abi)"] // null) as $was
   | select($was != null and $was.version == .version and ($was.sha256 != .sha256 or $was.urls != .urls))
   | "| \(.label) | \(.abi) | \(.version) | \(if $was.sha256 != .sha256 then "same version, OTHER BYTES" else "other URLs" end) |"')"
+# A versionCode that goes back, or one the lock cannot compare. A downgrade
+# under the same signer is how an older, vulnerable build would come back: an
+# upstream that marks an old release as its newest, or a release deleted and
+# its predecessor served again. Android refuses it on a phone that has the
+# newer build - but a first install from this lock would get the old one.
+back="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
+  ($o[0].entries | map({key: "\(.pkg) \(.abi)", value: .}) | from_entries) as $ov
+  | $n[0].entries[] | ($ov["\(.pkg) \(.abi)"] // null) as $was
+  | select($was != null and $was.version != .version)
+  | select(((.versionCode | type) != "number") or (($was.versionCode | type) != "number") or .versionCode <= $was.versionCode)
+  | "| \(.label) | \(.abi) | \($was.version) (\($was.versionCode // "?")) | \(.version) (\(.versionCode // "?")) |"')"
 gone="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
   ($n[0].entries | map("\(.pkg) \(.abi)")) as $keep
   | $o[0].entries[] | select(("\(.pkg) \(.abi)") as $k | $keep | index($k) | not)
@@ -88,6 +99,16 @@ report() {
     echo "fetch.sh pinned these on first sight. Compare each fingerprint in \`apks/certs/\` with a second source (\`make provenance\`) before this lock is trusted:"
     echo
     printf '%s\n' "$new_certs" | sed 's/^/- `/; s/$/`/'
+    echo
+  fi
+  if [ -n "$back" ]; then
+    echo "## ⚠ Versions that go back - review before merging"
+    echo
+    echo "The versionCode is not higher than before (or cannot be compared). Under the same signer this is how an older build returns:"
+    echo
+    echo "| App | ABI | was | now |"
+    echo "|---|---|---|---|"
+    printf '%s\n' "$back"
     echo
   fi
   if [ -n "$rebuilt" ]; then
@@ -114,8 +135,9 @@ if [ -n "$summary" ]; then report > "$summary"; fi
 report
 
 # "safe" is defined by what it is, not by what it is not: the same packages
-# and ABIs as before, every changed entry a new version, no signer pinned for
-# the first time. Everything else - an app added or removed, a same-version
+# and ABIs as before, every changed entry a HIGHER versionCode, no signer
+# pinned for the first time. (It used to say "a new version" and check only
+# that the version differed - a downgrade passed as safe.) Everything else - an app added or removed, a same-version
 # rebuild, a new signer even with an unchanged lock - is "review". A rule
 # defined as "not suspicious" lets through whatever nobody thought of.
 same_keys="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
@@ -125,7 +147,7 @@ only_versions="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
   | all($n[0].entries[]; ($ov["\(.pkg) \(.abi)"]) as $w | $w == null or $w == . or $w.version != .version)')"
 if [ -n "$new_certs" ]; then verdict=review
 elif cmp -s "$old" lock.json; then verdict=unchanged
-elif [ "$same_keys" = true ] && [ "$only_versions" = true ] && [ -z "$rebuilt$gone" ]; then verdict=safe
+elif [ "$same_keys" = true ] && [ "$only_versions" = true ] && [ -z "$rebuilt$gone$back" ]; then verdict=safe
 else verdict=review; fi
 [ -z "$verdict_file" ] || printf '%s\n' "$verdict" > "$verdict_file"
 echo "verdict: $verdict"
