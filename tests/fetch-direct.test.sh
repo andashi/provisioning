@@ -13,8 +13,8 @@ pass=0; fail=0
 t() { if eval "$2"; then printf '  ok    %s\n' "$1"; pass=$((pass+1)); else printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); fi; }
 
 ok(){ printf ' + %s\n' "$*"; }; bad(){ printf ' x %s\n' "$*" >&2; }
-eval "$(sed -n '/^direct_versions() {/,/^}/p; /^verify_detached_sig() {/,/^}/p' "$root/apks/fetch.sh")"
-declare -F direct_versions verify_detached_sig >/dev/null || { echo "functions not found in fetch.sh" >&2; exit 1; }
+eval "$(sed -n '/^direct_versions() {/,/^}/p; /^verify_detached_sig() {/,/^}/p; /^pkgs_in() {/,/^}/p' "$root/apks/fetch.sh")"
+declare -F direct_versions verify_detached_sig pkgs_in >/dev/null || { echo "functions not found in fetch.sh" >&2; exit 1; }
 
 mkdir -p "$tmp/bin" "$tmp/serve"
 ln -s "$root/tests/fixtures/fake-curl" "$tmp/bin/curl"
@@ -33,6 +33,13 @@ t "a dot in the pattern matches only a dot"      '! vers | grep -q 8.0'
 t "a version starts with a digit"                '! vers | grep -q "\.\."'
 t "a version with only its .sig left is not offered" '[ "$(direct_versions "v-{version}-android.apk" <<<"<a href=\"v-7.11.0-android.apk.sig\">s</a> v-7.4.1-android.apk")" = 7.4.1 ]'
 t "nothing offered: nothing, not an error"       '[ -z "$(direct_versions "v-{version}-android.apk" <<<"empty")" ]'
+
+# --- pkgs_in (the package names an inventory directory holds) --------------
+mkdir -p "$tmp/inv/universal" "$tmp/inv/empty"
+for f in im.molly.app-8.19.2-4.apk im.molly.app-8.20.0-1.apk org.a.b-1.0.apk notes.txt; do : > "$tmp/inv/universal/$f"; done
+t "a dashed version: the name ends at the first dash, each name once" '[ "$(pkgs_in "$tmp/inv/universal" | tr "\n" " ")" = "im.molly.app org.a.b " ]'
+t "an empty directory: no names, and no error"  '[ -z "$(pkgs_in "$tmp/inv/empty")" ]'
+t "a directory that does not exist: no names"   '[ -z "$(pkgs_in "$tmp/inv/none")" ]'
 
 # --- verify_detached_sig ---------------------------------------------------
 G="$tmp/gpg"; mkdir -p "$G"; chmod 700 "$G"
