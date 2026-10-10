@@ -40,6 +40,19 @@ lives in it.
   what can be automated: of 50 entries, 22 come from Obtainium and GitHub
   releases, 22 need sandboxed Play and a Google login (manual by design), the rest
   from Accrescent, F-Droid, the GrapheneOS store, or the system image.
+- **`role: "updater"`** marks the one app that keeps the others current: the
+  [andashi updater](https://github.com/andashi/updater). With such an entry,
+  `10-apps.sh` installs it before any other app and into every zone it is placed
+  in, makes it its own installer of record, puts it on the device-idle allowlist,
+  and allows it to install and to notify in each zone — every one of those read
+  back. Every app with a source the lock covers (`obtainium`, `fdroid`,
+  `torproject`, `direct`) is then installed with `-i <updater>`, and one that
+  runs the right build under another installer (installed before the updater
+  existed, by hand, or by an adb install that named nobody) is installed again,
+  same build, naming the updater. Without the entry nothing of this happens and
+  apps are installed as before. See [lib/updater.sh](../../lib/updater.sh) for
+  what was measured, and why every install names a user: `adb install` without
+  `--user` installs for every user on the device, a replace included.
 - **`pkg_status`** marks package names that have not yet been checked against a
   real APK; `provision/05-verify-catalog.sh` verifies them with aapt2 and can
   correct them.

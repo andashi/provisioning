@@ -2,6 +2,7 @@
 # Installs apps per profile according to config/apps.json.
 # Order: already there -> install-existing -> APK from apks/ -> MANUAL.md
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/updater.sh"
 require_device
 
 MANUAL_QUEUE="$STATE_DIR/manual-installs.tsv"
@@ -28,6 +29,10 @@ fi
 # is not done, and a run that says it is would be the proxy success this
 # repository exists to avoid.
 REMOVE_FAILED=()
+# What the updater was not given: a zone where it may not install or notify, a
+# package whose installer of record could not be moved to it. Every zone is
+# still attempted; the step fails at the end, as for removals.
+UPDATER_FAILED=()
 installed_record() { printf '%s/installed/%s/%s' "$STATE_DIR" "$(device_id)" "$1"; }
 
 # An APK is installed ONCE for the whole device - every user shares that code
@@ -36,18 +41,27 @@ installed_record() { printf '%s/installed/%s/%s' "$STATE_DIR" "$(device_id)" "$1
 # question alone is what made a release_tag bump a no-op on every device that
 # had been provisioned before. Measured 2026-09-21: bumping Andashi Home to
 # v0.3.0 and running the full chain left all six zones on 0.2.1, green log.
+#
+# The upgrade names a user that holds the package. Without --user, `adb
+# install` installs for EVERY user, a replace included (measured 2026-10-10:
+# DAVx5, in Home only, landed in all seven users) - so every upgrade this
+# function ever ran also spread the app into zones the catalog keeps it out
+# of. With --user the shared code moves for every user that has it, and only
+# for them.
 declare -A _PIN_CHECKED=()
-ensure_pinned_version() {   # $1=pkg $2=label
-  local pkg="$1" lbl="$2" cur want apk
+ensure_pinned_version() {   # $1=pkg $2=label $3=source
+  local pkg="$1" lbl="$2" src="$3" cur want apk holder inst
   [ -n "${_PIN_CHECKED[$pkg]:-}" ] && return 0
   _PIN_CHECKED[$pkg]=1
 
   # Not installed anywhere yet: the normal install path below handles it, and
   # apk_for_pkg() already honours release_tag there.
-  pkg_installed_anywhere "$pkg" || return 0
+  holder="$(user_holding "$pkg")" || return 0
   apk="$(apk_for_pkg "$pkg" || true)"
   # No local APK: Play/manual apps update through their own store.
   [ -n "$apk" ] || return 0
+  local -a iargs=()
+  updater_manages "$src" && iargs=("${INSTALLER_ARGS[@]}")
 
   cur="$(installed_version_code "$pkg" || true)"
   want="$(apk_version_code "$apk" || true)"
@@ -55,7 +69,24 @@ ensure_pinned_version() {   # $1=pkg $2=label
     warn "$lbl: versions not comparable (device='${cur:-?}', $(basename "$apk")='${want:-?}') - pin NOT enforced"
     return 0
   fi
-  [ "$cur" = "$want" ] && return 0
+  if [ "$cur" = "$want" ]; then
+    # The right build, but perhaps not the updater's: installed before the
+    # updater existed, by hand, or by an adb install that named nobody - the
+    # shell strips the installer of record silently. The same build again,
+    # naming the updater, moves it without a prompt (design §6).
+    updater_manages "$src" || return 0
+    inst="$(installer_of "$pkg" "$holder")"
+    [ "$inst" = "$UPDATER_PKG" ] && return 0
+    [ "$DRY_RUN" = "1" ] && { printf '   [dry-run] %s: installer %s -> %s\n' "$lbl" "${inst:-?}" "$UPDATER_PKG"; return 0; }
+    if adb_ install "${iargs[@]}" --user "$holder" -r "$apk" >/dev/null \
+       && [ "$(installer_of "$pkg" "$holder")" = "$UPDATER_PKG" ]; then
+      ok "$lbl: handed to the updater (installer was ${inst:-null})"
+    else
+      warn "$lbl: installer of record stays '${inst:-null}' - the updater cannot update it silently"
+      UPDATER_FAILED+=("$lbl: installer of record is ${inst:-null}, not the updater")
+    fi
+    return 0
+  fi
 
   # Say why this build is the target. Most apps carry no release_tag and simply
   # follow the newest APK the host has; calling that a pin sent people looking
@@ -65,19 +96,58 @@ ensure_pinned_version() {   # $1=pkg $2=label
   if [ -n "$tag" ]; then why="pinned by release_tag $tag"; else why="newest in the host inventory"; fi
 
   if [ "$cur" -gt "$want" ]; then
+    # Ahead because the updater moved it there - the normal state once the
+    # updater runs, since it follows the lock and the host inventory only
+    # follows `make from-lock`. Nothing to say, nothing to do.
+    if updater_manages "$src" && [ "$(installer_of "$pkg" "$holder")" = "$UPDATER_PKG" ]; then
+      return 0
+    fi
     # A rollback must be deliberate and loud. 'install -r' refuses a downgrade
     # without -d, and doing it silently would make the pin a lie in the other
     # direction - the device would keep a build the catalog does not name.
     warn "$lbl: device has $cur, target is $want ($(basename "$apk"), $why) - refusing to downgrade automatically"
     warn "$lbl: uninstall it first, or move release_tag to what should actually run"
+    # Nor can the updater be made its installer from here: that takes the
+    # same build again, and the host does not have it. Said, not failed - the
+    # host catches up with the next `make from-lock`, and a run that refused
+    # to finish until then would block everything else on this phone.
+    if updater_manages "$src"; then
+      inst="$(installer_of "$pkg" "$holder")"
+      [ "$inst" = "$UPDATER_PKG" ] \
+        || warn "$lbl: installer of record is '${inst:-null}' - handed to the updater once the host has build $cur (make from-lock)"
+    fi
     return 0
   fi
 
   log "$lbl: $cur -> $want ($why)"
-  adb_ install -r "$apk" >/dev/null \
+  adb_ install "${iargs[@]}" --user "$holder" -r "$apk" >/dev/null \
     && ok "$lbl upgraded to $want from $(basename "$apk")" \
     || warn "$lbl: upgrade to $want FAILED - device stays on $cur"
 }
+
+# A user that holds the package, or nothing (and status 1) when none does.
+# One that holds the updater as well, where there is one: `-i <updater>` names
+# the installer only if the updater is installed for the user the install
+# runs as. Measured 2026-10-10: RethinkDNS, in Work, Cloud and Gadgets,
+# reinstalled with -i through Work - where the updater does not run - kept
+# installer null; the same command through Cloud set it.
+user_holding() {   # $1=pkg
+  local u first=""
+  while read -r u; do
+    pkg_installed_for_user "$1" "$u" || continue
+    if [ -z "$UPDATER_PKG" ] || pkg_installed_for_user "$UPDATER_PKG" "$u"; then
+      printf '%s' "$u"; return 0
+    fi
+    first="${first:-$u}"
+  done < <(all_user_ids)
+  [ -n "$first" ] && { printf '%s' "$first"; return 0; }
+  return 1
+}
+
+# The updater before any app, in every zone it belongs to, so that every
+# install below can name it - whichever zone it runs through.
+ensure_updater_device
+ensure_updater_in_zones || UPDATER_FAILED+=("the updater could not be added to every zone it belongs to")
 
 log "Installing apps"
 while read -r key; do
@@ -107,6 +177,11 @@ while read -r key; do
   zone_apps="$(apps_for_profile "$key")" \
     || die "$label: could not read $CONFIG_DIR/apps.json - nothing installed or removed"
 
+  # The zone's updater first: present, allowed to install and to notify.
+  if [ -n "$UPDATER_PKG" ] && jq -e --arg p "$UPDATER_PKG" 'select(.pkg == $p)' <<<"$zone_apps" >/dev/null; then
+    ensure_updater_zone "$uid" "$label" || UPDATER_FAILED+=("$label: the updater may not install or notify there")
+  fi
+
   while read -r app; do
     [ -n "$app" ] || continue
     id="$(jq -r '.id'     <<<"$app")"
@@ -135,7 +210,7 @@ while read -r key; do
 
     # Enforce the pin before deciding anything about this profile: the upgrade
     # is global, so it must not depend on which zone happens to come first.
-    ensure_pinned_version "$pkg" "$lbl"
+    ensure_pinned_version "$pkg" "$lbl" "$src"
 
     if pkg_installed_for_user "$pkg" "$uid"; then
       skip "$lbl ($pkg)"
@@ -151,7 +226,9 @@ while read -r key; do
 
     apk="$(apk_for_pkg "$pkg" || true)"
     if [ -n "$apk" ]; then
-      adb_ install --user "$uid" -r "$apk" >/dev/null \
+      iargs=()
+      updater_manages "$src" && iargs=("${INSTALLER_ARGS[@]}")
+      adb_ install "${iargs[@]}" --user "$uid" -r "$apk" >/dev/null \
         && ok "$lbl from $(basename "$apk")" \
         || { warn "$lbl: install failed"; printf '%s\t%s\t%s\t%s\n' "$label" "$lbl" "$pkg" "$src" >> "$MANUAL_QUEUE"; }
       continue
@@ -254,8 +331,8 @@ log "$n app(s) need manual steps -> land in MANUAL.md"
 # because that one is a deliberate choice rather than just the newest file.
 printf '\n'
 log "Versions against the local APK inventory:"
-_match=0; _drift=0
-while IFS='|' read -r lbl pkg tag; do
+_match=0; _drift=0; _ahead=0
+while IFS='|' read -r lbl pkg tag src; do
   [ -z "$pkg" ] && continue
   pkg_installed_anywhere "$pkg" || continue
   apk="$(apk_for_pkg "$pkg" || true)"
@@ -265,20 +342,30 @@ while IFS='|' read -r lbl pkg tag; do
   if [ -n "$cur" ] && [ "$cur" = "$want" ]; then
     _match=$((_match+1))
     [ -n "$tag" ] && ok "$lbl: $cur ($tag)"
+  elif [ -n "$cur" ] && [ -n "$want" ] && [ "$cur" -gt "$want" ] && updater_manages "$src" \
+       && [ "$(installer_of "$pkg" "$(user_holding "$pkg")")" = "$UPDATER_PKG" ]; then
+    _ahead=$((_ahead+1))
   else
     _drift=$((_drift+1))
     warn "$lbl: device runs ${cur:-?}, host has ${want:-?} ($(basename "$apk"))"
   fi
-done < <(jq -r '.apps[]|"\(.label)|\(.pkg)|\(.release_tag // "")"' "$CONFIG_DIR/apps.json")
+done < <(jq -r '.apps[]|"\(.label)|\(.pkg)|\(.release_tag // "")|\(.source)"' "$CONFIG_DIR/apps.json")
+[ "$_ahead" = 0 ] || ok "$_ahead app(s) updated by the updater past the host inventory"
 if [ "$_drift" = 0 ]; then
   ok "$_match app(s) match the APK inventory on the host"
 else
   warn "$_drift app(s) differ from the host inventory - 'make update' brings them forward"
 fi
 
+if [ "${#UPDATER_FAILED[@]}" -gt 0 ]; then
+  printf '\n'
+  warn "${#UPDATER_FAILED[@]} thing(s) the updater was not given:"
+  for e in "${UPDATER_FAILED[@]}"; do printf '     %s\n' "$e" >&2; done
+fi
 if [ "${#REMOVE_FAILED[@]}" -gt 0 ]; then
   printf '\n'
   warn "${#REMOVE_FAILED[@]} removal(s) the catalog asked for did not happen:"
   for e in "${REMOVE_FAILED[@]}"; do printf '     %s\n' "$e" >&2; done
   die "apps: removals failed - see above"
 fi
+[ "${#UPDATER_FAILED[@]}" = 0 ] || die "apps: the updater cannot keep everything current - see above"

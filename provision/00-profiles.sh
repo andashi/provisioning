@@ -2,6 +2,7 @@
 # Creates the secondary profiles and brings them into the desired runtime state.
 # Home = Owner (user 0) is never created.
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/updater.sh"
 
 require_device
 require_graphene
@@ -75,7 +76,13 @@ while read -r key; do
       if ! pkg_installed_for_user "$popkg" 0; then
         po_apk="$(apk_for_pkg "$popkg" || true)"
         if [ -n "$po_apk" ]; then
-          adb_ install --user 0 -r "$po_apk" >/dev/null 2>&1 \
+          # The first app this chain installs on a fresh device, so the
+          # updater goes on first, to be named as its installer (lib/updater.sh).
+          ensure_updater_device
+          po_args=()
+          updater_manages "$(jq -r --arg p "$popkg" '[.apps[] | select(.pkg == $p) | .source][0] // ""' "$CONFIG_DIR/apps.json")" \
+            && po_args=("${INSTALLER_ARGS[@]}")
+          adb_ install "${po_args[@]}" --user 0 -r "$po_apk" >/dev/null 2>&1 \
             && ok "$label: profile owner $popkg installed from $(basename "$po_apk")" \
             || warn "$label: could not install $popkg from $(basename "$po_apk")"
         fi
