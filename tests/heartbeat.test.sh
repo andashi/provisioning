@@ -30,6 +30,7 @@ t "checked is when"                                    '[ "$(r show lock-heartbe
 t "the work tree is untouched"                         '[ "$(git rev-parse HEAD)" = "$c1" ] && [ -f untracked.txt ] && [ -z "$(git status --porcelain --untracked-files=no)" ]'
 hb "$c1" main
 t "a second run replaces it, still without history"    '[ $? = 0 ] && [ -z "$(r log -1 --format=%P lock-heartbeat)" ] && [ "$(r rev-list --count lock-heartbeat)" = 1 ]'
+# shellcheck disable=SC2034 # read by the check string (eval)
 phones="$(r rev-parse lock-heartbeat)"
 hb "$c1" hbtest
 t "another target writes its own branch, not the phones' one" '[ $? = 0 ] && r rev-parse -q --verify refs/heads/lock-heartbeat-hbtest >/dev/null && [ "$(r rev-parse lock-heartbeat)" = "$phones" ]'

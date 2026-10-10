@@ -129,7 +129,10 @@ for k in $(jq -r '.[]' <<<"$zones"); do
   u="${UID_OF[$k]}"
   A shell pm list users | tr -d '\r' | grep -q "{$u:.*} running" \
     || { printf '  ..    %s stopped - checked by its record only\n' "$k"; continue; }
+  # want and got are read by the check string below (eval).
+  # shellcheck disable=SC2034
   want="$(sha256sum "$CONFIG_DIR/updater/$k.json" | cut -d' ' -f1)"
+  # shellcheck disable=SC2034
   got="$(A shell content query --user "$u" --uri "content://$UPD.state/diagnostics" | tr -d '\r' | sed 's/^Row: 0 json=//' | jq -r .configSha256)"
   check "$k: the updater reports exactly this config" '[ "$got" = "$want" ]'
 done

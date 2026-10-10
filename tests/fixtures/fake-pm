@@ -90,6 +90,7 @@ list_packages() {   # args after "pm list packages"
 [ "${1:-}" = devices ] && { printf 'List of devices attached\nfake\tdevice\n'; exit 0; }
 [ "${1:-}" = shell ] || { echo "fake-pm: unexpected: $*" >&2; exit 97; }
 shift
+# shellcheck disable=SC2048 # word splitting is the point
 set -- $*   # `adb shell` joins its arguments into one command line
 case "$1 ${2:-}" in
   "pm list")

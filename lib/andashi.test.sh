@@ -40,6 +40,8 @@ t "an input the record lacks counts"  "$(changed_sections "${old/$'\nwallpapers 
 echo "the updater's snapshot follows the catalog, not the last regenerate"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ut="$(mktemp -d)"
+# Read by zone_snapshot and updater_generated_dir in this subshell.
+# shellcheck disable=SC2034
 ( REPO_ROOT="$root" STATE_DIR="$ut/state" APKS_DIR="$root/apks" CONFIG_DIR="$ut/config"
   cp -r "$root/config" "$CONFIG_DIR"
   before="$(zone_snapshot home | awk '$1 == "updater.json" {print $2}')"

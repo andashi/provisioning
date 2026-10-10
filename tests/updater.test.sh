@@ -22,7 +22,7 @@ export CONFIG_DIR="$tmp/config" APKS_DIR="$tmp/apks" DRY_RUN=0
 U=org.andashi.updater
 apk() { printf 'vc=%s\npkg=%s\n' "$3" "$1" > "$APKS_DIR/universal/$1-$2.apk"; }
 fresh() {   # $1 = catalog with ("with") or without ("without") the updater
-  rm -rf "$tmp/dev" "$CONFIG_DIR" "$APKS_DIR"
+  rm -rf "${tmp:?}/dev" "${CONFIG_DIR:?}" "${APKS_DIR:?}"
   mkdir -p "$tmp/dev/pkg" "$tmp/dev/appops" "$tmp/dev/grants" "$CONFIG_DIR" "$APKS_DIR/universal"
   printf '0\n10\n15\n' > "$tmp/dev/users"; : > "$tmp/dev/log"
   local upd=""

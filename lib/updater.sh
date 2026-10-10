@@ -29,6 +29,7 @@ UPDATER_PKG="$(jq -r '[.apps[] | select(.role == "updater") | .pkg]
   || die "could not read the updater from $CONFIG_DIR/apps.json (config/check-invariants.sh says why)"
 # The receiver's class lives in the app's code namespace, which a debug build's
 # application id suffix does not change.
+# shellcheck disable=SC2034 # read by the steps that source this file
 UPDATER_RECEIVER_CLASS="org.andashi.updater.host.ControlReceiver"
 
 # The arguments that name the updater as installer, once it is on the device:

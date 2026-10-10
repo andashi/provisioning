@@ -18,7 +18,7 @@ t() { if eval "$2"; then printf '  ok    %s\n' "$1"; pass=$((pass+1))
 export ADB="$root/tests/fixtures/fake-pm" ADB_SERIAL="$dev" FAKE_DEV="$tmp/dev" CONFIG_DIR="$tmp/config" UPDATER_POLL=0 DRY_RUN=0 UPDATER_CFG_DIR="$tmp/cfgs"
 U=org.andashi.updater
 fresh() {
-  rm -rf "$tmp/dev" "$CONFIG_DIR" "$root/.provision-state/updater/$dev" "$root/.provision-state/pending/$dev"
+  rm -rf "${tmp:?}/dev" "${CONFIG_DIR:?}" "$root/.provision-state/updater/$dev" "$root/.provision-state/pending/$dev"
   rm -rf "$tmp/cfgs"; mkdir -p "$tmp/dev/pkg" "$CONFIG_DIR" "$tmp/cfgs"
   printf '0\n10\n15\n' > "$tmp/dev/users"; : > "$tmp/dev/log"; : > "$tmp/dev/running"
   cat > "$CONFIG_DIR/profiles.json" <<'JSON'

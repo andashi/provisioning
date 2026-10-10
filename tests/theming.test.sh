@@ -45,7 +45,7 @@ chmod +x "$tmp/bin/adb"
 
 export ADB="$tmp/bin/adb" ADB_SERIAL="$dev" FAKE="$tmp/dev" CONFIG_DIR="$tmp/config" DRY_RUN=0
 fresh() {
-  rm -rf "$tmp/dev" "$CONFIG_DIR" "$root/.provision-state/pending/$dev"; mkdir -p "$tmp/dev" "$CONFIG_DIR"
+  rm -rf "${tmp:?}/dev" "${CONFIG_DIR:?}" "$root/.provision-state/pending/$dev"; mkdir -p "$tmp/dev" "$CONFIG_DIR"
   echo '{"profiles": [{"key": "home", "label": "Home", "create": false, "user_id": 0}]}' > "$CONFIG_DIR/profiles.json"
   echo '{"features": {}}' > "$CONFIG_DIR/features.json"
   cat > "$CONFIG_DIR/theming.json" <<'JSON'

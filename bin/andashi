@@ -253,7 +253,7 @@ updates_report() {
 
 cmd_update() {
   [ -n "$UPDATER_PKG" ] || die "the catalog has no updater (an app with role updater) - nothing to ask"
-  local z uid before now i
+  local z uid before now
   while read -r z; do
     zone_has_updater "$z" || continue
     uid="$(uid_of "$z")"
@@ -267,7 +267,7 @@ cmd_update() {
       || { warn "$z: CHECK_NOW could not be sent"; continue; }
     # The check runs in the background; its lastCheck moves when it is done.
     now="$before"
-    for i in $(seq 1 60); do
+    for _ in $(seq 1 60); do
       now="$(updater_state "$uid" | jq -r '.lastCheck // empty' 2>/dev/null || true)"
       [ -n "$now" ] && [ "$now" != "$before" ] && break
       sleep 2

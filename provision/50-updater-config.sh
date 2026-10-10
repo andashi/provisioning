@@ -74,7 +74,7 @@ ingest_write() {   # $1=uid $2=file
 }
 
 configure_zone() {   # $1=zone
-  local key="$1" label uid cfg want diag sha err i rec
+  local key="$1" label uid cfg want diag sha err rec
   label="$(profile_label "$key")"
   cfg="$UPDATER_CFG_DIR/$key.json"
   [ -f "$cfg" ] || { problem "$key" "$label: $cfg missing - run config/gen-updater.sh"; return 1; }
@@ -129,7 +129,7 @@ configure_zone() {   # $1=zone
     ingest_write "$uid" "$cfg" \
       || { problem "$key" "$label: content write into $UPDATER_PKG.ingest failed: ${WRITE_OUT:-?}"; return 1; }
     sha=""; err=""
-    for i in $(seq 1 20); do
+    for _ in $(seq 1 20); do
       diag="$(diagnostics "$uid" || true)"
       if [ -n "$before_at" ] && [ "$(dfield .at "$diag")" = "$before_at" ]; then sleep "${UPDATER_POLL:-1}"; continue; fi
       sha="$(dfield .configSha256 "$diag")"
