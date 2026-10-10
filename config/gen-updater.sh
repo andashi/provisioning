@@ -49,9 +49,18 @@ jq -e '
   # a host outside the list would be refused there, silently, for good.
   and ([.lock.url, .lock.heartbeatUrl] | all(.[]; urlhost as $h | $h != null and ($allowed | index($h))))
   and (.lock.maxAgeDays | type == "number" and . > 0)
-  and (.updater.schedule | type == "object") and (.updater.policy | type == "object")' \
+  # Schema 1 of the updater (design 9.1): every field present and typed. An
+  # empty object would reach the phone as a config without a schedule.
+  and (.updater.schedule | type == "object"
+       and (.checkEveryHours | type == "number" and . >= 0.25)
+       and (.requireUnmetered | type == "boolean") and (.requireCharging | type == "boolean"))
+  and (.updater.policy | type == "object"
+       and (.minimumAgeHours | type == "number" and . >= 0)
+       and (.constraints | type == "object"
+            and (.notInCall | type == "boolean") and (.notForeground | type == "boolean")
+            and (.boundHours | type == "number" and . > 0)))' \
   "$CONFIG_DIR/distribution.json" >/dev/null \
-  || { echo "gen-updater: $CONFIG_DIR/distribution.json lacks a valid allowedHosts, lock.url, lock.heartbeatUrl (https, on an allowed host), lock.maxAgeDays or updater.schedule/policy - nothing written" >&2; exit 1; }
+  || { echo "gen-updater: $CONFIG_DIR/distribution.json lacks a valid allowedHosts, lock.url, lock.heartbeatUrl (https, on an allowed host), lock.maxAgeDays or a complete updater.schedule/policy - nothing written" >&2; exit 1; }
 
 # The pins, as one JSON object pkg -> fingerprint, read once. A pin is a
 # SHA-256 in lower-case hex and nothing else: an empty or damaged file would

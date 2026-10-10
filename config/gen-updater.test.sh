@@ -78,6 +78,13 @@ t "... and accepted once the host is on the list" '[ $? = 0 ] && [ "$(jq -r .loc
 fresh; jq '.lock.heartbeatUrl = "https://raw.githubusercontent.com:8443/h.json"' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
 t "a heartbeat with a port: refused" '[ $? != 0 ]'
 
+fresh; jq '.updater.schedule = {}' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "an empty schedule: refused, never written as a config without one" '[ $? != 0 ] && grep -q "complete updater.schedule/policy" "$tmp/log"'
+fresh; jq 'del(.updater.policy.constraints.boundHours)' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "a policy missing one constraint: refused" '[ $? != 0 ]'
+fresh; jq '.updater.schedule.checkEveryHours = 0.1' "$tmp/c/distribution.json" > "$tmp/d" && mv "$tmp/d" "$tmp/c/distribution.json"; gen
+t "a check more often than every 15 minutes: refused" '[ $? != 0 ]'
+
 fresh; : > "$tmp/certs/y.yub.cert"; gen
 t "an empty pin file: refused, not passed on as signer \"\"" '[ $? != 0 ] && grep -q "y.yub.cert is not a SHA-256 fingerprint" "$tmp/log"'
 fresh; gen; jq '.profiles |= map(.type = "managed")' "$tmp/c/profiles.json" > "$tmp/p" && mv "$tmp/p" "$tmp/c/profiles.json"; gen
