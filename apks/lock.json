@@ -353,6 +353,20 @@
       ]
     },
     {
+      "pkg": "org.andashi.updater",
+      "label": "Andashi Updater",
+      "version": "0.1.0",
+      "versionCode": 1,
+      "abi": "universal",
+      "file": "universal/org.andashi.updater-0.1.0.apk",
+      "sha256": "c1b5a2af71bc06132eb27f98d88fe21e3add69956007ea3a7357c743934e15c7",
+      "size": 698009,
+      "signer": "0d0334f0a1237ed0b449d0d408e6be3ad113c9542fbaf9912dff31cf0362e1d3",
+      "urls": [
+        "https://github.com/andashi/updater/releases/download/v0.1.0/updater-v0.1.0.apk"
+      ]
+    },
+    {
       "pkg": "org.polymorphicshade.tubular",
       "label": "Tubular",
       "version": "0.28.4",

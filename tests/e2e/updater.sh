@@ -7,10 +7,10 @@
 #   SNAPSHOT=provisioned-061 LOCK_OWNER=<yours> \
 #   UPDATER_APK=../updater/app/build/outputs/apk/debug/app-debug.apk tests/e2e/updater.sh
 #
-# The template catalog has no updater until its first release, so this works
-# on a COPY of config/ with one entry added for UPDATER_APK, and on an
-# inventory that is the repository's plus that file, with its signer pinned
-# beside the others. A debug build carries the ".debug" suffix in every name;
+# UPDATER_APK may be a release or a local debug build, so this works on a
+# COPY of config/ whose updater entry is replaced by one for UPDATER_APK, and
+# on an inventory that is the repository's plus that file, with its signer
+# pinned beside the others. A debug build carries the ".debug" suffix in every name;
 # the entry takes the package name from the APK, so nothing here assumes one.
 #
 # Restores SNAPSHOT first and asserts that adbd runs as shell. Uses the
@@ -54,7 +54,7 @@ apksigner verify --print-certs "$UPDATER_APK" 2>/dev/null \
 zones="$(jq -c '[.profiles[] | select((.type // "") != "managed") | .key]' "$CONFIG_DIR/profiles.json")"
 jq --indent 2 --arg p "$UPD" --argjson z "$zones" '.apps = [{id: "updater", label: "Andashi Updater", pkg: $p,
     pkg_status: "verified", role: "updater", source: "obtainium", upstream: "https://github.com/andashi/updater",
-    profiles: $z, net: true}] + .apps' "$CONFIG_DIR/apps.json" > "$CONFIG_DIR/apps.json.new" \
+    profiles: $z, net: true}] + [.apps[] | select(.role != "updater")]' "$CONFIG_DIR/apps.json" > "$CONFIG_DIR/apps.json.new" \
   && mv "$CONFIG_DIR/apps.json.new" "$CONFIG_DIR/apps.json"
 OUT_DIR="$CONFIG_DIR/updater" CERTS_DIR="$APKS_DIR/certs" "$ROOT/config/gen-updater.sh" >/dev/null \
   || { echo "gen-updater failed"; exit 1; }
