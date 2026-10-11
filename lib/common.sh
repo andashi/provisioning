@@ -305,7 +305,10 @@ resolve_uid() {
 # doesn't. So collect first, then check.
 pkg_installed_for_user() {   # $1=pkg $2=uid
   local out
-  out="$(ash_ro pm list packages --user "$2" 2>/dev/null | tr -d '\r')" || return 1
+  # Filtered by the package manager (a substring match, hence the exact line
+  # below): asked for every app and every user, the whole list each time was
+  # minutes of a 10-apps run.
+  out="$(ash_ro pm list packages --user "$2" "$1" 2>/dev/null | tr -d '\r')" || return 1
   case $'\n'"$out"$'\n' in *$'\n'"package:$1"$'\n'*) return 0;; *) return 1;; esac
 }
 

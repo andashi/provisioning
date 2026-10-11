@@ -17,6 +17,8 @@ echo "steps for sections"
 t "a launcher change is one step"          "$(steps_for_sections launcher | j)" "45-launcher-config"
 t "a theme change: palette, then launcher" "$(steps_for_sections theme | j)"    "40-theming 45-launcher-config"
 t "chain order, whatever the input order"  "$(steps_for_sections launcher settings | j)" "30-settings 45-launcher-config"
+t "an updater change is one step"        "$(steps_for_sections updater | j)" "50-updater-config"
+t "after the launcher, before the manual" "$(steps_for_sections manual updater launcher | j)" "45-launcher-config 50-updater-config 90-manual"
 t "each step once"                         "$(steps_for_sections theme launcher | j)" "40-theming 45-launcher-config"
 t "apps start zones, so finalize follows"  "$(steps_for_sections apps | j)" "10-apps 20-permissions 45-launcher-config 90-manual 99-finalize"
 t "permissions start zones too"            "$(steps_for_sections permissions | j)" "20-permissions 99-finalize"
@@ -24,14 +26,53 @@ t "settings start nothing: no finalize"    "$(steps_for_sections settings | j)" 
 steps_for_sections themes >/dev/null 2>&1; t "an unknown section refuses" "$?" "1"
 
 echo "changed sections"
-old=$'profiles.json p1\napps.json a1\nsettings.json s1\ntheming.json t1\nfeatures.json f1\nwallpapers w1'
+old=$'profiles.json p1\napps.json a1\nsettings.json s1\ntheming.json t1\nfeatures.json f1\nupdater.json u1\nwallpapers w1'
 t "nothing changed"                   "$(changed_sections "$old" "$old" | j)" ""
 t "theming.json: theme and launcher"  "$(changed_sections "$old" "${old/t1/t2}" | j)" "theme launcher"
 t "new bytes under an old image name" "$(changed_sections "$old" "${old/w1/w2}" | j)" "launcher"
 t "apps.json"                         "$(changed_sections "$old" "${old/a1/a2}" | j)" "apps permissions launcher manual"
-t "profiles.json is everything"       "$(changed_sections "$old" "${old/p1/p2}" | j)" "profiles apps permissions settings vpn theme launcher manual"
-t "never applied is everything"       "$(changed_sections "" "$old" | j)" "profiles apps permissions settings vpn theme launcher manual"
+t "profiles.json is everything"       "$(changed_sections "$old" "${old/p1/p2}" | j)" "profiles apps permissions settings vpn theme launcher updater manual"
+t "never applied is everything"       "$(changed_sections "" "$old" | j)" "profiles apps permissions settings vpn theme launcher updater manual"
+t "the zone's updater config"           "$(changed_sections "$old" "${old/u1/u2}" | j)" "updater"
+t "a record from before the updater: owes it" "$(changed_sections "${old/$'\nupdater.json u1'/}" "$old" | j)" "updater"
 t "an input the record lacks counts"  "$(changed_sections "${old/$'\nwallpapers w1'/}" "$old" | j)" "launcher"
+
+echo "the updater's snapshot follows the catalog, not the last regenerate"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ut="$(mktemp -d)"
+# Read by zone_snapshot and updater_generated_dir in this subshell.
+# shellcheck disable=SC2034
+( REPO_ROOT="$root" STATE_DIR="$ut/state" APKS_DIR="$root/apks" CONFIG_DIR="$ut/config"
+  cp -r "$root/config" "$CONFIG_DIR"
+  before="$(zone_snapshot home | awk '$1 == "updater.json" {print $2}')"
+  # A hand edit: take a lock-covered app out of Home, without regenerating.
+  jq '(.apps[] | select(.pkg == "at.bitfire.davdroid") | .profiles) -= ["home"]' "$CONFIG_DIR/apps.json" > "$ut/a" && mv "$ut/a" "$CONFIG_DIR/apps.json"
+  after="$(zone_snapshot home | awk '$1 == "updater.json" {print $2}')"
+  stale="$(cmp -s "$CONFIG_DIR/updater/home.json" "$root/config/updater/home.json" && echo untouched)"
+  printf '%s|%s|%s|%s\n' "$([ -n "$before" ] && [ "$before" != "$after" ] && echo changed || echo same)" "$stale" \
+    "$(changed_sections "updater.json $before" "updater.json $after" | tr '\n' ' ')" \
+    "$(find "$STATE_DIR/updater-gen" -mindepth 1 -maxdepth 1 | wc -l)"
+) > "$ut/res" 2>&1
+IFS='|' read -r moved stale secs kept < "$ut/res"
+t "a hand-edited apps.json moves the updater hash" "$moved" "changed"
+t "... though config/updater was not regenerated"  "$stale" "untouched"
+t "... and schedules the updater section"          "$secs" "updater "
+t "only the generation of the current catalog is kept" "$kept" "1"
+
+rm -rf "$ut"
+ut="$(mktemp -d)"
+# shellcheck disable=SC2034
+( REPO_ROOT="$root" STATE_DIR="$ut/state" CONFIG_DIR="$root/config" APKS_DIR="$ut/apks"
+  mkdir -p "$ut/apks"; cp -r "$root/apks/certs" "$ut/apks/certs"
+  a="$(updater_generated_dir)"
+  # A pin file explicitly: ls sorts by locale, and under C the first entry
+  # is PROVENANCE.tsv, whose name is no input (found when CI disagreed).
+  for c in "$ut/apks/certs"/*.cert; do break; done; c="${c##*/}"
+  mv "$ut/apks/certs/$c" "$ut/apks/certs/renamed.$c"
+  b="$(updater_generated_dir)"
+  [ "$a" != "$b" ] && echo differs || echo same ) > "$ut/res" 2>&1
+t "a pin renamed, its bytes unchanged: a new generation, not the cached one" "$(cat "$ut/res")" "differs"
+rm -rf "$ut"
 
 echo "reconcile"
 t "nothing changed"                   "$(reconcile_plan a a a)" none

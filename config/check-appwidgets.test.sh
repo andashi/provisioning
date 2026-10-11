@@ -4,7 +4,7 @@
 # months, which is exactly the condition under which a broken check is never
 # noticed.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/launcher"
 pass=0; fail=0

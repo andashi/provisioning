@@ -80,6 +80,13 @@ such a lock only through a pull request, after looking.
 Nothing else reaches `main` this way, and the workflow must not be widened to
 other files.
 
+The same workflow force-pushes one more thing, never to `main`: the branch
+`lock-heartbeat`, a single parentless commit holding `heartbeat.json`
+(`{checked, lockSha256, mainCommit}`), written only by a run that confirmed
+the lock (`unchanged`, or `safe` and committed). The andashi updater reads it
+to tell a lock that is old because nothing changed upstream from one that is
+old because nobody checked. That branch carries nothing else.
+
 ## Tests
 
 Two levels, and a change names which one proves it.
