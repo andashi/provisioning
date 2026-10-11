@@ -479,6 +479,26 @@
       "appwidget_bind": true
     },
     {
+      "id": "updater",
+      "label": "Andashi Updater",
+      "pkg": "org.andashi.updater",
+      "pkg_status": "verified",
+      "role": "updater",
+      "source": "obtainium",
+      "upstream": "https://github.com/andashi/updater",
+      "profiles": [
+        "home",
+        "cloud",
+        "gadgets",
+        "ops",
+        "lab",
+        "anon"
+      ],
+      "net": true,
+      "notes": "The update client of this distribution: installer of record for every app it manages, and the only one, so no app is left that nobody keeps current. It reads apks/lock.json and the lock-heartbeat branch, never an upstream directly, and installs only what the lock pins. Built twice on two runners, signed in an approved GitHub environment by a key that never leaves it; the signer is published in the release notes and the updater README. asset_exclude drops the unsigned build that each release carries for reproduction.",
+      "asset_exclude": "unsigned"
+    },
+    {
       "id": "heliboard",
       "label": "HeliBoard",
       "pkg": "helium314.keyboard",

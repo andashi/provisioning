@@ -55,6 +55,11 @@
       "signer": "e42da3c2cf9e682d67b96f3655b2adf1bb22488a064b6ff833520b3c43f2a5ee"
     },
     {
+      "label": "Andashi Updater",
+      "pkg": "org.andashi.updater",
+      "signer": "0d0334f0a1237ed0b449d0d408e6be3ad113c9542fbaf9912dff31cf0362e1d3"
+    },
+    {
       "label": "Orbot",
       "pkg": "org.torproject.android",
       "signer": "a454b87a1847a89ed7f5e70fba6bba96f3ef29c26e0981204fe347bf231dfd5b"
