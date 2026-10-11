@@ -83,7 +83,7 @@ ensure_updater_device() {
       adb_ install -r --user 0 "$apk" >/dev/null \
         || die "updater: installing $(basename "$apk") failed"
       ok "updater installed from $(basename "$apk")"
-      inst="$(installer_of "$UPDATER_PKG" 0)"
+      inst="$(installer_of "$UPDATER_PKG" 0)" || die "updater: installed, but the packages of user 0 could not be read back"
     fi
   fi
   if [ "$inst" != "$UPDATER_PKG" ] && [ "$DRY_RUN" = "1" ]; then
@@ -96,7 +96,7 @@ ensure_updater_device() {
     # downgrade - and then the host has to catch up, not the device go back.
     adb_ install -r -i "$UPDATER_PKG" --user 0 "$apk" >/dev/null \
       || die "updater: could not make it its own installer (installer is '$inst'; does the device run a newer build than $(basename "$apk")?)"
-    inst="$(installer_of "$UPDATER_PKG" 0)"
+    inst="$(installer_of "$UPDATER_PKG" 0)" || die "updater: installed again with -i, but the packages of user 0 could not be read back"
     [ "$inst" = "$UPDATER_PKG" ] \
       || die "updater: installed again with -i, but the installer of record reads '${inst:-nothing}'"
     ok "updater is its own installer of record"
