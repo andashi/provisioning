@@ -86,6 +86,26 @@ t "several plain version moves: safe"             '[ "$(cat "$tmp/verdict")" = s
 t "a version that goes back: review, never safe"  '[ "$(cat "$tmp/verdict")" = review ]'
 t "... and the summary says so first"             '[ "$(grep -m1 "^## " "$tmp/summary.md")" = "## ⚠ Versions that go back - review before merging" ] && grep -qF "| app.a | universal | 1.1 (11) | 1.0 (10) |" "$tmp/summary.md"'
 
+# An ABI change, as Orbot did between two releases: universal, then arm64 only.
+ea() { jq -n --arg p "$1" --arg a "$2" --arg v "$3" --argjson c "$4" --arg g "${5:-sig}" \
+  '{pkg: $p, label: $p, abi: $a, version: $v, versionCode: $c, sha256: "s\($a)\($c)", signer: $g, urls: ["https://x/\($p)"]}'; }
+{ ea app.o universal 17.9.7-B 100; e app.a 1.0 aa; } | lockof | setup
+{ ea app.o arm64-v8a 17.9.7-RC 110; e app.a 1.0 aa; } | lockof | run env
+t "universal replaced by a newer arm64 build, same signer: safe" '[ "$(cat "$tmp/verdict")" = safe ]'
+t "... and the summary shows the ABI change" 'grep -q "## Builds per ABI changed" "$tmp/summary.md" && grep -qF "| app.o | universal 17.9.7-B | arm64-v8a 17.9.7-RC | phones covered, newer, same signer |" "$tmp/summary.md"'
+{ ea app.o universal 17.9.7-B 100; } | lockof | setup
+{ ea app.o x86_64 17.9.7-RC 110; } | lockof | run env
+t "universal replaced by x86_64 only - phones lose the app: review" '[ "$(cat "$tmp/verdict")" = review ] && grep -q "REVIEW: not a clean replacement" "$tmp/summary.md"'
+{ ea app.o universal 17.9.7-B 100; } | lockof | setup
+{ ea app.o arm64-v8a 17.9.6 90; } | lockof | run env
+t "an ABI change to an older build: review" '[ "$(cat "$tmp/verdict")" = review ]'
+{ ea app.o universal 17.9.7-B 100; } | lockof | setup
+{ ea app.o arm64-v8a 17.9.7-RC 110 other; } | lockof | run env
+t "an ABI change under another signer: review" '[ "$(cat "$tmp/verdict")" = review ]'
+{ ea app.o universal 17.9.7-B 100; e app.a 1.0 aa; } | lockof | setup
+{ ea app.o arm64-v8a 17.9.7-RC 110; } | lockof | run env
+t "an ABI change next to an app that leaves the lock: review" '[ "$(cat "$tmp/verdict")" = review ]'
+
 { e app.a 1.0 aa 7; } | lockof | setup
 { e app.a 1.0 ab 6; } | lockof | run env
 t "a same-name rebuild with a lower versionCode: listed as going back too" 'grep -qF "| app.a | universal | 1.0 (7) | 1.0 (6) |" "$tmp/summary.md" && [ "$(cat "$tmp/verdict")" = review ]'

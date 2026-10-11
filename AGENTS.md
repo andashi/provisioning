@@ -66,14 +66,19 @@ any other way. It refuses unless:
 
 `.github/workflows/lock-refresh.yml` commits `apks/lock.json`, `apks/SHA256SUMS`
 and `apks/certs/` to `main` **without a pull request** - daily, and only when
-`apks/refresh-lock.sh` rules the change `safe`: new versions under signers that
-were already pinned, `make check` green on the result, nothing else. The
+`apks/refresh-lock.sh` rules the change `safe`: new versions (a higher
+versionCode) under signers that were already pinned, `make check` green on
+the result, nothing else. An app whose builds change ABI - a universal APK in
+one release, per-ABI builds in the next - still counts, if an arm64-v8a build
+(the phones') is among the new ones, every new versionCode is above every old
+one, and the signer is the same (Dob, 2026-10-11). The
 checks that matter for these files are the hash and the pinned signer, and
 they ran; a review of a table of hashes and URLs adds little, and a lock that
 waits for one is a stale first install.
 
 Anything else is `review`: a signer pinned for the first time, a version whose
-bytes or URLs changed, or a failed run (a changed signer fails `fetch.sh`).
+bytes or URLs changed, a version that goes back, an app that leaves the lock
+or loses its phone build, or a failed run (a changed signer fails `fetch.sh`).
 Then `main` is left alone and an issue labelled `lock-refresh` says why. Take
 such a lock only through a pull request, after looking.
 
