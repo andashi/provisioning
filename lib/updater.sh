@@ -158,7 +158,8 @@ ensure_updater_zone() {   # $1=uid $2=label
   if [ -z "$inst" ]; then
     ash pm install-existing --user "$uid" "$UPDATER_PKG" >/dev/null \
       || { warn "$label: pm install-existing $UPDATER_PKG failed"; return 1; }
-    inst="$(installer_of "$UPDATER_PKG" "$uid")"
+    inst="$(installer_of "$UPDATER_PKG" "$uid")" \
+      || { warn "$label: updater added, but its packages could not be read back"; return 1; }
     ok "$label: updater added"
   fi
   [ "$inst" = "$UPDATER_PKG" ] \

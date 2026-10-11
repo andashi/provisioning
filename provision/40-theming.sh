@@ -224,7 +224,8 @@ while read -r key; do
   if [ "$restart_launcher" = "1" ] && [ -n "$LAUNCHER" ] && [ "$DRY_RUN" != "1" ] \
      && pkg_installed_for_user "$LAUNCHER" "$uid"; then
     ash am force-stop --user "$uid" "$LAUNCHER" >/dev/null \
-      && ok "Launcher restarted (palette changed)" || true
+      && ok "Launcher restarted (palette changed)" \
+      || failed "Launcher could not be restarted - its icons keep the old palette until it is"
   fi
   if [ "$ZONE_FAILED" = 0 ]; then
     pending_clear "$key" theme

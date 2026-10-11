@@ -130,7 +130,7 @@ report() {
     echo "|---|---|---|---|"
     [ -z "$changes" ] || printf '%s\n' "$changes"
     [ -z "$gone" ] || printf '%s\n' "$gone"
-  elif [ -z "$rebuilt$new_certs" ]; then
+  elif [ -z "$rebuilt$new_certs$back" ]; then
     # lock.sh leaves an unchanged lock alone, so there is nothing to propose.
     echo "The lock did not change."
   fi
