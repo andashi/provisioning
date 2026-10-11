@@ -94,6 +94,25 @@ gone="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
   | $o[0].entries[] | select(("\(.pkg) \(.abi)") as $k | $keep | index($k) | not)
   | "| \(.label // .pkg) | \(.abi) | \(.version) | removed |"')"
 
+# Apps whose set of ABIs changed - an upstream that ships a universal APK in
+# one release and per-ABI builds in the next (Orbot, 2026-10). One line per
+# app: "ok|pkg|from|to". ok means it still reaches phones and nothing else
+# moved: an arm64-v8a build among the new entries (the phones' ABI), every
+# new versionCode above every old one, and the same single signer. The
+# emulator may lose its build that way; phones never do.
+abi_moves="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
+  ($o[0].entries | group_by(.pkg) | map({key: .[0].pkg, value: .}) | from_entries) as $op
+  | ($n[0].entries | group_by(.pkg) | map({key: .[0].pkg, value: .}) | from_entries) as $np
+  | $np | keys[] as $p | select($op[$p] != null)
+  | $op[$p] as $was | $np[$p] as $now
+  | select(([$was[].abi] | sort) != ([$now[].abi] | sort))
+  | ( ([$now[].abi] | index("arm64-v8a")) != null
+      and ([$was[].signer, $now[].signer] | unique | length) == 1
+      and all($was[], $now[]; (.versionCode | type) == "number")
+      and ([$now[].versionCode] | min) > ([$was[].versionCode] | max) ) as $ok
+  | "\(if $ok then "ok" else "no" end)|\($p)|\([$was[] | "\(.abi) \(.version)"] | join(", "))|\([$now[] | "\(.abi) \(.version)"] | join(", "))"')"
+abi_moved_ok=" $(awk -F'|' '$1 == "ok" { printf "%s ", $2 }' <<<"$abi_moves")"
+
 report() {
   echo "Fetched from upstream, verified against the pinned signers, locked (\`apks/refresh-lock.sh\`)."
   echo
@@ -113,6 +132,14 @@ report() {
     echo "| App | ABI | was | now |"
     echo "|---|---|---|---|"
     printf '%s\n' "$back"
+    echo
+  fi
+  if [ -n "$abi_moves" ]; then
+    echo "## Builds per ABI changed"
+    echo
+    echo "| App | was | now | |"
+    echo "|---|---|---|---|"
+    awk -F'|' '{ printf "| %s | %s | %s | %s |\n", $2, $3, $4, ($1 == "ok" ? "phones covered, newer, same signer" : "REVIEW: not a clean replacement") }' <<<"$abi_moves"
     echo
   fi
   if [ -n "$rebuilt" ]; then
@@ -139,19 +166,26 @@ if [ -n "$summary" ]; then report > "$summary"; fi
 report
 
 # "safe" is defined by what it is, not by what it is not: the same packages
-# and ABIs as before, every changed entry a HIGHER versionCode, no signer
-# pinned for the first time. (It used to say "a new version" and check only
+# as before, with the same ABIs - or an ABI change that abi_moves rules ok -
+# every changed entry a HIGHER versionCode, no signer pinned for the first
+# time. (It used to say "a new version" and check only
 # that the version differed - a downgrade passed as safe.) Everything else - an app added or removed, a same-version
 # rebuild, a new signer even with an unchanged lock - is "review". A rule
 # defined as "not suspicious" lets through whatever nobody thought of.
-same_keys="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
-  ([$o[0].entries[] | "\(.pkg) \(.abi)"] | sort) == ([$n[0].entries[] | "\(.pkg) \(.abi)"] | sort)')"
+# Removed entries are allowed only as part of an ok ABI change of their app.
+gone_other="$(jq -r -n --slurpfile o "$old" --slurpfile n lock.json '
+  ($n[0].entries | map("\(.pkg) \(.abi)")) as $keep
+  | $o[0].entries[] | select(("\(.pkg) \(.abi)") as $k | $keep | index($k) | not) | .pkg' \
+  | while read -r p; do case "$abi_moved_ok" in *" $p "*) ;; *) printf '%s\n' "$p";; esac; done)"
+same_pkgs="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
+  ([$o[0].entries[].pkg] | unique) == ([$n[0].entries[].pkg] | unique)')"
+abi_bad="$(awk -F'|' '$1 != "ok" { print $2 }' <<<"$abi_moves")"
 only_versions="$(jq -n --slurpfile o "$old" --slurpfile n lock.json '
   ($o[0].entries | map({key: "\(.pkg) \(.abi)", value: .}) | from_entries) as $ov
   | all($n[0].entries[]; ($ov["\(.pkg) \(.abi)"]) as $w | $w == null or $w == . or $w.version != .version)')"
 if [ -n "$new_certs" ]; then verdict=review
 elif cmp -s "$old" lock.json; then verdict=unchanged
-elif [ "$same_keys" = true ] && [ "$only_versions" = true ] && [ -z "$rebuilt$gone$back" ]; then verdict=safe
+elif [ "$same_pkgs" = true ] && [ -z "$abi_bad" ] && [ "$only_versions" = true ] && [ -z "$rebuilt$gone_other$back" ]; then verdict=safe
 else verdict=review; fi
 [ -z "$verdict_file" ] || printf '%s\n' "$verdict" > "$verdict_file"
 echo "verdict: $verdict"

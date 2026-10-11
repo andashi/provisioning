@@ -8,7 +8,9 @@ name: lock refresh
 # signers, lock - and acts on its verdict:
 #
 #   unchanged  nothing to do
-#   safe       new versions under signers already pinned, nothing else:
+#   safe       new versions under signers already pinned - including an
+#              app moving between universal and per-ABI builds that keeps
+#              an arm64 build - nothing else:
 #              make check, then the lock is committed to the target branch
 #              (main) directly. This is the one change that reaches main
 #              without a pull request, on purpose and only under these
