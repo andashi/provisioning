@@ -6,7 +6,7 @@ b3a1a81b52d1437769e5570c89a95f5824518a6b376d10c39eb64af213a625b6  universal/com.
 d09124150e0d3714745ffa4b5b08908e9639ca97e53acd7c47aafe4df0e352fb  universal/com.x8bit.bitwarden-2026.9.1-bwpm.apk
 a6fe404c875216880e912b5f1c77bc0ea00e503c73e748db0365a469ddcc41b8  universal/com.yubico.yubioath-7.4.1.apk
 22dd0227762c663de3b3483ab5a1f6e449e92ccfb71d2f3ca0f25bd8d30ee9f8  universal/digital.ventral.ips-1.2.apk
-eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075  universal/helium314.keyboard-4.1.apk
+69b2b2fb349934371b1ed2d3569541cc0bda987f8aaf5eb5f5b157961f76de86  universal/helium314.keyboard-4.2.apk
 f1c6fd929f9047809a7a9bb4e663d1ec1ec4d9f33d9794799c8e2f8e1663ec11  universal/im.molly.app-8.19.2-4.apk
 ed1ded69472f2fa87c20c975b3e5f628889ec304dc9eb6aa5c52ecb6bd4c4687  universal/io.homeassistant.companion.android-2026.8.4.apk
 6e273ab0e991c4e79bc8b1bbb9b9dd739ccac1a8712a541a214078886b7b790f  universal/moe.shizuku.privileged.api-13.6.0.apk
@@ -23,9 +23,9 @@ ec051d90bc9f82587a726b525976494bacef50bc8a7dd0e3789b859373121753  arm64-v8a/com.
 6f6398e9fcfdf6ec02cea6ce50ba325d7312d721fc0a3441975557b4eb3e62cc  arm64-v8a/com.governikus.ausweisapp2-2.6.0.apk
 ce1aa65430af809289f4045994838b1b072a2021bd82fceab1a6f4a90d0108d4  arm64-v8a/dev.imranr.obtainium-1.6.17.apk
 97d3a0a5181394e99fbabdda9fefb73027657cac4c7400c64ebf146a7778860b  arm64-v8a/org.torproject.android-17.9.7-RC-1-tor-0.4.9.14.apk
-4b8d51527ab516c5e8ecf7ea25dabbcb0e4bdfb54d55eadb12ad09a36f227cda  arm64-v8a/org.torproject.torbrowser-15.0.24.apk
+43b13364a9adc9b139f7c44279e552b7fdea07aef09a553310c7a8e5743c28b8  arm64-v8a/org.torproject.torbrowser-15.0.25.apk
 d80bd845ef312fad2e8f6b0045b8f073f5737d689866869fc24ff5da09d49926  x86_64/app.alextran.immich-3.3.1.apk
 053df660d915f807f111fa73167bb3826880a976dffddceef4838a048b7689b5  x86_64/com.celzero.bravedns-0.5.7.apk
 479bd4231a08f60e88068d385f5acbaac012de2d45bb66bf66221313a90fd946  x86_64/com.governikus.ausweisapp2-2.6.0.apk
 ebdaaa34b464286e3bbed8cfe311bdd74dc04673609740da8aa6a1523602119e  x86_64/dev.imranr.obtainium-1.6.17.apk
-2d92439e67e8e8cbc59a8821ecbef8dacd11fd64b0f305827a3023764da75b39  x86_64/org.torproject.torbrowser-15.0.24.apk
+9f7934ea3a4e68a6e405f04febcd55e6a5a87d112b221b9aac89c6d1bc77597e  x86_64/org.torproject.torbrowser-15.0.25.apk

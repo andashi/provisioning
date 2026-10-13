@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-12T13:10:59Z",
+  "generated": "2026-10-13T12:45:36Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -257,15 +257,15 @@
     {
       "pkg": "helium314.keyboard",
       "label": "HeliBoard",
-      "version": "4.1",
-      "versionCode": 4101,
+      "version": "4.2",
+      "versionCode": 4201,
       "abi": "universal",
-      "file": "universal/helium314.keyboard-4.1.apk",
-      "sha256": "eb9c06685ebd5b7307491da9ef15fb5e29694077a934a8699b9b6772c6f76075",
-      "size": 22413693,
+      "file": "universal/helium314.keyboard-4.2.apk",
+      "sha256": "69b2b2fb349934371b1ed2d3569541cc0bda987f8aaf5eb5f5b157961f76de86",
+      "size": 22431797,
       "signer": "5ec0a5313aa43558ee75b20b58ccd8194cdbf066df94a43ba288d933d60b86ce",
       "urls": [
-        "https://github.com/HeliBorg/HeliBoard/releases/download/v4.1/HeliBoard_4.1-release.apk"
+        "https://github.com/HeliBorg/HeliBoard/releases/download/v4.2/HeliBoard_4.2-release.apk"
       ]
     },
     {
@@ -411,31 +411,31 @@
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "15.0.24",
-      "versionCode": 2016187202,
+      "version": "15.0.25",
+      "versionCode": 2016189938,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/org.torproject.torbrowser-15.0.24.apk",
-      "sha256": "4b8d51527ab516c5e8ecf7ea25dabbcb0e4bdfb54d55eadb12ad09a36f227cda",
-      "size": 111113963,
+      "file": "arm64-v8a/org.torproject.torbrowser-15.0.25.apk",
+      "sha256": "43b13364a9adc9b139f7c44279e552b7fdea07aef09a553310c7a8e5743c28b8",
+      "size": 111122155,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.24/tor-browser-android-aarch64-15.0.24.apk",
-        "https://dist.torproject.org/torbrowser/15.0.24/tor-browser-android-aarch64-15.0.24.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.25/tor-browser-android-aarch64-15.0.25.apk",
+        "https://dist.torproject.org/torbrowser/15.0.25/tor-browser-android-aarch64-15.0.25.apk"
       ]
     },
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "15.0.24",
-      "versionCode": 2016187206,
+      "version": "15.0.25",
+      "versionCode": 2016189942,
       "abi": "x86_64",
-      "file": "x86_64/org.torproject.torbrowser-15.0.24.apk",
-      "sha256": "2d92439e67e8e8cbc59a8821ecbef8dacd11fd64b0f305827a3023764da75b39",
-      "size": 112510536,
+      "file": "x86_64/org.torproject.torbrowser-15.0.25.apk",
+      "sha256": "9f7934ea3a4e68a6e405f04febcd55e6a5a87d112b221b9aac89c6d1bc77597e",
+      "size": 112518728,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.24/tor-browser-android-x86_64-15.0.24.apk",
-        "https://dist.torproject.org/torbrowser/15.0.24/tor-browser-android-x86_64-15.0.24.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.25/tor-browser-android-x86_64-15.0.25.apk",
+        "https://dist.torproject.org/torbrowser/15.0.25/tor-browser-android-x86_64-15.0.25.apk"
       ]
     }
   ]
