@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-13T12:45:36Z",
+  "generated": "2026-10-14T10:12:50Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -103,57 +103,57 @@
     {
       "pkg": "com.celzero.bravedns",
       "label": "RethinkDNS",
-      "version": "0.5.7",
-      "versionCode": 30000069,
+      "version": "0.5.8",
+      "versionCode": 30000070,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/com.celzero.bravedns-0.5.7.apk",
-      "sha256": "88f2cfd8ae8840b983c4d3c08549239e928d5f2b4a2e4577f11f681c048e67b1",
-      "size": 31680073,
+      "file": "arm64-v8a/com.celzero.bravedns-0.5.8.apk",
+      "sha256": "2eb2c79f3c3e87dcaf42f5c43d307fe3665c7e1c8a25c6f966212ee49fb53eeb",
+      "size": 31780409,
       "signer": "1f32d432e81a1dc5c00aafeb0c6636cd7819965d174420e59db9675dff7a88e9",
       "urls": [
-        "https://github.com/celzero/rethink-app/releases/download/v0.5.7/rethink-69-arm64-v8a.apk"
+        "https://github.com/celzero/rethink-app/releases/download/v0.5.8/rethink-70-arm64-v8a.apk"
       ]
     },
     {
       "pkg": "com.celzero.bravedns",
       "label": "RethinkDNS",
-      "version": "0.5.7",
-      "versionCode": 90000069,
+      "version": "0.5.8",
+      "versionCode": 90000070,
       "abi": "x86_64",
-      "file": "x86_64/com.celzero.bravedns-0.5.7.apk",
-      "sha256": "053df660d915f807f111fa73167bb3826880a976dffddceef4838a048b7689b5",
-      "size": 33018860,
+      "file": "x86_64/com.celzero.bravedns-0.5.8.apk",
+      "sha256": "237778cc6f4446bb77853f769359e98329d323385341cdcece391ab8af5cd161",
+      "size": 33119817,
       "signer": "1f32d432e81a1dc5c00aafeb0c6636cd7819965d174420e59db9675dff7a88e9",
       "urls": [
-        "https://github.com/celzero/rethink-app/releases/download/v0.5.7/rethink-69-x86_64.apk"
+        "https://github.com/celzero/rethink-app/releases/download/v0.5.8/rethink-70-x86_64.apk"
       ]
     },
     {
       "pkg": "com.governikus.ausweisapp2",
       "label": "AusweisApp",
-      "version": "2.6.0",
-      "versionCode": 351,
+      "version": "2.6.1",
+      "versionCode": 354,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/com.governikus.ausweisapp2-2.6.0.apk",
-      "sha256": "6f6398e9fcfdf6ec02cea6ce50ba325d7312d721fc0a3441975557b4eb3e62cc",
+      "file": "arm64-v8a/com.governikus.ausweisapp2-2.6.1.apk",
+      "sha256": "b85de8e26b1ae0cdae75dc9d190a8891c60fb847fc336926c01310e5c5d6e2b7",
       "size": 54536165,
       "signer": "b02ac76b50a497ae810aeac22598187b3d4290277d0851a7fa8e1aea5a979870",
       "urls": [
-        "https://github.com/Governikus/AusweisApp/releases/download/2.6.0/AusweisApp-2.6.0-arm64-v8a.apk"
+        "https://github.com/Governikus/AusweisApp/releases/download/2.6.1/AusweisApp-2.6.1-arm64-v8a.apk"
       ]
     },
     {
       "pkg": "com.governikus.ausweisapp2",
       "label": "AusweisApp",
-      "version": "2.6.0",
-      "versionCode": 352,
+      "version": "2.6.1",
+      "versionCode": 355,
       "abi": "x86_64",
-      "file": "x86_64/com.governikus.ausweisapp2-2.6.0.apk",
-      "sha256": "479bd4231a08f60e88068d385f5acbaac012de2d45bb66bf66221313a90fd946",
+      "file": "x86_64/com.governikus.ausweisapp2-2.6.1.apk",
+      "sha256": "aa6cde98bb3e4eacc84ecfa90068de68d6f3cdac2803703790cdd8f1086bff8f",
       "size": 54380244,
       "signer": "b02ac76b50a497ae810aeac22598187b3d4290277d0851a7fa8e1aea5a979870",
       "urls": [
-        "https://github.com/Governikus/AusweisApp/releases/download/2.6.0/AusweisApp-2.6.0-x86_64.apk"
+        "https://github.com/Governikus/AusweisApp/releases/download/2.6.1/AusweisApp-2.6.1-x86_64.apk"
       ]
     },
     {
