@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-15T09:56:14Z",
+  "generated": "2026-10-16T09:51:01Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -75,15 +75,15 @@
     {
       "pkg": "at.bitfire.davdroid",
       "label": "DAVx5",
-      "version": "4.5.20-ose",
-      "versionCode": 405200005,
+      "version": "4.5.21-ose",
+      "versionCode": 405210002,
       "abi": "universal",
-      "file": "universal/at.bitfire.davdroid-4.5.20-ose.apk",
-      "sha256": "33d4b21c85169bbe2b22b7efc17aa17a685b295e28810cfdf063402a60ae064c",
-      "size": 17651508,
+      "file": "universal/at.bitfire.davdroid-4.5.21-ose.apk",
+      "sha256": "8a41ae9d76484b86ce326e2002bae5ad5609aa5c4ea2179037287af676fd1b41",
+      "size": 17706717,
       "signer": "b39e7b77ec853483646b21b4a3e3ca540ba094ef8daa18e87e0be1fa4638d321",
       "urls": [
-        "https://github.com/bitfireAT/davx5-ose/releases/download/v4.5.20-ose/davx5-405200005-4.5.20-ose-release.apk"
+        "https://github.com/bitfireAT/davx5-ose/releases/download/v4.5.21-ose/davx5-405210002-4.5.21-ose-release.apk"
       ]
     },
     {
@@ -187,15 +187,15 @@
     {
       "pkg": "com.x8bit.bitwarden",
       "label": "Bitwarden",
-      "version": "2026.9.1-bwpm",
-      "versionCode": 21929,
+      "version": "2026.10.0-bwpm",
+      "versionCode": 21955,
       "abi": "universal",
-      "file": "universal/com.x8bit.bitwarden-2026.9.1-bwpm.apk",
-      "sha256": "d09124150e0d3714745ffa4b5b08908e9639ca97e53acd7c47aafe4df0e352fb",
-      "size": 91578509,
+      "file": "universal/com.x8bit.bitwarden-2026.10.0-bwpm.apk",
+      "sha256": "63a1072029253e8b2e017e52aa49b0a70dba05a433239f211a64aa2206fadb64",
+      "size": 93493017,
       "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90",
       "urls": [
-        "https://github.com/bitwarden/android/releases/download/v2026.9.1-bwpm/com.x8bit.bitwarden-fdroid.apk"
+        "https://github.com/bitwarden/android/releases/download/v2026.10.0-bwpm/com.x8bit.bitwarden-fdroid.apk"
       ]
     },
     {
