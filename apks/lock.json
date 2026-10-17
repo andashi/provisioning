@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-16T09:51:01Z",
+  "generated": "2026-10-17T09:23:30Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -215,29 +215,29 @@
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.6.17",
-      "versionCode": 23563,
+      "version": "1.7.0",
+      "versionCode": 23583,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/dev.imranr.obtainium-1.6.17.apk",
-      "sha256": "ce1aa65430af809289f4045994838b1b072a2021bd82fceab1a6f4a90d0108d4",
-      "size": 26154026,
+      "file": "arm64-v8a/dev.imranr.obtainium-1.7.0.apk",
+      "sha256": "418e478a2b332750a5ee015ec622963f689475f1e28b1149097856b7b368ad38",
+      "size": 27190409,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.6.17/app-arm64-v8a-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.0/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.6.17",
-      "versionCode": 23561,
+      "version": "1.7.0",
+      "versionCode": 23581,
       "abi": "x86_64",
-      "file": "x86_64/dev.imranr.obtainium-1.6.17.apk",
-      "sha256": "ebdaaa34b464286e3bbed8cfe311bdd74dc04673609740da8aa6a1523602119e",
-      "size": 27702302,
+      "file": "x86_64/dev.imranr.obtainium-1.7.0.apk",
+      "sha256": "90808938e31aafdc8cb0b2289511f52e2b20bd6d67a69dd629f33660af341e16",
+      "size": 28804221,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.6.17/app-x86_64-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.0/app-x86_64-release.apk"
       ]
     },
     {
@@ -383,15 +383,15 @@
     {
       "pkg": "org.thoughtcrime.securesms",
       "label": "Signal",
-      "version": "8.30.3",
-      "versionCode": 176301,
+      "version": "8.31.2",
+      "versionCode": 176601,
       "abi": "universal",
-      "file": "universal/org.thoughtcrime.securesms-8.30.3.apk",
-      "sha256": "9a8ddd9a2f3d7ddc6abca15eb41e5d1515f75d0bd8c45e22074767932a5dde20",
-      "size": 114097843,
+      "file": "universal/org.thoughtcrime.securesms-8.31.2.apk",
+      "sha256": "142751c581fd1e7bbba8bda8a1402806ff30deb0fa6ed490f32a266915299479",
+      "size": 114794220,
       "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8",
       "urls": [
-        "https://github.com/signalapp/Signal-Android/releases/download/v8.30.3/Signal-Android-github-prod-universal-release-8.30.3.apk"
+        "https://github.com/signalapp/Signal-Android/releases/download/v8.31.2/Signal-Android-github-prod-universal-release-8.31.2.apk"
       ]
     },
     {
