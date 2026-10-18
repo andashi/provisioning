@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-17T09:23:30Z",
+  "generated": "2026-10-18T09:38:18Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -61,15 +61,15 @@
     {
       "pkg": "app.lawnchair.lawnicons",
       "label": "Lawnicons",
-      "version": "2.18.0",
-      "versionCode": 26,
+      "version": "2.19.0",
+      "versionCode": 27,
       "abi": "universal",
-      "file": "universal/app.lawnchair.lawnicons-2.18.0.apk",
-      "sha256": "e830b37e1cd7cd66487492f4a1084ba086254b2b09541d729da0ec2169a73bfe",
-      "size": 17091744,
+      "file": "universal/app.lawnchair.lawnicons-2.19.0.apk",
+      "sha256": "5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd",
+      "size": 18700742,
       "signer": "747c3645b357258b2e23e851e53c96747fe0add007e5ba2cd97e8c85572e4dc5",
       "urls": [
-        "https://github.com/LawnchairLauncher/lawnicons/releases/download/v2.18.0/Lawnicons.2.18.0.apk"
+        "https://github.com/LawnchairLauncher/lawnicons/releases/download/v2.19.0/Lawnicons.2.19.0.apk"
       ]
     },
     {
