@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-19T10:48:21Z",
+  "generated": "2026-10-21T10:09:07Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -19,29 +19,29 @@
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.3.3",
-      "versionCode": 3032399,
+      "version": "3.3.4",
+      "versionCode": 3032499,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/app.alextran.immich-3.3.3.apk",
-      "sha256": "08059f5a427c6c59c79cb7690f7217367477fc0631648133dac65b8f8eaf0e78",
-      "size": 69260129,
+      "file": "arm64-v8a/app.alextran.immich-3.3.4.apk",
+      "sha256": "a928327423b4556e2fad128cca94a121a82807205f2880926de57a2366933beb",
+      "size": 69260133,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.3.3/app-arm64-v8a-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.3.4/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.3.3",
-      "versionCode": 3034399,
+      "version": "3.3.4",
+      "versionCode": 3034499,
       "abi": "x86_64",
-      "file": "x86_64/app.alextran.immich-3.3.3.apk",
-      "sha256": "06673d2e04a7767388869dcfbf4f66208d99b967f9a030ee6a8a72889fcd2cea",
+      "file": "x86_64/app.alextran.immich-3.3.4.apk",
+      "sha256": "353f393c4f5c9ffae6a34ff657307a6e66e2a878c8110912fb774dfac9395302",
       "size": 71980079,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.3.3/app-x86_64-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.3.4/app-x86_64-release.apk"
       ]
     },
     {
