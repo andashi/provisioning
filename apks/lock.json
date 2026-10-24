@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-23T10:04:24Z",
+  "generated": "2026-10-24T09:34:11Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -159,15 +159,15 @@
     {
       "pkg": "com.pocketpalai",
       "label": "PocketPal AI",
-      "version": "1.20.1",
-      "versionCode": 152,
+      "version": "1.21.0",
+      "versionCode": 153,
       "abi": "universal",
-      "file": "universal/com.pocketpalai-1.20.1.apk",
-      "sha256": "fb0da266d5e436b92f31e36c1aba12c63c7c1396c8e1dd8792b5ce4108e0e56f",
-      "size": 241717836,
+      "file": "universal/com.pocketpalai-1.21.0.apk",
+      "sha256": "922b6be57d2dbccfb1e2b3f355e25eadb23d7245c0cc3b591ff3e13a1fa20d96",
+      "size": 265188568,
       "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614",
       "urls": [
-        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.20.1/app-prod-release.apk"
+        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.21.0/app-prod-release.apk"
       ]
     },
     {
@@ -215,29 +215,29 @@
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.7.1",
-      "versionCode": 23593,
+      "version": "1.7.2",
+      "versionCode": 23603,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/dev.imranr.obtainium-1.7.1.apk",
-      "sha256": "04dfd02c56dae8d5271d2d402977e1b07c8eeffb313df054a13e71b75b8b8a26",
-      "size": 27194505,
+      "file": "arm64-v8a/dev.imranr.obtainium-1.7.2.apk",
+      "sha256": "f6c83f6e948a701746a0fd7fb52e6ee485b3ca952e719f7cfa3d80567a1e2f13",
+      "size": 34511439,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.1/app-arm64-v8a-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.2/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.7.1",
-      "versionCode": 23591,
+      "version": "1.7.2",
+      "versionCode": 23601,
       "abi": "x86_64",
-      "file": "x86_64/dev.imranr.obtainium-1.7.1.apk",
-      "sha256": "8e168b139626aac8e366ca0bbe401bbb06e85e01eb38f9a15b6fb686a4a0447d",
-      "size": 28808317,
+      "file": "x86_64/dev.imranr.obtainium-1.7.2.apk",
+      "sha256": "eb17c70c8737b4c861735c8f402e14c59cea010bdb453d1c415f38070be52a65",
+      "size": 36837952,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.1/app-x86_64-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.2/app-x86_64-release.apk"
       ]
     },
     {
