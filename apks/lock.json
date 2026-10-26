@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-25T09:51:00Z",
+  "generated": "2026-10-26T11:08:12Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -159,15 +159,15 @@
     {
       "pkg": "com.pocketpalai",
       "label": "PocketPal AI",
-      "version": "1.21.0",
-      "versionCode": 153,
+      "version": "1.21.1",
+      "versionCode": 154,
       "abi": "universal",
-      "file": "universal/com.pocketpalai-1.21.0.apk",
-      "sha256": "922b6be57d2dbccfb1e2b3f355e25eadb23d7245c0cc3b591ff3e13a1fa20d96",
-      "size": 265188568,
+      "file": "universal/com.pocketpalai-1.21.1.apk",
+      "sha256": "0bd7acc9759575ec3602fff5a15981eaf80f66589c7f7eb9547964d1144dc1fb",
+      "size": 266916019,
       "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614",
       "urls": [
-        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.21.0/app-prod-release.apk"
+        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.21.1/app-prod-release.apk"
       ]
     },
     {
@@ -285,15 +285,15 @@
     {
       "pkg": "io.homeassistant.companion.android",
       "label": "Home Assistant",
-      "version": "2026.8.4",
-      "versionCode": 24228,
+      "version": "2026.10.1",
+      "versionCode": 24906,
       "abi": "universal",
-      "file": "universal/io.homeassistant.companion.android-2026.8.4.apk",
-      "sha256": "ed1ded69472f2fa87c20c975b3e5f628889ec304dc9eb6aa5c52ecb6bd4c4687",
-      "size": 40625111,
+      "file": "universal/io.homeassistant.companion.android-2026.10.1.apk",
+      "sha256": "f6f5ef86b6854390eb620e32de43ec0a7eeef079efa54f96d9fd676b98b09910",
+      "size": 37564951,
       "signer": "11194ba809b42ddf0e1a7dec6842a59c7ff1119c5482e95febffd5c6014daa5a",
       "urls": [
-        "https://github.com/home-assistant/android/releases/download/2026.8.4/app-full-release.apk"
+        "https://github.com/home-assistant/android/releases/download/2026.10.1/app-full-release.apk"
       ]
     },
     {
