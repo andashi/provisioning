@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-27T10:34:33Z",
+  "generated": "2026-10-28T11:23:28Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -131,29 +131,29 @@
     {
       "pkg": "com.governikus.ausweisapp2",
       "label": "AusweisApp",
-      "version": "2.6.1",
-      "versionCode": 354,
+      "version": "2.6.2",
+      "versionCode": 360,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/com.governikus.ausweisapp2-2.6.1.apk",
-      "sha256": "b85de8e26b1ae0cdae75dc9d190a8891c60fb847fc336926c01310e5c5d6e2b7",
+      "file": "arm64-v8a/com.governikus.ausweisapp2-2.6.2.apk",
+      "sha256": "24a786cbdf601a6fd1c44e753e070e4e95534ff5736d964899955c55c2cf301d",
       "size": 54536165,
       "signer": "b02ac76b50a497ae810aeac22598187b3d4290277d0851a7fa8e1aea5a979870",
       "urls": [
-        "https://github.com/Governikus/AusweisApp/releases/download/2.6.1/AusweisApp-2.6.1-arm64-v8a.apk"
+        "https://github.com/Governikus/AusweisApp/releases/download/2.6.2/AusweisApp-2.6.2-arm64-v8a.apk"
       ]
     },
     {
       "pkg": "com.governikus.ausweisapp2",
       "label": "AusweisApp",
-      "version": "2.6.1",
-      "versionCode": 355,
+      "version": "2.6.2",
+      "versionCode": 361,
       "abi": "x86_64",
-      "file": "x86_64/com.governikus.ausweisapp2-2.6.1.apk",
-      "sha256": "aa6cde98bb3e4eacc84ecfa90068de68d6f3cdac2803703790cdd8f1086bff8f",
+      "file": "x86_64/com.governikus.ausweisapp2-2.6.2.apk",
+      "sha256": "23db016feacf37f3ca2ddc977741099ddc0e64a8c427a53308c5ea3cd74f0a76",
       "size": 54380244,
       "signer": "b02ac76b50a497ae810aeac22598187b3d4290277d0851a7fa8e1aea5a979870",
       "urls": [
-        "https://github.com/Governikus/AusweisApp/releases/download/2.6.1/AusweisApp-2.6.1-x86_64.apk"
+        "https://github.com/Governikus/AusweisApp/releases/download/2.6.2/AusweisApp-2.6.2-x86_64.apk"
       ]
     },
     {
