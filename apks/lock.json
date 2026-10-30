@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-29T11:32:48Z",
+  "generated": "2026-10-30T11:26:16Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -187,15 +187,15 @@
     {
       "pkg": "com.x8bit.bitwarden",
       "label": "Bitwarden",
-      "version": "2026.10.0-bwpm",
-      "versionCode": 21955,
+      "version": "2026.10.1-bwpm",
+      "versionCode": 21986,
       "abi": "universal",
-      "file": "universal/com.x8bit.bitwarden-2026.10.0-bwpm.apk",
-      "sha256": "63a1072029253e8b2e017e52aa49b0a70dba05a433239f211a64aa2206fadb64",
-      "size": 93493017,
+      "file": "universal/com.x8bit.bitwarden-2026.10.1-bwpm.apk",
+      "sha256": "96ff41d05c7da4269909518b30488e1d93deba789f679141af795aef228a1d2e",
+      "size": 144865483,
       "signer": "de6ec91431557995297bf3e65bc80349bc603a04708160618c86bc9994171c90",
       "urls": [
-        "https://github.com/bitwarden/android/releases/download/v2026.10.0-bwpm/com.x8bit.bitwarden-fdroid.apk"
+        "https://github.com/bitwarden/android/releases/download/v2026.10.1-bwpm/com.x8bit.bitwarden-fdroid.apk"
       ]
     },
     {
@@ -411,31 +411,31 @@
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "15.0.26",
-      "versionCode": 2016191530,
+      "version": "16.0",
+      "versionCode": 2016192618,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/org.torproject.torbrowser-15.0.26.apk",
-      "sha256": "76cab5bed1def6289eacc6a6acad62156d5aae74669e69af5eb63ae76692b306",
-      "size": 111118059,
+      "file": "arm64-v8a/org.torproject.torbrowser-16.0.apk",
+      "sha256": "2e24d41a54161ee3791477ba021de847844f224231055b2651f93930a0a7573f",
+      "size": 115591599,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.26/tor-browser-android-aarch64-15.0.26.apk",
-        "https://dist.torproject.org/torbrowser/15.0.26/tor-browser-android-aarch64-15.0.26.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0/tor-browser-android-aarch64-16.0.apk",
+        "https://dist.torproject.org/torbrowser/16.0/tor-browser-android-aarch64-16.0.apk"
       ]
     },
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "15.0.26",
-      "versionCode": 2016191534,
+      "version": "16.0",
+      "versionCode": 2016192622,
       "abi": "x86_64",
-      "file": "x86_64/org.torproject.torbrowser-15.0.26.apk",
-      "sha256": "5b292e0fa91ed40a30435058f79f2bb88481e0be43d430761aa586c36cd156c7",
-      "size": 112510536,
+      "file": "x86_64/org.torproject.torbrowser-16.0.apk",
+      "sha256": "f9e79971bc2245f98da6d661915f30a5bd6552a2cf72a9fab6f371d999876df1",
+      "size": 116037906,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.26/tor-browser-android-x86_64-15.0.26.apk",
-        "https://dist.torproject.org/torbrowser/15.0.26/tor-browser-android-x86_64-15.0.26.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0/tor-browser-android-x86_64-16.0.apk",
+        "https://dist.torproject.org/torbrowser/16.0/tor-browser-android-x86_64-16.0.apk"
       ]
     }
   ]
