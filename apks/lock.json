@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-30T11:26:16Z",
+  "generated": "2026-10-31T10:59:10Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -159,15 +159,15 @@
     {
       "pkg": "com.pocketpalai",
       "label": "PocketPal AI",
-      "version": "1.21.4",
-      "versionCode": 157,
+      "version": "1.22.0",
+      "versionCode": 158,
       "abi": "universal",
-      "file": "universal/com.pocketpalai-1.21.4.apk",
-      "sha256": "d290decae884d376ae159cc74166086a1de1d944a5f06e64e0e6582105dd8b90",
-      "size": 266926991,
+      "file": "universal/com.pocketpalai-1.22.0.apk",
+      "sha256": "e26933e5a94434d94929f65fcc019f1e10b734a5864dcb0b7995ace569b37f6b",
+      "size": 275953055,
       "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614",
       "urls": [
-        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.21.4/app-prod-release.apk"
+        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.22.0/app-prod-release.apk"
       ]
     },
     {
