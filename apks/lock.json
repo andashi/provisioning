@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-10-31T10:59:10Z",
+  "generated": "2026-11-01T11:53:54Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -215,29 +215,29 @@
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.7.3",
-      "versionCode": 23613,
+      "version": "1.7.4",
+      "versionCode": 23623,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/dev.imranr.obtainium-1.7.3.apk",
-      "sha256": "3a3caf4611b32fa665cd5d19a4b593c6b8678a3ceb69981a0e5c2253b3dc8f30",
-      "size": 34532014,
+      "file": "arm64-v8a/dev.imranr.obtainium-1.7.4.apk",
+      "sha256": "f9216f721a7713b75929e0806bc18586f8fcf7328fbbff99b6aef1debb9eef80",
+      "size": 34609838,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.3/app-arm64-v8a-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.4/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.7.3",
-      "versionCode": 23611,
+      "version": "1.7.4",
+      "versionCode": 23621,
       "abi": "x86_64",
-      "file": "x86_64/dev.imranr.obtainium-1.7.3.apk",
-      "sha256": "678bb84c6019775e1b318cdef18e5e13764379b431e45f25fa2ffde5650e5f8e",
-      "size": 36858527,
+      "file": "x86_64/dev.imranr.obtainium-1.7.4.apk",
+      "sha256": "f4e0ba24f2ba7b49d7268a8f7b47b9c233afd864d1e5214f709e6e2ae30a7580",
+      "size": 36936351,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.3/app-x86_64-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.4/app-x86_64-release.apk"
       ]
     },
     {
