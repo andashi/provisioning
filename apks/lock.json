@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-01T11:53:54Z",
+  "generated": "2026-11-02T13:31:20Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -285,15 +285,15 @@
     {
       "pkg": "io.homeassistant.companion.android",
       "label": "Home Assistant",
-      "version": "2026.10.1",
-      "versionCode": 24906,
+      "version": "2026.11.1",
+      "versionCode": 25506,
       "abi": "universal",
-      "file": "universal/io.homeassistant.companion.android-2026.10.1.apk",
-      "sha256": "f6f5ef86b6854390eb620e32de43ec0a7eeef079efa54f96d9fd676b98b09910",
-      "size": 37564951,
+      "file": "universal/io.homeassistant.companion.android-2026.11.1.apk",
+      "sha256": "9c11abaf9e1b832894c49d806f66769ed76f99bac26cd1da029e2a9df227e41f",
+      "size": 43986826,
       "signer": "11194ba809b42ddf0e1a7dec6842a59c7ff1119c5482e95febffd5c6014daa5a",
       "urls": [
-        "https://github.com/home-assistant/android/releases/download/2026.10.1/app-full-release.apk"
+        "https://github.com/home-assistant/android/releases/download/2026.11.1/app-full-release.apk"
       ]
     },
     {
