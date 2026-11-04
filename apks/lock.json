@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-02T13:31:20Z",
+  "generated": "2026-11-04T13:01:38Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -173,15 +173,15 @@
     {
       "pkg": "com.tailscale.ipn",
       "label": "Tailscale",
-      "version": "1.104.4-t938213198-gb9d487fe6",
-      "versionCode": 298857390,
+      "version": "1.104.5-t788384763-gd8673104f",
+      "versionCode": 298943510,
       "abi": "universal",
-      "file": "universal/com.tailscale.ipn-1.104.4-t938213198-gb9d487fe6.apk",
-      "sha256": "47628cecde2de0ed03f4a69424635259023daf76fb5d9afeeddfa62761690984",
-      "size": 105698535,
+      "file": "universal/com.tailscale.ipn-1.104.5-t788384763-gd8673104f.apk",
+      "sha256": "a517f94006b90a9dbd7383221cbd05ff4acf5ea680335b9b0318e3fbf086d4c9",
+      "size": 105702631,
       "signer": "5cdb295551bfe1a087fed6acda07141c6c929fa7c29bd273a7092813acc434bf",
       "urls": [
-        "https://github.com/tailscale/tailscale-android/releases/download/1.104.4-t938213198-gb9d487fe6/tailscale-android-universal-1.104.4.apk"
+        "https://github.com/tailscale/tailscale-android/releases/download/1.104.5-t788384763-gd8673104f/tailscale-android-universal-1.104.5.apk"
       ]
     },
     {
@@ -201,15 +201,15 @@
     {
       "pkg": "com.yubico.yubioath",
       "label": "Yubico Authenticator",
-      "version": "7.4.1",
-      "versionCode": 703080,
+      "version": "7.5.0",
+      "versionCode": 703110,
       "abi": "universal",
-      "file": "universal/com.yubico.yubioath-7.4.1.apk",
-      "sha256": "a6fe404c875216880e912b5f1c77bc0ea00e503c73e748db0365a469ddcc41b8",
-      "size": 74613517,
+      "file": "universal/com.yubico.yubioath-7.5.0.apk",
+      "sha256": "a460c8cc70d5cae92b18358fbaa2459fada34ab1217f90a719f4f644b99b2d2a",
+      "size": 82060165,
       "signer": "3e21da5acaa8d49ce515b1c6d2a1903bae298d0911432c55e75a196199f2b9a0",
       "urls": [
-        "https://developers.yubico.com/yubioath-flutter/Releases/yubico-authenticator-7.4.1-android.apk"
+        "https://developers.yubico.com/yubioath-flutter/Releases/yubico-authenticator-7.5.0-android.apk"
       ]
     },
     {
