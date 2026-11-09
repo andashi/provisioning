@@ -1,7 +1,7 @@
 1c86c5af1e247eefbe6d5ee6d1114b1aa1d76f23c03ac00cc435e89c95cb947e  universal/app.accrescent.client-0.29.1.apk
 5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd  universal/app.lawnchair.lawnicons-2.19.0.apk
 8a41ae9d76484b86ce326e2002bae5ad5609aa5c4ea2179037287af676fd1b41  universal/at.bitfire.davdroid-4.5.21-ose.apk
-e26933e5a94434d94929f65fcc019f1e10b734a5864dcb0b7995ace569b37f6b  universal/com.pocketpalai-1.22.0.apk
+0c608581d360957cee3087553508295dbcd666e0d9fcda5df454ced3f9ff00b9  universal/com.pocketpalai-1.22.1.apk
 a517f94006b90a9dbd7383221cbd05ff4acf5ea680335b9b0318e3fbf086d4c9  universal/com.tailscale.ipn-1.104.5-t788384763-gd8673104f.apk
 96ff41d05c7da4269909518b30488e1d93deba789f679141af795aef228a1d2e  universal/com.x8bit.bitwarden-2026.10.1-bwpm.apk
 a460c8cc70d5cae92b18358fbaa2459fada34ab1217f90a719f4f644b99b2d2a  universal/com.yubico.yubioath-7.5.0.apk
@@ -17,7 +17,7 @@ c1b5a2af71bc06132eb27f98d88fe21e3add69956007ea3a7357c743934e15c7  universal/org.
 b362605d9a7a3383262622d016a069221726a60a1288be1b8fade4b563e499f1  universal/org.polymorphicshade.tubular-0.28.4.apk
 6fd805eaa5362efb5d6f50da3a22af3be031a535591fcee3a9417ea5143b77be  universal/org.thoughtcrime.securesms-8.34.2.apk
 0c89f2af60d14aef178424f35f8c58e4313e2b8453647366eed6b3358f668482  arm64-v8a/app.alextran.immich-3.3.6.apk
-7eea2f49dd79e583e14cd9ebac3b98e754b3e351dad2522530e40cedf9b5987a  arm64-v8a/app.comaps-2026.10.05-19.apk
+312e122561ee40862e16b8125a613accc162e09ed45c6ec49bf20419b3fec6bf  arm64-v8a/app.comaps-2026.11.07-16.apk
 ec051d90bc9f82587a726b525976494bacef50bc8a7dd0e3789b859373121753  arm64-v8a/com.Vali98.ChatterUI-0.10.0.apk
 2eb2c79f3c3e87dcaf42f5c43d307fe3665c7e1c8a25c6f966212ee49fb53eeb  arm64-v8a/com.celzero.bravedns-0.5.8.apk
 24a786cbdf601a6fd1c44e753e070e4e95534ff5736d964899955c55c2cf301d  arm64-v8a/com.governikus.ausweisapp2-2.6.2.apk

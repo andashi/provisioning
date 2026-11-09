@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-05T13:14:29Z",
+  "generated": "2026-11-09T13:56:39Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -47,15 +47,15 @@
     {
       "pkg": "app.comaps",
       "label": "CoMaps",
-      "version": "2026.10.05-19",
-      "versionCode": 26100519,
+      "version": "2026.11.07-16",
+      "versionCode": 26110716,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/app.comaps-2026.10.05-19.apk",
-      "sha256": "7eea2f49dd79e583e14cd9ebac3b98e754b3e351dad2522530e40cedf9b5987a",
-      "size": 63779356,
+      "file": "arm64-v8a/app.comaps-2026.11.07-16.apk",
+      "sha256": "312e122561ee40862e16b8125a613accc162e09ed45c6ec49bf20419b3fec6bf",
+      "size": 65283524,
       "signer": "4894e8e6963627ef660031d8593fe77297f835acb4e23810003e926135023b4c",
       "urls": [
-        "https://codeberg.org/comaps/comaps/releases/download/v2026.10.05-19/CoMaps-26100519-main-release.apk"
+        "https://codeberg.org/comaps/comaps/releases/download/v2026.11.07-16/CoMaps-26110716-main-release.apk"
       ]
     },
     {
@@ -159,15 +159,15 @@
     {
       "pkg": "com.pocketpalai",
       "label": "PocketPal AI",
-      "version": "1.22.0",
-      "versionCode": 158,
+      "version": "1.22.1",
+      "versionCode": 159,
       "abi": "universal",
-      "file": "universal/com.pocketpalai-1.22.0.apk",
-      "sha256": "e26933e5a94434d94929f65fcc019f1e10b734a5864dcb0b7995ace569b37f6b",
-      "size": 275953055,
+      "file": "universal/com.pocketpalai-1.22.1.apk",
+      "sha256": "0c608581d360957cee3087553508295dbcd666e0d9fcda5df454ced3f9ff00b9",
+      "size": 275960507,
       "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614",
       "urls": [
-        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.22.0/app-prod-release.apk"
+        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.22.1/app-prod-release.apk"
       ]
     },
     {
