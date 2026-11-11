@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-10T13:30:36Z",
+  "generated": "2026-11-11T12:45:10Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -19,29 +19,29 @@
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.3.6",
-      "versionCode": 3032699,
+      "version": "3.4.0",
+      "versionCode": 3042099,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/app.alextran.immich-3.3.6.apk",
-      "sha256": "0c89f2af60d14aef178424f35f8c58e4313e2b8453647366eed6b3358f668482",
-      "size": 69260133,
+      "file": "arm64-v8a/app.alextran.immich-3.4.0.apk",
+      "sha256": "40b9e5184bf7d0ffc598b1cbdadc2dcec21c1af7c94a29f8c89b023e754e8442",
+      "size": 71851873,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.3.6/app-arm64-v8a-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.4.0/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.3.6",
-      "versionCode": 3034699,
+      "version": "3.4.0",
+      "versionCode": 3044099,
       "abi": "x86_64",
-      "file": "x86_64/app.alextran.immich-3.3.6.apk",
-      "sha256": "e58b54d433e5132266b83d06e91c9191b9165296911d857ab71079d180ab3a49",
-      "size": 71980079,
+      "file": "x86_64/app.alextran.immich-3.4.0.apk",
+      "sha256": "7f5fecdda0e29e4fa0b31438397fcf37e408c47b13e9179e36407d1eec34a77d",
+      "size": 74997435,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.3.6/app-x86_64-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.4.0/app-x86_64-release.apk"
       ]
     },
     {
@@ -411,31 +411,31 @@
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "16.0.1",
-      "versionCode": 2016195266,
+      "version": "16.0.2",
+      "versionCode": 2016195514,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/org.torproject.torbrowser-16.0.1.apk",
-      "sha256": "5e892c341828827d802741bf00d1d50d5a614731827fa9ad53fd6b7c52db5949",
-      "size": 115501487,
+      "file": "arm64-v8a/org.torproject.torbrowser-16.0.2.apk",
+      "sha256": "e937a744fae08a34ea0bd22fa69f6007affe859c51f9ff1a6ba02d1dc0394108",
+      "size": 115534255,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.1/tor-browser-android-aarch64-16.0.1.apk",
-        "https://dist.torproject.org/torbrowser/16.0.1/tor-browser-android-aarch64-16.0.1.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.2/tor-browser-android-aarch64-16.0.2.apk",
+        "https://dist.torproject.org/torbrowser/16.0.2/tor-browser-android-aarch64-16.0.2.apk"
       ]
     },
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "16.0.1",
-      "versionCode": 2016195270,
+      "version": "16.0.2",
+      "versionCode": 2016195518,
       "abi": "x86_64",
-      "file": "x86_64/org.torproject.torbrowser-16.0.1.apk",
-      "sha256": "bd661fdf8fca03c6a61dd685dab10e38943ab813c113f024b246b1b2c6b625cf",
-      "size": 115992850,
+      "file": "x86_64/org.torproject.torbrowser-16.0.2.apk",
+      "sha256": "d28dbcd71a1b93a23cc19255eae6b2345f8b3c13473aeccafb7f654fee87976d",
+      "size": 116021522,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.1/tor-browser-android-x86_64-16.0.1.apk",
-        "https://dist.torproject.org/torbrowser/16.0.1/tor-browser-android-x86_64-16.0.1.apk"
+        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.2/tor-browser-android-x86_64-16.0.2.apk",
+        "https://dist.torproject.org/torbrowser/16.0.2/tor-browser-android-x86_64-16.0.2.apk"
       ]
     }
   ]
