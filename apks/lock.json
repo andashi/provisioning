@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-12T13:48:01Z",
+  "generated": "2026-11-13T13:07:45Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -383,15 +383,15 @@
     {
       "pkg": "org.thoughtcrime.securesms",
       "label": "Signal",
-      "version": "8.34.2",
-      "versionCode": 177501,
+      "version": "8.35.2",
+      "versionCode": 177801,
       "abi": "universal",
-      "file": "universal/org.thoughtcrime.securesms-8.34.2.apk",
-      "sha256": "6fd805eaa5362efb5d6f50da3a22af3be031a535591fcee3a9417ea5143b77be",
-      "size": 115262343,
+      "file": "universal/org.thoughtcrime.securesms-8.35.2.apk",
+      "sha256": "fae7a83bd1a14059d15900149edc647af3a1310691eeba6dc1b536696f5444f6",
+      "size": 115451440,
       "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8",
       "urls": [
-        "https://github.com/signalapp/Signal-Android/releases/download/v8.34.2/Signal-Android-github-prod-universal-release-8.34.2.apk"
+        "https://github.com/signalapp/Signal-Android/releases/download/v8.35.2/Signal-Android-github-prod-universal-release-8.35.2.apk"
       ]
     },
     {
