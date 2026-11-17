@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-13T13:07:45Z",
+  "generated": "2026-11-17T14:27:26Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -159,15 +159,15 @@
     {
       "pkg": "com.pocketpalai",
       "label": "PocketPal AI",
-      "version": "1.23.0",
-      "versionCode": 160,
+      "version": "1.24.0",
+      "versionCode": 161,
       "abi": "universal",
-      "file": "universal/com.pocketpalai-1.23.0.apk",
-      "sha256": "9bd195285c9e36f2d218b5eee7151e16917d53a741a6e6f5000d05ea23f7ec76",
-      "size": 276050667,
+      "file": "universal/com.pocketpalai-1.24.0.apk",
+      "sha256": "027cbc808b1c0fa85ba954426ca06119bf2f8adb12a76b52d4f882517c58ed9c",
+      "size": 295190260,
       "signer": "f55acacb10155bea116e1dba487cf2bfb8bce2b65439bc62bc2370a6b2239614",
       "urls": [
-        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.23.0/app-prod-release.apk"
+        "https://github.com/a-ghorbani/pocketpal-ai/releases/download/v1.24.0/app-prod-release.apk"
       ]
     },
     {
@@ -397,15 +397,15 @@
     {
       "pkg": "org.torproject.android",
       "label": "Orbot",
-      "version": "17.9.7-RC-1-tor-0.4.9.14",
-      "versionCode": 1797300102,
+      "version": "17.9.8-RC-1-tor-0.4.9.17",
+      "versionCode": 1798300102,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/org.torproject.android-17.9.7-RC-1-tor-0.4.9.14.apk",
-      "sha256": "97d3a0a5181394e99fbabdda9fefb73027657cac4c7400c64ebf146a7778860b",
-      "size": 35860127,
+      "file": "arm64-v8a/org.torproject.android-17.9.8-RC-1-tor-0.4.9.17.apk",
+      "sha256": "f9acaa06b7651e1f070106b8d033722c746af863a4fe806f80b68a9ac56bdd25",
+      "size": 35884080,
       "signer": "a454b87a1847a89ed7f5e70fba6bba96f3ef29c26e0981204fe347bf231dfd5b",
       "urls": [
-        "https://github.com/guardianproject/orbot-android/releases/download/17.9.7-RC-1-tor-0.4.9.14/Orbot-17.9.7-RC-1-tor-0.4.9.14-1-g0ea112a4d-fullperm-arm64-v8a-release.apk"
+        "https://github.com/guardianproject/orbot-android/releases/download/17.9.8-RC-1-tor-0.4.9.17/Orbot-17.9.8-RC-1-tor-0.4.9.17-1-g75a2abad5-fullperm-arm64-v8a-release.apk"
       ]
     },
     {
