@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-18T13:58:46Z",
+  "generated": "2026-11-19T14:27:45Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -19,29 +19,29 @@
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.4.1",
-      "versionCode": 3042199,
+      "version": "3.4.2",
+      "versionCode": 3042299,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/app.alextran.immich-3.4.1.apk",
-      "sha256": "fae6c0f77a714b0c99ef6eb7e278ce9650b509ead00b9ecb15ffc2ae9f6c71a5",
+      "file": "arm64-v8a/app.alextran.immich-3.4.2.apk",
+      "sha256": "bf8e9dd7248ffbdd3e063a9825720dccac6b2ed2a0fe34aeae2d019ba37d7667",
       "size": 71851873,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.4.1/app-arm64-v8a-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.4.2/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "app.alextran.immich",
       "label": "Immich",
-      "version": "3.4.1",
-      "versionCode": 3044199,
+      "version": "3.4.2",
+      "versionCode": 3044299,
       "abi": "x86_64",
-      "file": "x86_64/app.alextran.immich-3.4.1.apk",
-      "sha256": "398f0be793dda8bc7f4223adb037ba9c5536d4d423958b1379612d31dfe8217a",
-      "size": 74997431,
+      "file": "x86_64/app.alextran.immich-3.4.2.apk",
+      "sha256": "43618725bfe4a3c75baf8efc9bbbd2cf16c8c3a7bd605f01d9cfce6e4eba5212",
+      "size": 74997435,
       "signer": "86c5c455dfaf4985923a8f35adb31d0c9e0b957d7f94c2d2af6a2438aa960020",
       "urls": [
-        "https://github.com/immich-app/immich/releases/download/v3.4.1/app-x86_64-release.apk"
+        "https://github.com/immich-app/immich/releases/download/v3.4.2/app-x86_64-release.apk"
       ]
     },
     {
@@ -383,15 +383,15 @@
     {
       "pkg": "org.thoughtcrime.securesms",
       "label": "Signal",
-      "version": "8.35.2",
-      "versionCode": 177801,
+      "version": "8.36.3",
+      "versionCode": 178201,
       "abi": "universal",
-      "file": "universal/org.thoughtcrime.securesms-8.35.2.apk",
-      "sha256": "fae7a83bd1a14059d15900149edc647af3a1310691eeba6dc1b536696f5444f6",
-      "size": 115451440,
+      "file": "universal/org.thoughtcrime.securesms-8.36.3.apk",
+      "sha256": "e1a3cf13d3360f5f59338906b9e5ab712de9453738a1c3c5b54d3de59b46c041",
+      "size": 115876464,
       "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8",
       "urls": [
-        "https://github.com/signalapp/Signal-Android/releases/download/v8.35.2/Signal-Android-github-prod-universal-release-8.35.2.apk"
+        "https://github.com/signalapp/Signal-Android/releases/download/v8.36.3/Signal-Android-github-prod-universal-release-8.36.3.apk"
       ]
     },
     {
