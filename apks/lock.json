@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-20T14:01:54Z",
+  "generated": "2026-11-22T13:22:13Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -271,15 +271,15 @@
     {
       "pkg": "im.molly.app",
       "label": "Molly",
-      "version": "8.19.2-4",
-      "versionCode": 171904,
+      "version": "8.34.2-1",
+      "versionCode": 177501,
       "abi": "universal",
-      "file": "universal/im.molly.app-8.19.2-4.apk",
-      "sha256": "f1c6fd929f9047809a7a9bb4e663d1ec1ec4d9f33d9794799c8e2f8e1663ec11",
-      "size": 96755948,
+      "file": "universal/im.molly.app-8.34.2-1.apk",
+      "sha256": "9896f4f6494b74a49ccb33cb9d795c53391b0aafcd58a1674b784951d47e61d4",
+      "size": 95689412,
       "signer": "6aa80fdf4a8cc13737cfb434fc0cde486f09cf8fcda21a67bea5ee1ca2700886",
       "urls": [
-        "https://github.com/mollyim/mollyim-android/releases/download/v8.19.2-4/Molly-v8.19.2-4.apk"
+        "https://github.com/mollyim/mollyim-android/releases/download/v8.34.2-1/Molly-v8.34.2-1.apk"
       ]
     },
     {
