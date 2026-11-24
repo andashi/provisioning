@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-22T13:22:13Z",
+  "generated": "2026-11-24T15:54:22Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -75,15 +75,15 @@
     {
       "pkg": "at.bitfire.davdroid",
       "label": "DAVx5",
-      "version": "4.5.21-ose",
-      "versionCode": 405210002,
+      "version": "4.5.22-ose",
+      "versionCode": 405220004,
       "abi": "universal",
-      "file": "universal/at.bitfire.davdroid-4.5.21-ose.apk",
-      "sha256": "8a41ae9d76484b86ce326e2002bae5ad5609aa5c4ea2179037287af676fd1b41",
-      "size": 17706717,
+      "file": "universal/at.bitfire.davdroid-4.5.22-ose.apk",
+      "sha256": "2537706a794da52932e5a75a3911fa870b8764e19f7fff3a45fb6062cc38f0ae",
+      "size": 17946162,
       "signer": "b39e7b77ec853483646b21b4a3e3ca540ba094ef8daa18e87e0be1fa4638d321",
       "urls": [
-        "https://github.com/bitfireAT/davx5-ose/releases/download/v4.5.21-ose/davx5-405210002-4.5.21-ose-release.apk"
+        "https://github.com/bitfireAT/davx5-ose/releases/download/v4.5.22-ose/davx5-405220004-4.5.22-ose-release.apk"
       ]
     },
     {
@@ -215,29 +215,29 @@
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.7.4",
-      "versionCode": 23623,
+      "version": "1.7.5",
+      "versionCode": 33633,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/dev.imranr.obtainium-1.7.4.apk",
-      "sha256": "f9216f721a7713b75929e0806bc18586f8fcf7328fbbff99b6aef1debb9eef80",
-      "size": 34609838,
+      "file": "arm64-v8a/dev.imranr.obtainium-1.7.5.apk",
+      "sha256": "dd80da62348d5ad57a8d53ef4247f90d4f58c396a4ab797218ca3eb6d3b96918",
+      "size": 34089646,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.4/app-arm64-v8a-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.5/app-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "dev.imranr.obtainium",
       "label": "Obtainium",
-      "version": "1.7.4",
-      "versionCode": 23621,
+      "version": "1.7.5",
+      "versionCode": 33631,
       "abi": "x86_64",
-      "file": "x86_64/dev.imranr.obtainium-1.7.4.apk",
-      "sha256": "f4e0ba24f2ba7b49d7268a8f7b47b9c233afd864d1e5214f709e6e2ae30a7580",
-      "size": 36936351,
+      "file": "x86_64/dev.imranr.obtainium-1.7.5.apk",
+      "sha256": "0a50495e1797067dd1a84b1aaf2aae5bf369d35f16f9301d8820b6667da79525",
+      "size": 36223647,
       "signer": "b353601f6a1d5fd6603ae2f50be80cf301367b86b6ab8b1f66243da96cd57362",
       "urls": [
-        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.4/app-x86_64-release.apk"
+        "https://github.com/ImranR98/Obtainium/releases/download/v1.7.5/app-x86_64-release.apk"
       ]
     },
     {
@@ -397,45 +397,43 @@
     {
       "pkg": "org.torproject.android",
       "label": "Orbot",
-      "version": "17.9.8-RC-1-tor-0.4.9.17",
-      "versionCode": 1798300102,
+      "version": "17.9.9-RC-1-tor-0.4.9.17.1",
+      "versionCode": 1799300102,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/org.torproject.android-17.9.8-RC-1-tor-0.4.9.17.apk",
-      "sha256": "f9acaa06b7651e1f070106b8d033722c746af863a4fe806f80b68a9ac56bdd25",
-      "size": 35884080,
+      "file": "arm64-v8a/org.torproject.android-17.9.9-RC-1-tor-0.4.9.17.1.apk",
+      "sha256": "0be6755b96658cac80dc2ce28c5d91d25ab60cd7b770c0ce13f112d422e724c1",
+      "size": 36116041,
       "signer": "a454b87a1847a89ed7f5e70fba6bba96f3ef29c26e0981204fe347bf231dfd5b",
       "urls": [
-        "https://github.com/guardianproject/orbot-android/releases/download/17.9.8-RC-1-tor-0.4.9.17/Orbot-17.9.8-RC-1-tor-0.4.9.17-1-g75a2abad5-fullperm-arm64-v8a-release.apk"
+        "https://github.com/guardianproject/orbot-android/releases/download/17.9.9-RC-1-tor-0.4.9.17.1/Orbot-17.9.9-RC-1-tor-0.4.9.17.1-fullperm-play-arm64-v8a-release.apk"
       ]
     },
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "16.0.2",
-      "versionCode": 2016195514,
+      "version": "16.0.3",
+      "versionCode": 2016197962,
       "abi": "arm64-v8a",
-      "file": "arm64-v8a/org.torproject.torbrowser-16.0.2.apk",
-      "sha256": "e937a744fae08a34ea0bd22fa69f6007affe859c51f9ff1a6ba02d1dc0394108",
-      "size": 115534255,
+      "file": "arm64-v8a/org.torproject.torbrowser-16.0.3.apk",
+      "sha256": "1838fa64a4f4e64a1efab2e242f13d1fe949d14890bb9cb0efeeac7f66e6d4aa",
+      "size": 115571119,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.2/tor-browser-android-aarch64-16.0.2.apk",
-        "https://dist.torproject.org/torbrowser/16.0.2/tor-browser-android-aarch64-16.0.2.apk"
+        "https://dist.torproject.org/torbrowser/16.0.3/tor-browser-android-aarch64-16.0.3.apk"
       ]
     },
     {
       "pkg": "org.torproject.torbrowser",
       "label": "Tor Browser",
-      "version": "16.0.2",
-      "versionCode": 2016195518,
+      "version": "16.0.3",
+      "versionCode": 2016197966,
       "abi": "x86_64",
-      "file": "x86_64/org.torproject.torbrowser-16.0.2.apk",
-      "sha256": "d28dbcd71a1b93a23cc19255eae6b2345f8b3c13473aeccafb7f654fee87976d",
-      "size": 116021522,
+      "file": "x86_64/org.torproject.torbrowser-16.0.3.apk",
+      "sha256": "392b0fe0a761ccec934e3a3e7311b0da7afad5f1375cb2b32e258d790c603a62",
+      "size": 116058386,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
-        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.2/tor-browser-android-x86_64-16.0.2.apk",
-        "https://dist.torproject.org/torbrowser/16.0.2/tor-browser-android-x86_64-16.0.2.apk"
+        "https://dist.torproject.org/torbrowser/16.0.3/tor-browser-android-x86_64-16.0.3.apk"
       ]
     }
   ]

@@ -1,6 +1,6 @@
 1c86c5af1e247eefbe6d5ee6d1114b1aa1d76f23c03ac00cc435e89c95cb947e  universal/app.accrescent.client-0.29.1.apk
 5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd  universal/app.lawnchair.lawnicons-2.19.0.apk
-8a41ae9d76484b86ce326e2002bae5ad5609aa5c4ea2179037287af676fd1b41  universal/at.bitfire.davdroid-4.5.21-ose.apk
+2537706a794da52932e5a75a3911fa870b8764e19f7fff3a45fb6062cc38f0ae  universal/at.bitfire.davdroid-4.5.22-ose.apk
 027cbc808b1c0fa85ba954426ca06119bf2f8adb12a76b52d4f882517c58ed9c  universal/com.pocketpalai-1.24.0.apk
 5a620e118c36a203bdde43ddd93ef4122ce2d8ab2f7ad59ec30b6bbf391e01d9  universal/com.tailscale.ipn-1.104.7-tfb3b9b296-g226f029a3.apk
 9f4e2dc177af3a6dd1ec45aea49eb2aa5929bca5ab7f0b3d33b3db8d5790c2b4  universal/com.x8bit.bitwarden-2026.11.1-bwpm.apk
@@ -21,11 +21,11 @@ bf8e9dd7248ffbdd3e063a9825720dccac6b2ed2a0fe34aeae2d019ba37d7667  arm64-v8a/app.
 ec051d90bc9f82587a726b525976494bacef50bc8a7dd0e3789b859373121753  arm64-v8a/com.Vali98.ChatterUI-0.10.0.apk
 2eb2c79f3c3e87dcaf42f5c43d307fe3665c7e1c8a25c6f966212ee49fb53eeb  arm64-v8a/com.celzero.bravedns-0.5.8.apk
 b4148db235a9dc4ccdeaa3c67b131f6a4acbeae7629a5cabc812fa5caeb6ff6d  arm64-v8a/com.governikus.ausweisapp2-2.6.3.apk
-f9216f721a7713b75929e0806bc18586f8fcf7328fbbff99b6aef1debb9eef80  arm64-v8a/dev.imranr.obtainium-1.7.4.apk
-f9acaa06b7651e1f070106b8d033722c746af863a4fe806f80b68a9ac56bdd25  arm64-v8a/org.torproject.android-17.9.8-RC-1-tor-0.4.9.17.apk
-e937a744fae08a34ea0bd22fa69f6007affe859c51f9ff1a6ba02d1dc0394108  arm64-v8a/org.torproject.torbrowser-16.0.2.apk
+dd80da62348d5ad57a8d53ef4247f90d4f58c396a4ab797218ca3eb6d3b96918  arm64-v8a/dev.imranr.obtainium-1.7.5.apk
+0be6755b96658cac80dc2ce28c5d91d25ab60cd7b770c0ce13f112d422e724c1  arm64-v8a/org.torproject.android-17.9.9-RC-1-tor-0.4.9.17.1.apk
+1838fa64a4f4e64a1efab2e242f13d1fe949d14890bb9cb0efeeac7f66e6d4aa  arm64-v8a/org.torproject.torbrowser-16.0.3.apk
 43618725bfe4a3c75baf8efc9bbbd2cf16c8c3a7bd605f01d9cfce6e4eba5212  x86_64/app.alextran.immich-3.4.2.apk
 237778cc6f4446bb77853f769359e98329d323385341cdcece391ab8af5cd161  x86_64/com.celzero.bravedns-0.5.8.apk
 5d909ae64b9b545e6165f4d38eeb9f0312d8feaa520c18292b63c235ebe5999e  x86_64/com.governikus.ausweisapp2-2.6.3.apk
-f4e0ba24f2ba7b49d7268a8f7b47b9c233afd864d1e5214f709e6e2ae30a7580  x86_64/dev.imranr.obtainium-1.7.4.apk
-d28dbcd71a1b93a23cc19255eae6b2345f8b3c13473aeccafb7f654fee87976d  x86_64/org.torproject.torbrowser-16.0.2.apk
+0a50495e1797067dd1a84b1aaf2aae5bf369d35f16f9301d8820b6667da79525  x86_64/dev.imranr.obtainium-1.7.5.apk
+392b0fe0a761ccec934e3a3e7311b0da7afad5f1375cb2b32e258d790c603a62  x86_64/org.torproject.torbrowser-16.0.3.apk
