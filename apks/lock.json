@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "generated": "2026-11-24T15:54:22Z",
+  "generated": "2026-11-27T15:05:59Z",
   "entries": [
     {
       "pkg": "app.accrescent.client",
@@ -383,15 +383,15 @@
     {
       "pkg": "org.thoughtcrime.securesms",
       "label": "Signal",
-      "version": "8.36.3",
-      "versionCode": 178201,
+      "version": "8.37.3",
+      "versionCode": 178601,
       "abi": "universal",
-      "file": "universal/org.thoughtcrime.securesms-8.36.3.apk",
-      "sha256": "e1a3cf13d3360f5f59338906b9e5ab712de9453738a1c3c5b54d3de59b46c041",
-      "size": 115876464,
+      "file": "universal/org.thoughtcrime.securesms-8.37.3.apk",
+      "sha256": "0ac3e42d7b6c74acf3275924556d6350515ac0707fdbcea2cfc2b8c95cfb3c96",
+      "size": 116400893,
       "signer": "4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8",
       "urls": [
-        "https://github.com/signalapp/Signal-Android/releases/download/v8.36.3/Signal-Android-github-prod-universal-release-8.36.3.apk"
+        "https://github.com/signalapp/Signal-Android/releases/download/v8.37.3/Signal-Android-github-prod-universal-release-8.37.3.apk"
       ]
     },
     {
@@ -419,6 +419,7 @@
       "size": 115571119,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
+        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.3/tor-browser-android-aarch64-16.0.3.apk",
         "https://dist.torproject.org/torbrowser/16.0.3/tor-browser-android-aarch64-16.0.3.apk"
       ]
     },
@@ -433,6 +434,7 @@
       "size": 116058386,
       "signer": "20061f045e737c67375c17794cfedb436a03cec6bacb7cb9f96642205ca2cec8",
       "urls": [
+        "https://archive.torproject.org/tor-package-archive/torbrowser/16.0.3/tor-browser-android-x86_64-16.0.3.apk",
         "https://dist.torproject.org/torbrowser/16.0.3/tor-browser-android-x86_64-16.0.3.apk"
       ]
     }
