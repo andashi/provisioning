@@ -10,7 +10,7 @@ case_input="$tmp/config.json"
 printf '%s\n' '{"schemaVersion":2,"appearance":{"glass":{"blur":12,"tint":0.3,"specular":0},"theme":{"palette":{"dark":{"surface":"#21191F","error":"#FFB4AB"}}}}}' > "$case_input"
 hash=$(sha256sum "$case_input" | cut -d' ' -f1)
 expected='{"schemaVersion":2,"appearance":{"glass":{"blur":12,"tint":0.3,"floor":0,"scheme":"dark"},"theme":{"palette":{"dark":{"surface":"#21191F"}}}}}'
-DRY_RUN=0
+export DRY_RUN=0
 package_result='package:org.andashi.keyboard'
 written="$tmp/writes"
 fake_report="$tmp/report"
