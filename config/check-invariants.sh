@@ -36,6 +36,10 @@
 #      the live repository for free. It found both of its first two cases:
 #      Helium314/HeliBoard -> HeliBorg/HeliBoard, and, unnoticed until the rule
 #      existed, Governikus/AusweisApp2 -> Governikus/AusweisApp.
+#      The key is host + owner + name, lower-cased: without the host a GitHub
+#      upstream would match a Codeberg download of the same name, and without
+#      the lower-casing a repository spelled in a different case would be
+#      reported as a move when both forges treat it as one repository.
 #
 # 4-6 lived inline in the Makefile, where `andashi app rm` could not reach
 # them: removing Tor Browser from Anon passed every check the command ran.
@@ -110,13 +114,20 @@ updater="$(jq -r -n --slurpfile a "$A" --slurpfile p "$P" '
 
 # 8
 moved="$(jq -r -n --slurpfile a "$A" --slurpfile l "$LOCK_FILE" '
-  def repo: capture("https://(?:github[.]com|codeberg[.]org)/(?<o>[^/]+)/(?<r>[^/?#]+)") | "\(.o)/\(.r)";
+  # The key carries the forge HOST as well as owner/name: the same owner and
+  # name exist on both forges (comaps/comaps is on Codeberg), and without the
+  # host a GitHub upstream would compare equal to a Codeberg download.
+  # Lower-cased because GitHub and Codeberg both treat owner and repository
+  # as case-insensitive, so heliborg/heliboard and HeliBorg/HeliBoard are one
+  # repository and must not be reported as two.
+  def key: capture("https://(?<h>github[.]com|codeberg[.]org)/(?<o>[^/]+)/(?<r>[^/?#]+)")
+           | "\(.h)/\(.o)/\(.r)" | ascii_downcase;
   ($l[0].entries | INDEX(.pkg)) as $lock
   | $a[0].apps[] | select(.source == "obtainium") | select((.upstream // "") != "")
-  | . as $app | (.upstream | repo? // empty) as $want
-  | ($lock[$app.pkg].urls // []) | map(repo? // empty) | select(length > 0) as $have
+  | . as $app | (.upstream | key? // empty) as $want
+  | ($lock[$app.pkg].urls // []) | map(key? // empty) | select(length > 0) as $have
   | select($have | index($want) | not)
-  | "  \($app.label): catalog says \($want), the lock downloads from \($have | join(", "))"')"
+  | "  \($app.label): catalog says \($want), the lock downloads from \($have | unique | join(", "))"')"
 [ -z "$moved" ] || bad="${bad}upstreams the lock disagrees with (a repository that moved):"$'\n'"$moved"$'\n'"  GitHub redirects a renamed repository until it does not - name the live one"$'\n'
 
 if [ -n "$bad" ]; then printf '%s' "$bad" >&2; exit 1; fi

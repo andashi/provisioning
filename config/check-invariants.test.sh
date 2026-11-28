@@ -62,9 +62,13 @@ t "Tor Browser taken out of Anon" "Anon: browser org.torproject.torbrowser is no
 # not. The lock still records the name the API answered with, so the catalog and
 # the lock disagree - with no network needed to notice.
 fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://github.com/Helium314/HeliBoard"'
-t "an upstream the repository moved away from" "HeliBoard: catalog says Helium314/HeliBoard, the lock downloads from HeliBorg/HeliBoard"
+t "an upstream the repository moved away from" "HeliBoard: catalog says github.com/helium314/heliboard, the lock downloads from github.com/heliborg/heliboard"
 fresh; edit apps.json '(.apps[] | select(.id == "ausweisapp") | .upstream) = "https://github.com/Governikus/AusweisApp2"'
-t "... and the second one, which nobody had noticed" "AusweisApp: catalog says Governikus/AusweisApp2"
+t "... and the second one, which nobody had noticed" "AusweisApp: catalog says github.com/governikus/ausweisapp2"
+fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://codeberg.org/HeliBorg/HeliBoard"'
+t "the same owner and name on the OTHER forge is still a mismatch" "the lock downloads from github.com/heliborg/heliboard"
+fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://github.com/heliborg/heliboard"'
+t "a different spelling of the same repository is not a move" ""
 fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://f-droid.org/packages/helium314.keyboard"'
 t "an upstream that is not a git forge is not rule 8's business" ""
 fresh; edit apps.json '.apps += [{id: "brandnew", label: "Brand New", pkg: "com.example.new", source: "obtainium", upstream: "https://github.com/example/new", profiles: ["lab"], net: true}]'
