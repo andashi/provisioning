@@ -106,7 +106,7 @@
     "icon_blacklist": "volume,alarm_clock,headset",
     "glass": {
       "blur": 24,
-      "tint": 0.12,
+      "tint": 0.22,
       "radius": 28,
       "contrast": "medium",
       "wallpaperBlur": false,
