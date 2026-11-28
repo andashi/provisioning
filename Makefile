@@ -5,7 +5,8 @@ help:  ## This overview
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}'
 
 check: ## Check JSON + bash syntax + catalog consistency locally
-	@for f in config/*.json; do jq -e . $$f >/dev/null && echo "ok: $$f"; done
+	@config/check-json.sh config/*.json
+	@out="$$(config/check-json.test.sh 2>&1)" && echo "ok: json check (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@for f in $$(find . -name '*.sh'); do bash -n $$f || exit 1; done; echo "ok: bash -n"
 	@out="$$(tests/commit-msg.test.sh 2>&1)" && echo "ok: commit-msg hook (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@out="$$(tests/theming.test.sh 2>&1)" && echo "ok: theming keeps failed zones pending (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }

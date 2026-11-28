@@ -22,12 +22,11 @@ jobs:
         # iteration, so an invalid file anywhere but the end passed this step
         # green - demonstrated 2026-09-27 with a three-file loop whose middle
         # member was broken: exit 0.
+        # One definition for CI and `make check`: the local copy of this loop
+        # kept the old defect for two months after CI's was fixed.
         run: |
-          fail=0
-          for f in config/*.json; do
-            if jq -e . "$f" >/dev/null; then echo "ok: $f"; else echo "invalid: $f"; fail=1; fi
-          done
-          exit $fail
+          config/check-json.sh config/*.json
+          config/check-json.test.sh
       - name: Catalog consistency
         run: |
           # Every profile in apps.json must exist in profiles.json
