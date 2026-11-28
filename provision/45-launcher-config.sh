@@ -74,6 +74,7 @@ problem() {   # $1=profile-key $2=reason; in DRY_RUN only a warning
 
 # Records, decisions and the state provider: lib/launcher-state.sh.
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/launcher-state.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/keyboard-look.sh"
 
 # content write into an ingest URI, with a bounded retry for the moment right
 # after `am start-user -w`: the user is already UNLOCKED, but its external
@@ -223,6 +224,8 @@ configure_profile() {   # $1=profile-key
     if [ -n "$d_sha" ] && [ "$d_sha" = "$want_sha" ] && [ "$d_ok" = "true" ] \
        && [ "$d_store" = "$(record_field "$rec" storeId 2>/dev/null || true)" ] \
        && ! report_moved "$d_seq" "$d_store" "$(record_field "$rec" sequence 2>/dev/null || true)" "$d_store"; then
+      sync_keyboard_look "$uid" "$cfgfile" "$want_sha" "$label" \
+        || { problem "$key" "$label: Andashi Keyboard look could not be verified"; return 1; }
       skip "$label: unchanged, and the device still reports what we pushed"
       pending_clear "$key" launcher
       return 0
@@ -377,6 +380,8 @@ configure_profile() {   # $1=profile-key
     || { problem "$key" "$label: reload broadcast failed"; return 1; }
 
   if [ "$DRY_RUN" = "1" ]; then
+    sync_keyboard_look "$uid" "$cfgfile" "$want_sha" "$label" \
+      || { problem "$key" "$label: Andashi Keyboard look could not be verified"; return 1; }
     log "[dry-run] would poll content://$PKG.state/diagnostics until configSha256=${want_sha:0:12}... and verify /config"
     return 0
   fi
@@ -524,6 +529,8 @@ configure_profile() {   # $1=profile-key
     return 1
   fi
   if [ -z "$mism" ]; then
+    sync_keyboard_look "$uid" "$cfgfile" "$want_sha" "$label" \
+      || { problem "$key" "$label: Andashi Keyboard look could not be verified"; return 1; }
     ok "$label: effective config verified"
     pending_clear "$key" launcher
     return 0

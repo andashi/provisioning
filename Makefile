@@ -11,6 +11,7 @@ check: ## Check JSON + bash syntax + catalog consistency locally
 	@out="$$(tests/theming.test.sh 2>&1)" && echo "ok: theming keeps failed zones pending (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@out="$$(tests/pr-gate.test.sh 2>&1)" && echo "ok: pr-gate branch deletion (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@out="$$(tests/identity.test.sh 2>&1)" && echo "ok: e2e shell identity (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
+	@out="$$(tests/keyboard-look.test.sh 2>&1)" && echo "ok: keyboard look sync (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@out="$$(lib/readback-compare.test.sh 2>&1)" && echo "ok: read-back comparison (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@out="$$(lib/report-moved.test.sh 2>&1)" && echo "ok: report-moved condition (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
 	@out="$$(lib/wallpaper-drifted.test.sh 2>&1)" && echo "ok: wallpaper-drift condition (cases)" || { printf '%s\n' "$$out" >&2; exit 1; }
