@@ -74,6 +74,12 @@ serves its effective state back for reading. **Everything the chain sets today i
 convergent.** When something new cannot be verified, that is a reason to change
 the thing being configured, not to accept a blind write.
 
+Andashi Keyboard, when installed in a zone as `org.andashi.keyboard`, receives
+the same generated launcher file in step 45. Its shell-restricted state
+provider exposes only the glass settings and Material colors it consumes.
+The host checks both the file hash and the effective appearance. Existing
+HeliBoard installs continue through the manual flow above.
+
 ## Verifying, and the one recurring defect
 
 Five separate failures in this chain shared a single shape: *a step read a proxy
