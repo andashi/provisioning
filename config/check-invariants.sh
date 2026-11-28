@@ -26,6 +26,16 @@
 #      a zone without it keeps its apps on whatever the last provisioning
 #      run left - while Obtainium's import, emptied for the updater, no
 #      longer offers them either.
+#   8. An app's `upstream` names the same repository its lock entry downloads
+#      from. GitHub serves a renamed or transferred repository through a 301
+#      for as long as it pleases, so a catalog pointing at a dead name keeps
+#      working - fetch.sh and gen-obtainium.sh both follow the redirect - until
+#      the day it stops, and then nothing says why. The lock already records
+#      where the bytes really came from, because refresh-lock.sh wrote down the
+#      URL the API answered with. Comparing the two needs no network and names
+#      the live repository for free. It found both of its first two cases:
+#      Helium314/HeliBoard -> HeliBorg/HeliBoard, and, unnoticed until the rule
+#      existed, Governikus/AusweisApp2 -> Governikus/AusweisApp.
 #
 # 4-6 lived inline in the Makefile, where `andashi app rm` could not reach
 # them: removing Tor Browser from Anon passed every check the command ran.
@@ -36,7 +46,14 @@ set -euo pipefail
 cd "$(dirname "$0")"
 : "${CONFIG_DIR:=$PWD}"
 P="$CONFIG_DIR/profiles.json"; A="$CONFIG_DIR/apps.json"
+# The lock is the repository's, not the catalog copy's: CONFIG_DIR may be a
+# temporary tree (bin/andashi, the cases) with no apks/ beside it, while $PWD
+# here is always the real config/ because of the cd above.
+: "${LOCK_FILE:=$PWD/../apks/lock.json}"
 [ -f "$P" ] && [ -f "$A" ] || { echo "check-invariants: profiles.json or apps.json missing in $CONFIG_DIR" >&2; exit 1; }
+# Fail closed: a missing lock means rule 8 cannot be answered, which is not
+# the same as it holding.
+[ -f "$LOCK_FILE" ] || { echo "check-invariants: lock file missing: $LOCK_FILE" >&2; exit 1; }
 
 bad=""
 # 1
@@ -91,5 +108,16 @@ updater="$(jq -r -n --slurpfile a "$A" --slurpfile p "$P" '
 '"$updater"$'
 '
 
+# 8
+moved="$(jq -r -n --slurpfile a "$A" --slurpfile l "$LOCK_FILE" '
+  def repo: capture("https://(?:github[.]com|codeberg[.]org)/(?<o>[^/]+)/(?<r>[^/?#]+)") | "\(.o)/\(.r)";
+  ($l[0].entries | INDEX(.pkg)) as $lock
+  | $a[0].apps[] | select(.source == "obtainium") | select((.upstream // "") != "")
+  | . as $app | (.upstream | repo? // empty) as $want
+  | ($lock[$app.pkg].urls // []) | map(repo? // empty) | select(length > 0) as $have
+  | select($have | index($want) | not)
+  | "  \($app.label): catalog says \($want), the lock downloads from \($have | join(", "))"')"
+[ -z "$moved" ] || bad="${bad}upstreams the lock disagrees with (a repository that moved):"$'\n'"$moved"$'\n'"  GitHub redirects a renamed repository until it does not - name the live one"$'\n'
+
 if [ -n "$bad" ]; then printf '%s' "$bad" >&2; exit 1; fi
-echo "ok: catalog invariants (Play-free zones, one always-on zone, net: false, unique packages, tailnet, zone browsers, updater)"
+echo "ok: catalog invariants (Play-free zones, one always-on zone, net: false, unique packages, tailnet, zone browsers, updater, live upstreams)"

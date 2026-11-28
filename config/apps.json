@@ -112,7 +112,7 @@
       "pkg": "com.governikus.ausweisapp2",
       "pkg_status": "verified",
       "source": "obtainium",
-      "upstream": "https://github.com/Governikus/AusweisApp2",
+      "upstream": "https://github.com/Governikus/AusweisApp",
       "profiles": [
         "home"
       ],
@@ -504,7 +504,8 @@
       "pkg": "helium314.keyboard",
       "pkg_status": "verified",
       "source": "obtainium",
-      "upstream": "https://github.com/Helium314/HeliBoard",
+      "upstream": "https://github.com/HeliBorg/HeliBoard",
+      "release_tag": "v4.1",
       "profiles": [
         "home",
         "cloud",
@@ -514,7 +515,7 @@
         "anon"
       ],
       "net": false,
-      "notes": "Keyboard for all profiles, follows the Monet profile color (dynamic colors). Declares NO INTERNET permission itself - net:false is a no-op, but documents the target state. fetch.sh excludes the nouserlib variant. 40-theming.sh sets it as the default IME."
+      "notes": "Keyboard for all profiles, follows the Monet profile color (dynamic colors). Declares NO INTERNET permission itself - net:false is a no-op, but documents the target state. fetch.sh excludes the nouserlib variant. 40-theming.sh sets it as the default IME. PINNED to v4.1: 4.2 breaks the split keyboard on a Pixel Fold (Helium314/HeliBoard#2918, seen on a Pixel 9 Pro Fold), and the split is how this keyboard is usable on the inner display. Decision 0012 is explicit that a pin is for sitting out a bad release, not a default - so the question to answer before every lock refresh is: HAS THE SPLIT-KEYBOARD FIX SHIPPED IN A STABLE HELIBOARD RELEASE? It is fixed in 4.3-beta1; when a 4.3 stable exists, drop release_tag and let the lock move again."
     },
     {
       "id": "ips",
