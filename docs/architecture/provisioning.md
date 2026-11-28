@@ -70,9 +70,32 @@ The second class used to include the entire launcher layer, which was configured
 by driving its settings UI with uiautomator: 688 lines, roughly 27 minutes per
 run, and no way to verify the result. That layer moved into the first class by
 changing the launcher rather than the script — it now ingests a config file and
-serves its effective state back for reading. **Everything the chain sets today is
-convergent.** When something new cannot be verified, that is a reason to change
-the thing being configured, not to accept a blind write.
+serves its effective state back for reading. When something new cannot be
+verified, that is a reason to change the thing being configured, not to accept a
+blind write.
+
+**Everything the chain sets today is convergent — and one thing it deliberately
+does not set is not.** HeliBoard keeps its configuration in its own
+SharedPreferences under `/data/user/N/helium314.keyboard`, and the chain can
+neither write it nor read it back. Measured on 4.1 (2026-11-28): `run-as` refuses
+the package as not debuggable, the data directory is not readable from the shell,
+and the only components the manifest exports are the IME, the spell checker, the
+settings activities and two boot receivers — none of which accepts a settings
+import. The app *can* import: Settings → Advanced → Backup and restore reads a zip
+of its own preferences, and the colour editor loads a theme file. Both go through
+a SAF document picker, so both need a finger.
+
+So the keyboard's look is tapped in by hand, and `provision/90-manual.sh` lists
+every tap. That is the state this section says to refuse, and it is accepted here
+only because the alternative is driving a settings UI with uiautomator — the
+688-line layer this chain removed, for the reasons above.
+
+The way out is the same as for the launcher: change the thing being configured.
+The question to answer, whenever the keyboard is next touched, is **has HeliBoard
+gained a shell-reachable settings import?** — an exported component, a
+documented intent, or a file it reads from a known path on start. On 4.1 the
+answer is no. If it ever becomes yes, the keyboard moves from the second class
+into the first and 90-manual.sh loses its longest entry.
 
 ## Verifying, and the one recurring defect
 

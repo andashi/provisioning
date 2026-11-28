@@ -57,5 +57,32 @@ t "a tailnet app in a zone without Tailscale" "is in anon, whose VPN slot is"
 fresh; edit apps.json '(.apps[] | select(.pkg == "org.torproject.torbrowser") | .profiles) -= ["anon"]'
 t "Tor Browser taken out of Anon" "Anon: browser org.torproject.torbrowser is not placed in this zone"
 
+# Rule 8. Both cases are the real defect this rule was written for: a repository
+# that was renamed, where GitHub's 301 keeps the old name working until it does
+# not. The lock still records the name the API answered with, so the catalog and
+# the lock disagree - with no network needed to notice.
+fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://github.com/Helium314/HeliBoard"'
+t "an upstream the repository moved away from" "HeliBoard: catalog says github.com/helium314/heliboard, the lock downloads from github.com/heliborg/heliboard"
+fresh; edit apps.json '(.apps[] | select(.id == "ausweisapp") | .upstream) = "https://github.com/Governikus/AusweisApp2"'
+t "... and the second one, which nobody had noticed" "AusweisApp: catalog says github.com/governikus/ausweisapp2"
+fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://codeberg.org/HeliBorg/HeliBoard"'
+t "the same owner and name on the OTHER forge is still a mismatch" "the lock downloads from github.com/heliborg/heliboard"
+fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://github.com/heliborg/heliboard"'
+t "a different spelling of the same repository is not a move" ""
+fresh; edit apps.json '(.apps[] | select(.id == "heliboard") | .upstream) = "https://f-droid.org/packages/helium314.keyboard"'
+t "an upstream that is not a git forge is not rule 8's business" ""
+fresh; edit apps.json '.apps += [{id: "brandnew", label: "Brand New", pkg: "com.example.new", source: "obtainium", upstream: "https://github.com/example/new", profiles: ["lab"], net: true}]'
+t "an app the lock does not carry yet has nothing to disagree with" ""
+
+# Fail closed: "the lock is missing" and "the rule holds" are different answers,
+# and only one of them is safe to report as a pass.
+fresh
+out="$(LOCK_FILE="$tmp/no-such-lock.json" CONFIG_DIR="$tmp" ./check-invariants.sh 2>&1)"; rc=$?
+if [ "$rc" != 0 ] && printf '%s' "$out" | grep -qF "lock file missing"; then
+  printf '  ok    %s\n' "a missing lock refuses rather than passes"; pass=$((pass+1))
+else
+  printf '  FAIL  %s\n        rc=%s, got: %s\n' "a missing lock refuses rather than passes" "$rc" "$out"; fail=$((fail+1))
+fi
+
 printf '\n  %d ok, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]
